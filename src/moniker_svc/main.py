@@ -284,12 +284,21 @@ async def create_telemetry(config: Config) -> tuple[TelemetryEmitter, TelemetryB
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown."""
+    import os
+    from pathlib import Path
+
     global _service, _telemetry_task, _batcher_task
 
     logger.info("Starting moniker resolution service...")
 
-    # Load config (from environment or defaults)
-    config = Config()
+    # Load config from file or use defaults
+    config_path = os.environ.get("MONIKER_CONFIG", "config.yaml")
+    if Path(config_path).exists():
+        config = Config.from_yaml(config_path)
+        logger.info(f"Loaded config from {config_path}")
+    else:
+        config = Config()
+        logger.info("Using default config")
 
     # Load catalog from file or use demo
     if config.catalog.definition_file:
@@ -581,18 +590,55 @@ async def root():
 
 def run():
     """Run the service with uvicorn."""
+    import argparse
+    import os
     import uvicorn
+
+    parser = argparse.ArgumentParser(description="Moniker Resolution Service")
+    parser.add_argument(
+        "--config", "-c",
+        default=os.environ.get("MONIKER_CONFIG", "config.yaml"),
+        help="Path to config file (default: config.yaml or MONIKER_CONFIG env var)",
+    )
+    parser.add_argument(
+        "--host",
+        default=None,
+        help="Override host (default: from config)",
+    )
+    parser.add_argument(
+        "--port", "-p",
+        type=int,
+        default=None,
+        help="Override port (default: from config)",
+    )
+    args = parser.parse_args()
+
+    # Store config path in environment for lifespan to pick up
+    os.environ["MONIKER_CONFIG"] = args.config
 
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
+    # Load config to get host/port
+    from pathlib import Path
+    config_path = Path(args.config)
+    if config_path.exists():
+        config = Config.from_yaml(str(config_path))
+        logger.info(f"Loaded config from {config_path}")
+    else:
+        config = Config()
+        logger.info("Using default config (no config file found)")
+
+    host = args.host or config.server.host
+    port = args.port or config.server.port
+
     uvicorn.run(
         "moniker_svc.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
+        host=host,
+        port=port,
+        reload=config.server.reload,
     )
 
 

@@ -247,6 +247,45 @@ Telemetry sinks:
 - `file` - Rotating JSONL files
 - `zmq` - ZeroMQ PUB/SUB streaming
 
+### ZeroMQ Streaming Demo
+
+Stream telemetry events in real-time using ZeroMQ PUB/SUB:
+
+```bash
+# Install ZeroMQ
+pip install pyzmq
+
+# Terminal 1: Start service with ZMQ telemetry
+python -m moniker_svc.main --config config_zmq.yaml
+
+# Terminal 2: Subscribe to telemetry stream
+python telemetry_subscriber.py
+```
+
+The subscriber shows events as they happen:
+
+```
+[14:32:15.123] RESOLVE  success    market-data/prices/equity/AAPL <- my-notebook (2.3ms)
+[14:32:15.456] ACCESS   success    market-data/prices/equity/AAPL <- my-notebook (145.2ms) [snowflake]
+```
+
+Subscriber options:
+```bash
+# Show raw JSON
+python telemetry_subscriber.py --raw
+
+# Connect to different endpoint
+python telemetry_subscriber.py --endpoint tcp://moniker-svc:5556
+
+# Filter by topic
+python telemetry_subscriber.py --topic moniker.access
+
+# Verbose output with row counts
+python telemetry_subscriber.py -v
+```
+
+For production, pipe telemetry to Kafka, Splunk, or your data warehouse by modifying `telemetry_subscriber.py` or implementing a custom sink.
+
 ## Catalog Definition
 
 Define your catalog in `example_catalog.yaml`:

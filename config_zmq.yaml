@@ -1,0 +1,37 @@
+# Moniker Service Configuration - ZeroMQ Telemetry Demo
+#
+# This configuration enables ZeroMQ PUB/SUB telemetry streaming.
+# Use this to see real-time telemetry events from the service.
+#
+# Usage:
+#   Terminal 1: python -m moniker_svc.main --config config_zmq.yaml
+#   Terminal 2: python telemetry_subscriber.py
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+
+telemetry:
+  enabled: true
+  sink_type: zmq
+
+  sink_config:
+    # ZeroMQ PUB socket endpoint
+    # The subscriber connects to this address
+    endpoint: "tcp://*:5556"
+
+    # Optional topic prefix for filtering
+    # Subscribers can filter by topic (e.g., "moniker.access")
+    topic: "moniker"
+
+  # Batching - lower values for demo visibility
+  batch_size: 1
+  flush_interval_seconds: 0.1
+
+cache:
+  enabled: true
+  max_size: 10000
+  default_ttl_seconds: 300
+
+catalog:
+  definition_file: "./example_catalog.yaml"
