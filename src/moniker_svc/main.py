@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from .cache.memory import InMemoryCache
 from .catalog.registry import CatalogRegistry
+from .catalog.loader import load_catalog
 from .catalog.types import CatalogNode, Ownership, SourceBinding, SourceType
 from .config import Config
 from .identity.extractor import extract_identity
@@ -290,8 +291,16 @@ async def lifespan(app: FastAPI):
     # Load config (from environment or defaults)
     config = Config()
 
-    # Create components
-    catalog = create_demo_catalog()
+    # Load catalog from file or use demo
+    if config.catalog.definition_file:
+        logger.info(f"Loading catalog from: {config.catalog.definition_file}")
+        catalog = load_catalog(config.catalog.definition_file)
+    else:
+        logger.info("Using demo catalog (no definition_file configured)")
+        catalog = create_demo_catalog()
+
+    logger.info(f"Catalog loaded with {len(catalog.all_paths())} paths")
+
     cache = InMemoryCache(
         max_size=config.cache.max_size,
         default_ttl_seconds=config.cache.default_ttl_seconds,
