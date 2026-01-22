@@ -219,26 +219,47 @@ Map moniker paths to actual data sources:
 
 ### Query Templates
 
-Source bindings can use template placeholders in queries:
+Source bindings use template placeholders that get translated at resolution time.
+
+**Raw Value Placeholders:**
 
 | Placeholder | Description |
 |-------------|-------------|
 | `{path}` | Full sub-path after the binding |
 | `{segments[N]}` | Specific path segment (0-indexed) |
-| `{version}` | Version from `@suffix` |
+| `{version}` | Version from `@suffix` (raw string) |
 | `{revision}` | Revision from `/vN` suffix |
 | `{namespace}` | Namespace prefix if provided |
 
-Example Snowflake query template:
+**SQL-Translated Placeholders:**
+
+| Placeholder | Description |
+|-------------|-------------|
+| `{version_date}` | SQL date: `CURRENT_DATE()` if empty, `TO_DATE('20260115','YYYYMMDD')` if date |
+| `{filter[N]:column}` | SQL filter: `column = 'value'` or `1=1` if segment is `ALL` |
+| `{is_all[N]}` | `"true"` if segment N is `ALL`, else `"false"` |
+| `{is_latest}` | `"true"` if version is `latest`, else `"false"` |
+
+**Example - ALL and @latest support:**
+
 ```sql
-SELECT * FROM POSITIONS
-WHERE as_of_date = TO_DATE('{segments[0]}', 'YYYYMMDD')
-  AND portfolio_id = '{segments[1]}'
+-- For: prices.equity/AAPL@20260115 or prices.equity/ALL@latest
+SELECT symbol, close_price, volume
+FROM EQUITY_EOD
+WHERE {filter[0]:symbol}                    -- "symbol = 'AAPL'" or "1=1" for ALL
+  AND trade_date = CASE
+    WHEN {is_latest} = 'true' THEN (SELECT MAX(trade_date) FROM EQUITY_EOD)
+    ELSE {version_date}                     -- TO_DATE('20260115','YYYYMMDD')
+  END
 ```
 
-For moniker `holdings/positions/20260115/fund_alpha`:
-- `{segments[0]}` → `20260115`
-- `{segments[1]}` → `fund_alpha`
+**Translation examples:**
+
+| Moniker | `{filter[0]:symbol}` | `{version_date}` | `{is_latest}` |
+|---------|---------------------|------------------|---------------|
+| `prices.equity/AAPL` | `symbol = 'AAPL'` | `CURRENT_DATE()` | `false` |
+| `prices.equity/AAPL@20260115` | `symbol = 'AAPL'` | `TO_DATE('20260115','YYYYMMDD')` | `false` |
+| `prices.equity/ALL@latest` | `1=1` | `'__LATEST__'` | `true` |
 
 ## API Endpoints
 

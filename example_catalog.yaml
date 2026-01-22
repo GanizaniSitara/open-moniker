@@ -33,6 +33,7 @@ indices.sovereign:
   description: Government bond indices by region and currency
 
 # Example: indices.sovereign/developed/EU.GovBondAgg/EUR/ALL
+# Using {filter[N]:col} for ALL support and {version_date} for date handling
 indices.sovereign/developed:
   display_name: Developed Markets Sovereign
   description: DM government bond benchmarks
@@ -46,9 +47,9 @@ indices.sovereign/developed:
       query: |
         SELECT index_id, index_name, currency, weight, yield, duration, mod_duration
         FROM DM_SOVEREIGN_INDICES
-        WHERE index_family = '{segments[0]}'
-          AND currency = '{segments[1]}'
-          AND as_of_date = COALESCE(TO_DATE('{version}', 'YYYYMMDD'), CURRENT_DATE())
+        WHERE {filter[0]:index_family}
+          AND {filter[1]:currency}
+          AND as_of_date = {version_date}
 
 indices.corporate:
   display_name: Corporate Indices
@@ -390,6 +391,7 @@ prices:
     data_specialist: market-data-ops@firm.com
     support_channel: "#market-data"
 
+# Example: prices.equity/AAPL@20260115 or prices.equity/ALL@latest
 prices.equity:
   display_name: Equity Prices
   source_binding:
@@ -402,8 +404,11 @@ prices.equity:
       query: |
         SELECT symbol, open_price, high_price, low_price, close_price, volume, vwap
         FROM EQUITY_EOD
-        WHERE symbol = '{segments[0]}'
-          AND trade_date = COALESCE(TO_DATE('{version}', 'YYYYMMDD'), CURRENT_DATE())
+        WHERE {filter[0]:symbol}
+          AND trade_date = CASE
+            WHEN {is_latest} = 'true' THEN (SELECT MAX(trade_date) FROM EQUITY_EOD)
+            ELSE {version_date}
+          END
 
 prices.fx:
   display_name: FX Rates

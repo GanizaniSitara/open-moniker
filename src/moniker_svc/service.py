@@ -231,30 +231,63 @@ class MonikerService:
         template: str,
         moniker: Moniker,
         sub_path: str | None,
+        source_type: str = "snowflake",
     ) -> str:
         """
         Format a template string with moniker components.
 
         Supported placeholders:
-            {path}         - Full sub-path after the binding
-            {segments[N]}  - Specific path segment (0-indexed from sub_path)
-            {version}      - Version from @suffix (e.g., @20260115, @latest)
-            {revision}     - Revision from /vN suffix
-            {namespace}    - Namespace prefix if provided
-            {moniker}      - Full moniker string
+            Raw values:
+                {path}              - Full sub-path after the binding
+                {segments[N]}       - Specific path segment (0-indexed)
+                {version}           - Version from @suffix (raw string)
+                {revision}          - Revision from /vN suffix
+                {namespace}         - Namespace prefix if provided
+                {moniker}           - Full moniker string
+
+            SQL-translated values:
+                {version_date}      - SQL date expression for version
+                                      "" → CURRENT_DATE / SYSDATE
+                                      "latest" → subquery placeholder
+                                      "20260115" → TO_DATE('20260115','YYYYMMDD')
+                {filter[N]:col}     - SQL filter for segment N on column col
+                                      "ALL" → "1=1" (match all)
+                                      "AAPL" → "col = 'AAPL'"
+                {is_all[N]}         - "true" if segment N is "ALL", else "false"
+                {is_latest}         - "true" if version is "latest", else "false"
         """
         import re
 
         path = sub_path or str(moniker.path)
         segments = path.split("/") if path else []
+        version = moniker.version or ""
+
+        # Determine SQL dialect
+        is_oracle = source_type == "oracle"
+
+        # SQL date translation
+        if not version:
+            version_date = "SYSDATE" if is_oracle else "CURRENT_DATE()"
+        elif version.lower() == "latest":
+            # Placeholder - query author should use MAX() subquery
+            version_date = "'__LATEST__'"
+        elif version.isdigit() and len(version) == 8:
+            if is_oracle:
+                version_date = f"TO_DATE('{version}', 'YYYYMMDD')"
+            else:
+                version_date = f"TO_DATE('{version}', 'YYYYMMDD')"
+        else:
+            version_date = f"'{version}'"
 
         # Build substitution dict
         subs = {
             "path": path,
-            "version": moniker.version or "",
+            "version": version,
+            "version_date": version_date,
             "revision": str(moniker.revision) if moniker.revision is not None else "",
             "namespace": moniker.namespace or "",
             "moniker": str(moniker),
+            "is_latest": "true" if version.lower() == "latest" else "false",
         }
 
         result = template
@@ -267,6 +300,29 @@ class MonikerService:
             return ""
 
         result = re.sub(r"\{segments\[(\d+)\]\}", replace_segment, result)
+
+        # Handle {is_all[N]} patterns
+        def replace_is_all(match: re.Match) -> str:
+            idx = int(match.group(1))
+            if 0 <= idx < len(segments):
+                return "true" if segments[idx].upper() == "ALL" else "false"
+            return "false"
+
+        result = re.sub(r"\{is_all\[(\d+)\]\}", replace_is_all, result)
+
+        # Handle {filter[N]:column} patterns - generates SQL WHERE clause fragment
+        def replace_filter(match: re.Match) -> str:
+            idx = int(match.group(1))
+            col = match.group(2)
+            if 0 <= idx < len(segments):
+                seg_value = segments[idx]
+                if seg_value.upper() == "ALL":
+                    return "1=1"  # Match everything
+                else:
+                    return f"{col} = '{seg_value}'"
+            return "1=1"
+
+        result = re.sub(r"\{filter\[(\d+)\]:(\w+)\}", replace_filter, result)
 
         # Handle simple placeholders
         for key, value in subs.items():
@@ -284,9 +340,9 @@ class MonikerService:
         config = binding.config
         source_type = binding.source_type.value
 
-        # Helper to format templates
+        # Helper to format templates with SQL dialect awareness
         def fmt(template: str) -> str:
-            return self._format_template(template, moniker, sub_path)
+            return self._format_template(template, moniker, sub_path, source_type)
 
         # Extract connection info (remove query/sensitive bits)
         connection: dict[str, Any] = {}
