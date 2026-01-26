@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from .auth.config import AuthConfig
+
 
 @dataclass
 class ServerConfig:
@@ -55,15 +57,18 @@ class Config:
     telemetry: TelemetryConfig = field(default_factory=TelemetryConfig)
     cache: CacheConfig = field(default_factory=CacheConfig)
     catalog: CatalogConfig = field(default_factory=CatalogConfig)
+    auth: AuthConfig = field(default_factory=AuthConfig)
 
     @classmethod
     def from_dict(cls, data: dict) -> Config:
         """Create config from dictionary."""
+        auth_data = data.get("auth", {})
         return cls(
             server=ServerConfig(**data.get("server", {})),
             telemetry=TelemetryConfig(**data.get("telemetry", {})),
             cache=CacheConfig(**data.get("cache", {})),
             catalog=CatalogConfig(**data.get("catalog", {})),
+            auth=AuthConfig.from_dict(auth_data) if auth_data else AuthConfig(),
         )
 
     @classmethod

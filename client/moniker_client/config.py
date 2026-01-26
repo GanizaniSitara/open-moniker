@@ -45,6 +45,25 @@ class ClientConfig:
         default_factory=lambda: float(os.environ.get("MONIKER_CACHE_TTL", "60"))
     )
 
+    # Authentication method: "kerberos", "jwt", or None
+    auth_method: str | None = field(
+        default_factory=lambda: os.environ.get("MONIKER_AUTH_METHOD")
+    )
+
+    # Kerberos settings
+    kerberos_service_principal: str | None = field(
+        default_factory=lambda: os.environ.get("MONIKER_SERVICE_PRINCIPAL")
+    )
+
+    # JWT settings
+    jwt_token: str | None = None  # Direct token (not from env for security)
+    jwt_token_env: str = field(
+        default_factory=lambda: os.environ.get("MONIKER_JWT_ENV", "MONIKER_JWT")
+    )
+    jwt_token_file: str | None = field(
+        default_factory=lambda: os.environ.get("MONIKER_JWT_FILE")
+    )
+
     # Database credentials (not from service for security)
     # These are used by the client when connecting to sources
     snowflake_user: str | None = field(

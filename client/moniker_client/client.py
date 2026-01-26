@@ -8,6 +8,7 @@ from typing import Any
 
 import httpx
 
+from .auth import get_auth_headers
 from .config import ClientConfig
 from .adapters import get_adapter
 
@@ -232,12 +233,17 @@ class MonikerClient:
         return resolved
 
     def _get_headers(self) -> dict[str, str]:
-        """Build request headers."""
+        """Build request headers including authentication."""
         headers = {}
         if self.config.app_id:
             headers["X-App-ID"] = self.config.app_id
         if self.config.team:
             headers["X-Team"] = self.config.team
+
+        # Add authentication headers
+        auth_headers = get_auth_headers(self.config)
+        headers.update(auth_headers)
+
         return headers
 
     def _report_telemetry(

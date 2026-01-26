@@ -44,3 +44,28 @@ catalog:
 
   # Hot reload interval (0 = disabled)
   reload_interval_seconds: 60
+
+# Authentication configuration
+auth:
+  enabled: false
+  enforce: false  # If false, allow anonymous fallback for dev/testing
+  method_order: [kerberos, jwt]  # Try Kerberos first, then JWT
+
+  # Kerberos SPNEGO configuration
+  kerberos:
+    enabled: false
+    service_principal: "HTTP/moniker-svc.firm.com@FIRM.COM"
+    keytab_path: "/etc/moniker-svc/krb5.keytab"
+    realm: "FIRM.COM"
+
+  # Okta JWT configuration
+  okta:
+    enabled: false
+    issuer: "https://firm.okta.com/oauth2/default"
+    audience: "api://moniker-svc"
+    jwks_cache_ttl: 3600  # seconds
+    user_claim: "sub"
+    groups_claim: "groups"
+    # Test mode (local dev only!): set issuer to "test" and provide secret
+    # issuer: "test"
+    # test_secret: "your-test-secret-min-32-chars-long"

@@ -30,6 +30,9 @@ oracle = ["oracledb>=2.0.0"]
 excel = ["openpyxl>=3.1.0"]
 parquet = ["pyarrow>=14.0.0"]
 
+# Authentication (Kerberos SPNEGO)
+auth = ["gssapi>=1.8.0"]
+
 # Financial data providers (require commercial licenses)
 bloomberg = ["blpapi>=3.19.0"]
 refinitiv = ["eikon>=1.1.0", "refinitiv-data>=1.5.0"]
@@ -40,6 +43,7 @@ all = [
     "oracledb>=2.0.0",
     "openpyxl>=3.1.0",
     "pyarrow>=14.0.0",
+    "gssapi>=1.8.0",
 ]
 
 # Development
@@ -64,3 +68,9 @@ target-version = "py310"
 [tool.mypy]
 python_version = "3.10"
 strict = true
+
+[[tool.mypy.overrides]]
+module = [
+    "gssapi.*",
+]
+ignore_missing_imports = true

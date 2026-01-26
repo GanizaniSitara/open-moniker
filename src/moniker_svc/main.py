@@ -9,12 +9,13 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import FastAPI, HTTPException, Request, Query
+from fastapi import Depends, FastAPI, HTTPException, Request, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from .auth import create_composite_authenticator, get_caller_identity, set_authenticator
 from .cache.memory import InMemoryCache
 from .catalog.registry import CatalogRegistry
 from .catalog.loader import load_catalog
@@ -520,6 +521,15 @@ async def lifespan(app: FastAPI):
         config=config,
     )
 
+    # Initialize authentication if enabled
+    if config.auth.enabled:
+        authenticator = create_composite_authenticator(config.auth)
+        set_authenticator(authenticator)
+        logger.info(f"Authentication enabled (enforce={config.auth.enforce})")
+    else:
+        set_authenticator(None)
+        logger.info("Authentication disabled")
+
     logger.info("Moniker resolution service started")
 
     yield
@@ -594,6 +604,7 @@ async def health():
 async def resolve_moniker(
     request: Request,
     path: str,
+    caller: Annotated[CallerIdentity, Depends(get_caller_identity)],
 ):
     """
     Resolve a moniker to source connection info.
@@ -608,9 +619,6 @@ async def resolve_moniker(
     """
     if not _service:
         raise HTTPException(status_code=503, detail="Service not initialized")
-
-    # Extract caller identity
-    caller = extract_identity(request)
 
     # Build full moniker string
     moniker_str = f"moniker://{path}"
@@ -645,14 +653,13 @@ async def resolve_moniker(
 
 @app.get("/list/{path:path}", response_model=ListResponse)
 async def list_children(
-    request: Request,
     path: str = "",
+    caller: Annotated[CallerIdentity, Depends(get_caller_identity)] = None,
 ):
     """List children of a moniker path (from catalog)."""
     if not _service:
         raise HTTPException(status_code=503, detail="Service not initialized")
 
-    caller = extract_identity(request)
     moniker_str = f"moniker://{path}" if path else "moniker://"
 
     result = await _service.list_children(moniker_str, caller)
@@ -665,14 +672,13 @@ async def list_children(
 
 @app.get("/describe/{path:path}", response_model=DescribeResponse)
 async def describe_moniker(
-    request: Request,
     path: str,
+    caller: Annotated[CallerIdentity, Depends(get_caller_identity)],
 ):
     """Get metadata about a moniker path (ownership, classification, etc.)."""
     if not _service:
         raise HTTPException(status_code=503, detail="Service not initialized")
 
-    caller = extract_identity(request)
     moniker_str = f"moniker://{path}"
 
     result = await _service.describe(moniker_str, caller)
@@ -697,14 +703,13 @@ async def describe_moniker(
 
 @app.get("/lineage/{path:path}", response_model=LineageResponse)
 async def get_lineage(
-    request: Request,
     path: str,
+    caller: Annotated[CallerIdentity, Depends(get_caller_identity)],
 ):
     """Get full ownership lineage for a moniker path."""
     if not _service:
         raise HTTPException(status_code=503, detail="Service not initialized")
 
-    caller = extract_identity(request)
     moniker_str = f"moniker://{path}"
 
     result = await _service.lineage(moniker_str, caller)
@@ -713,8 +718,8 @@ async def get_lineage(
 
 @app.post("/telemetry/access")
 async def report_access(
-    request: Request,
     report: AccessReport,
+    caller: Annotated[CallerIdentity, Depends(get_caller_identity)],
 ):
     """
     Client reports access telemetry after fetching data.
@@ -723,8 +728,6 @@ async def report_access(
     """
     if not _service:
         raise HTTPException(status_code=503, detail="Service not initialized")
-
-    caller = extract_identity(request)
 
     # Map string outcome to enum
     outcome_map = {
