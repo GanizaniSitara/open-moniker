@@ -92,6 +92,9 @@ class CatalogNode:
     Nodes can have:
     - Ownership (inheritable triple)
     - Source binding (how to fetch data)
+    - Data quality info
+    - SLA info
+    - Freshness info
     - Children (sub-paths)
     - Metadata
     """
@@ -104,6 +107,11 @@ class CatalogNode:
 
     # Source binding (only leaf nodes typically have this)
     source_binding: SourceBinding | None = None
+
+    # Data governance
+    data_quality: DataQuality | None = None
+    sla: SLA | None = None
+    freshness: Freshness | None = None
 
     # Data classification (for governance)
     classification: str = "internal"
@@ -148,3 +156,54 @@ class ResolvedOwnership:
             data_specialist=self.data_specialist,
             support_channel=self.support_channel,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class DataQuality:
+    """Data quality information for a catalog node."""
+    # DQ owner/steward responsible for data quality
+    dq_owner: str | None = None
+
+    # Quality score (0-100) if measured
+    quality_score: float | None = None
+
+    # Validation rules applied
+    validation_rules: tuple[str, ...] = ()
+
+    # Known issues or caveats
+    known_issues: tuple[str, ...] = ()
+
+    # Last DQ check timestamp (ISO format)
+    last_validated: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SLA:
+    """Service level agreement for a data source."""
+    # Expected freshness (e.g., "T+1", "15min", "real-time")
+    freshness: str | None = None
+
+    # Availability target (e.g., "99.9%")
+    availability: str | None = None
+
+    # Support hours (e.g., "24/7", "business hours ET")
+    support_hours: str | None = None
+
+    # Escalation contact for SLA breaches
+    escalation_contact: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Freshness:
+    """Data freshness information."""
+    # When the data was last loaded/refreshed (ISO format)
+    last_loaded: str | None = None
+
+    # Scheduled refresh time (e.g., "06:00 ET daily")
+    refresh_schedule: str | None = None
+
+    # Source system the data comes from
+    source_system: str | None = None
+
+    # Upstream dependencies
+    upstream_dependencies: tuple[str, ...] = ()

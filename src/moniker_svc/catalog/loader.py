@@ -9,7 +9,7 @@ from typing import Any
 import yaml
 
 from .registry import CatalogRegistry
-from .types import CatalogNode, Ownership, SourceBinding, SourceType
+from .types import CatalogNode, DataQuality, Freshness, Ownership, SLA, SourceBinding, SourceType
 
 
 logger = logging.getLogger(__name__)
@@ -102,12 +102,49 @@ class CatalogLoader:
         # Parse tags
         tags = frozenset(data.get("tags", []))
 
+        # Parse data quality
+        data_quality = None
+        if "data_quality" in data:
+            dq_data = data["data_quality"]
+            data_quality = DataQuality(
+                dq_owner=dq_data.get("dq_owner"),
+                quality_score=dq_data.get("quality_score"),
+                validation_rules=tuple(dq_data.get("validation_rules", [])),
+                known_issues=tuple(dq_data.get("known_issues", [])),
+                last_validated=dq_data.get("last_validated"),
+            )
+
+        # Parse SLA
+        sla = None
+        if "sla" in data:
+            sla_data = data["sla"]
+            sla = SLA(
+                freshness=sla_data.get("freshness"),
+                availability=sla_data.get("availability"),
+                support_hours=sla_data.get("support_hours"),
+                escalation_contact=sla_data.get("escalation_contact"),
+            )
+
+        # Parse freshness
+        freshness = None
+        if "freshness" in data:
+            fresh_data = data["freshness"]
+            freshness = Freshness(
+                last_loaded=fresh_data.get("last_loaded"),
+                refresh_schedule=fresh_data.get("refresh_schedule"),
+                source_system=fresh_data.get("source_system"),
+                upstream_dependencies=tuple(fresh_data.get("upstream_dependencies", [])),
+            )
+
         return CatalogNode(
             path=path,
             display_name=data.get("display_name", ""),
             description=data.get("description", ""),
             ownership=ownership,
             source_binding=source_binding,
+            data_quality=data_quality,
+            sla=sla,
+            freshness=freshness,
             classification=data.get("classification", "internal"),
             tags=tags,
             metadata=data.get("metadata", {}),

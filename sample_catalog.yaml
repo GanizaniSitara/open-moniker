@@ -329,10 +329,42 @@ risk:
 risk.cvar:
   display_name: Conditional Value at Risk
   description: CVaR tail risk measures by portfolio, currency, and security
+  classification: confidential
+
   ownership:
     accountable_owner: risk-governance@firm.com
     data_specialist: risk-quant@firm.com
     support_channel: "#risk-analytics"
+
+  # Data Quality information
+  data_quality:
+    dq_owner: dq-risk-team@firm.com
+    quality_score: 94.5
+    validation_rules:
+      - "CVAR values must be between -1 and 1"
+      - "No null SSM_ID values"
+      - "ASOF_DATE must be a valid business day"
+    known_issues:
+      - "Some legacy positions from 2019 have missing LT_ID mappings"
+    last_validated: "2026-01-28T06:00:00Z"
+
+  # SLA commitments
+  sla:
+    freshness: "T+1 by 06:00 ET"
+    availability: "99.5%"
+    support_hours: "Business hours ET (8am-6pm)"
+    escalation_contact: risk-oncall@firm.com
+
+  # Data freshness
+  freshness:
+    last_loaded: "2026-01-28T05:45:00Z"
+    refresh_schedule: "Daily at 05:30 ET"
+    source_system: "Proteus Risk Engine"
+    upstream_dependencies:
+      - "positions.eod"
+      - "market-data.eod"
+      - "reference.security"
+
   source_binding:
     type: oracle
     config:

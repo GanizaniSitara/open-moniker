@@ -67,6 +67,11 @@ class DescribeResponse(BaseModel):
     classification: str | None = None
     tags: list[str] = []
 
+    # Data governance fields
+    data_quality: dict[str, Any] | None = None
+    sla: dict[str, Any] | None = None
+    freshness: dict[str, Any] | None = None
+
 
 class LineageResponse(BaseModel):
     moniker: str
@@ -682,6 +687,41 @@ async def describe_moniker(
     moniker_str = f"moniker://{path}"
 
     result = await _service.describe(moniker_str, caller)
+
+    # Build data quality dict if present
+    data_quality = None
+    if result.node and result.node.data_quality:
+        dq = result.node.data_quality
+        data_quality = {
+            "dq_owner": dq.dq_owner,
+            "quality_score": dq.quality_score,
+            "validation_rules": list(dq.validation_rules),
+            "known_issues": list(dq.known_issues),
+            "last_validated": dq.last_validated,
+        }
+
+    # Build SLA dict if present
+    sla = None
+    if result.node and result.node.sla:
+        s = result.node.sla
+        sla = {
+            "freshness": s.freshness,
+            "availability": s.availability,
+            "support_hours": s.support_hours,
+            "escalation_contact": s.escalation_contact,
+        }
+
+    # Build freshness dict if present
+    freshness = None
+    if result.node and result.node.freshness:
+        f = result.node.freshness
+        freshness = {
+            "last_loaded": f.last_loaded,
+            "refresh_schedule": f.refresh_schedule,
+            "source_system": f.source_system,
+            "upstream_dependencies": list(f.upstream_dependencies),
+        }
+
     return DescribeResponse(
         path=result.path,
         display_name=result.node.display_name if result.node else None,
@@ -698,6 +738,9 @@ async def describe_moniker(
         source_type=result.source_type,
         classification=result.node.classification if result.node else None,
         tags=list(result.node.tags) if result.node else [],
+        data_quality=data_quality,
+        sla=sla,
+        freshness=freshness,
     )
 
 

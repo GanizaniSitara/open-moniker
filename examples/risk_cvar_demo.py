@@ -55,17 +55,73 @@ def run_demo():
     )
     client = MonikerClient(config=config)
 
-    # Demo 1: Describe the risk.cvar domain
+    # Demo 1: Describe the risk.cvar domain (basic info)
     print("\n" + "=" * 60)
-    print("1. Describe risk.cvar domain")
+    print("1. Describe risk.cvar domain - Basic Info")
     print("=" * 60)
     try:
         info = client.describe("risk.cvar")
-        print(f"   Display Name: {info.get('display_name')}")
-        print(f"   Description:  {info.get('description')}")
-        print(f"   Owner:        {info.get('ownership', {}).get('accountable_owner')}")
-        print(f"   Specialist:   {info.get('ownership', {}).get('data_specialist')}")
-        print(f"   Support:      {info.get('ownership', {}).get('support_channel')}")
+        print(f"   Display Name:    {info.get('display_name')}")
+        print(f"   Description:     {info.get('description')}")
+        print(f"   Classification:  {info.get('classification')}")
+        print(f"\n   Ownership:")
+        print(f"      Owner:        {info.get('ownership', {}).get('accountable_owner')}")
+        print(f"      Specialist:   {info.get('ownership', {}).get('data_specialist')}")
+        print(f"      Support:      {info.get('ownership', {}).get('support_channel')}")
+    except Exception as e:
+        print(f"   Error: {e}")
+
+    # Demo 1b: Data Governance - SLA, DQ, Freshness
+    print("\n" + "=" * 60)
+    print("1b. Data Governance - SLA, Quality, Freshness")
+    print("=" * 60)
+    try:
+        info = client.describe("risk.cvar")
+
+        # SLA information
+        sla = info.get('sla')
+        if sla:
+            print(f"\n   SLA Commitments:")
+            print(f"      Freshness:    {sla.get('freshness')}")
+            print(f"      Availability: {sla.get('availability')}")
+            print(f"      Support:      {sla.get('support_hours')}")
+            print(f"      Escalation:   {sla.get('escalation_contact')}")
+        else:
+            print(f"\n   SLA: Not defined")
+
+        # Data Quality
+        dq = info.get('data_quality')
+        if dq:
+            print(f"\n   Data Quality:")
+            print(f"      DQ Owner:     {dq.get('dq_owner')}")
+            print(f"      Score:        {dq.get('quality_score')}%")
+            print(f"      Last Check:   {dq.get('last_validated')}")
+            rules = dq.get('validation_rules', [])
+            if rules:
+                print(f"      Rules ({len(rules)}):")
+                for rule in rules[:3]:
+                    print(f"         - {rule}")
+            issues = dq.get('known_issues', [])
+            if issues:
+                print(f"      Known Issues ({len(issues)}):")
+                for issue in issues:
+                    print(f"         - {issue}")
+        else:
+            print(f"\n   Data Quality: Not defined")
+
+        # Freshness
+        fresh = info.get('freshness')
+        if fresh:
+            print(f"\n   Data Freshness:")
+            print(f"      Last Loaded:  {fresh.get('last_loaded')}")
+            print(f"      Schedule:     {fresh.get('refresh_schedule')}")
+            print(f"      Source:       {fresh.get('source_system')}")
+            deps = fresh.get('upstream_dependencies', [])
+            if deps:
+                print(f"      Depends on:   {', '.join(deps)}")
+        else:
+            print(f"\n   Freshness: Not defined")
+
     except Exception as e:
         print(f"   Error: {e}")
 
