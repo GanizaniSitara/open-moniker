@@ -20,7 +20,7 @@ if _EXTERNAL_DATA.exists() and str(_EXTERNAL_DATA) not in sys.path:
     sys.path.insert(0, str(_EXTERNAL_DATA))
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from pydantic import BaseModel
 
 from .auth import create_composite_authenticator, get_caller_identity, set_authenticator
@@ -173,6 +173,21 @@ class SampleDataResponse(BaseModel):
     row_count: int
     columns: list[str]
     data: list[dict[str, Any]]
+
+
+class TreeNodeResponse(BaseModel):
+    """A node in the catalog tree hierarchy."""
+    path: str
+    name: str
+    children: list["TreeNodeResponse"] = []
+    ownership: dict[str, Any] | None = None
+    source_type: str | None = None
+    has_source_binding: bool = False
+    description: str | None = None
+
+
+# Enable self-referencing in TreeNodeResponse
+TreeNodeResponse.model_rebuild()
 
 
 # Global service instance (initialized in lifespan)
@@ -1233,6 +1248,159 @@ async def get_sample_data(
     )
 
 
+@app.get("/tree/{path:path}", response_model=TreeNodeResponse)
+async def get_tree(
+    path: str,
+    depth: int | None = Query(default=None, description="Maximum depth to traverse"),
+):
+    """
+    Get the catalog tree structure starting from a path.
+
+    Returns a hierarchical view of the catalog with metadata at each node.
+    Useful for understanding the available data domains and their organization.
+    """
+    service = get_service()
+
+    def build_tree_node(node_path: str, current_depth: int = 0) -> TreeNodeResponse:
+        # Check depth limit
+        if depth is not None and current_depth > depth:
+            return None
+
+        # Get node info
+        node = service.registry.get(node_path)
+        if node is None:
+            return None
+
+        # Get name (last segment of path)
+        name = node_path.split("/")[-1] if "/" in node_path else node_path
+
+        # Get ownership
+        ownership = None
+        if node.ownership:
+            ownership = {
+                "accountable_owner": node.ownership.accountable_owner,
+                "data_specialist": node.ownership.data_specialist,
+                "support_channel": node.ownership.support_channel,
+            }
+            # Also include governance roles if set
+            if node.ownership.adop:
+                ownership["adop"] = node.ownership.adop
+            if node.ownership.ads:
+                ownership["ads"] = node.ownership.ads
+            if node.ownership.adal:
+                ownership["adal"] = node.ownership.adal
+
+        # Get source type
+        source_type = None
+        has_source_binding = False
+        if node.source_binding:
+            has_source_binding = True
+            source_type = node.source_binding.type.value
+
+        # Build children recursively
+        children = []
+        if depth is None or current_depth < depth:
+            child_paths = service.registry.children(node_path)
+            for child_name in child_paths:
+                child_path = f"{node_path}/{child_name}" if node_path else child_name
+                child_node = build_tree_node(child_path, current_depth + 1)
+                if child_node:
+                    children.append(child_node)
+
+        return TreeNodeResponse(
+            path=node_path,
+            name=name,
+            children=children,
+            ownership=ownership,
+            source_type=source_type,
+            has_source_binding=has_source_binding,
+            description=node.description,
+        )
+
+    tree = build_tree_node(path)
+    if tree is None:
+        raise HTTPException(status_code=404, detail=f"Path not found: {path}")
+
+    return tree
+
+
+@app.get("/tree", response_model=list[TreeNodeResponse])
+async def get_tree_root(
+    depth: int | None = Query(default=None, description="Maximum depth to traverse"),
+):
+    """
+    Get the catalog tree structure from the root.
+
+    Returns all top-level domains with their hierarchical structure.
+    """
+    service = get_service()
+
+    def build_tree_node(node_path: str, current_depth: int = 0) -> TreeNodeResponse:
+        # Check depth limit
+        if depth is not None and current_depth > depth:
+            return None
+
+        # Get node info
+        node = service.registry.get(node_path)
+        if node is None:
+            return None
+
+        # Get name (last segment of path)
+        name = node_path.split("/")[-1] if "/" in node_path else node_path
+
+        # Get ownership
+        ownership = None
+        if node.ownership:
+            ownership = {
+                "accountable_owner": node.ownership.accountable_owner,
+                "data_specialist": node.ownership.data_specialist,
+                "support_channel": node.ownership.support_channel,
+            }
+            if node.ownership.adop:
+                ownership["adop"] = node.ownership.adop
+            if node.ownership.ads:
+                ownership["ads"] = node.ownership.ads
+            if node.ownership.adal:
+                ownership["adal"] = node.ownership.adal
+
+        # Get source type
+        source_type = None
+        has_source_binding = False
+        if node.source_binding:
+            has_source_binding = True
+            source_type = node.source_binding.type.value
+
+        # Build children recursively
+        children = []
+        if depth is None or current_depth < depth:
+            child_paths = service.registry.children(node_path)
+            for child_name in child_paths:
+                child_path = f"{node_path}/{child_name}" if node_path else child_name
+                child_node = build_tree_node(child_path, current_depth + 1)
+                if child_node:
+                    children.append(child_node)
+
+        return TreeNodeResponse(
+            path=node_path,
+            name=name,
+            children=children,
+            ownership=ownership,
+            source_type=source_type,
+            has_source_binding=has_source_binding,
+            description=node.description,
+        )
+
+    # Get root-level nodes
+    root_children = service.registry.children("")
+    trees = []
+    for child_name in root_children:
+        tree = build_tree_node(child_name)
+        if tree:
+            trees.append(tree)
+
+    return trees
+
+
 @app.get("/")
 async def root():
     """Root endpoint with service info."""
@@ -1246,6 +1414,8 @@ async def root():
             "/list/{path}": "List children in catalog",
             "/describe/{path}": "Get metadata and ownership",
             "/lineage/{path}": "Get full ownership lineage",
+            "/tree/{path}": "Get hierarchical tree view with metadata",
+            "/tree": "Get all root-level domains as tree",
             # Data fetch endpoints (server executes query)
             "/fetch/{path}": "Fetch data (server executes query, returns data)",
             "/sample/{path}": "Get sample rows from a data source",
@@ -1254,6 +1424,7 @@ async def root():
             "/catalog": "List all catalog paths",
             "/telemetry/access": "POST - Report access telemetry from client",
             "/health": "Health check",
+            "/ui": "Web UI for browsing the catalog",
         },
         "ai_endpoints": {
             "/metadata/{path}": "Optimized for AI agents - includes semantic tags, relationships, cost indicators",
@@ -1261,6 +1432,203 @@ async def root():
         },
         "client_library": "pip install moniker-client",
     }
+
+
+# Simple HTML UI for tree visualization
+_UI_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moniker Catalog</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+            background: #1a1a2e; color: #eee; padding: 20px;
+            display: flex; height: 100vh;
+        }
+        .panel { background: #16213e; border-radius: 8px; padding: 16px; overflow: auto; }
+        .tree-panel { flex: 1; margin-right: 16px; }
+        .detail-panel { width: 400px; }
+        h1 { font-size: 18px; margin-bottom: 16px; color: #e94560; }
+        h2 { font-size: 14px; margin-bottom: 12px; color: #0f3460; background: #e94560; padding: 8px; border-radius: 4px; }
+
+        /* Tree styles */
+        .tree { font-size: 13px; line-height: 1.6; }
+        .tree ul { list-style: none; padding-left: 20px; }
+        .tree > ul { padding-left: 0; }
+        .tree li { position: relative; }
+        .tree li::before {
+            content: ''; position: absolute; left: -14px; top: 0;
+            border-left: 1px solid #444; height: 100%;
+        }
+        .tree li::after {
+            content: ''; position: absolute; left: -14px; top: 12px;
+            border-top: 1px solid #444; width: 10px;
+        }
+        .tree li:last-child::before { height: 12px; }
+        .tree > ul > li::before, .tree > ul > li::after { display: none; }
+
+        .node {
+            cursor: pointer; padding: 4px 8px; border-radius: 4px;
+            display: inline-block; transition: background 0.2s;
+        }
+        .node:hover { background: #0f3460; }
+        .node.selected { background: #e94560; color: white; }
+        .node-name { font-weight: 600; }
+        .node-badge {
+            font-size: 10px; padding: 2px 6px; border-radius: 3px;
+            margin-left: 6px; background: #0f3460;
+        }
+        .node-badge.source { background: #1e5128; }
+        .node-badge.owner { background: #4a0e0e; }
+
+        .toggle {
+            display: inline-block; width: 16px; text-align: center;
+            color: #666; cursor: pointer; user-select: none;
+        }
+        .toggle:hover { color: #e94560; }
+        .collapsed > ul { display: none; }
+        .collapsed > .node .toggle { transform: rotate(-90deg); }
+
+        /* Detail panel */
+        .detail-section { margin-bottom: 16px; }
+        .detail-section h3 { font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase; }
+        .detail-row { font-size: 13px; padding: 4px 0; border-bottom: 1px solid #222; }
+        .detail-row span:first-child { color: #888; }
+        .detail-row span:last-child { color: #4ecca3; float: right; }
+        .path-display {
+            font-family: monospace; font-size: 12px; background: #0f3460;
+            padding: 8px; border-radius: 4px; word-break: break-all; margin-bottom: 12px;
+        }
+        .empty { color: #666; font-style: italic; }
+
+        /* Loading */
+        .loading { text-align: center; padding: 40px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="panel tree-panel">
+        <h1>Moniker Catalog</h1>
+        <div id="tree" class="tree"><div class="loading">Loading...</div></div>
+    </div>
+    <div class="panel detail-panel">
+        <h2>Node Details</h2>
+        <div id="details"><p class="empty">Click a node to view details</p></div>
+    </div>
+
+    <script>
+        let selectedNode = null;
+
+        async function loadTree() {
+            const res = await fetch('/tree');
+            const data = await res.json();
+            document.getElementById('tree').innerHTML = '<ul>' + data.map(renderNode).join('') + '</ul>';
+        }
+
+        function renderNode(node) {
+            const hasChildren = node.children && node.children.length > 0;
+            const badges = [];
+            if (node.source_type) badges.push(`<span class="node-badge source">${node.source_type}</span>`);
+            if (node.ownership?.accountable_owner) {
+                const owner = node.ownership.accountable_owner.split('@')[0];
+                badges.push(`<span class="node-badge owner">${owner}</span>`);
+            }
+
+            return `
+                <li data-path="${node.path}" data-node='${JSON.stringify(node).replace(/'/g, "&#39;")}'>
+                    <span class="node" onclick="selectNode(this)">
+                        ${hasChildren ? '<span class="toggle" onclick="toggleNode(event, this)">▼</span>' : '<span class="toggle"></span>'}
+                        <span class="node-name">${node.name}/</span>
+                        ${badges.join('')}
+                    </span>
+                    ${hasChildren ? '<ul>' + node.children.map(renderNode).join('') + '</ul>' : ''}
+                </li>
+            `;
+        }
+
+        function toggleNode(e, el) {
+            e.stopPropagation();
+            el.closest('li').classList.toggle('collapsed');
+        }
+
+        function selectNode(el) {
+            if (selectedNode) selectedNode.classList.remove('selected');
+            el.classList.add('selected');
+            selectedNode = el;
+
+            const li = el.closest('li');
+            const node = JSON.parse(li.dataset.node);
+            showDetails(node);
+        }
+
+        function showDetails(node) {
+            const ownership = node.ownership || {};
+            const html = `
+                <div class="path-display">moniker://${node.path}</div>
+
+                <div class="detail-section">
+                    <h3>Basic Info</h3>
+                    ${detailRow('Name', node.name)}
+                    ${detailRow('Path', node.path)}
+                    ${detailRow('Description', node.description || '-')}
+                </div>
+
+                <div class="detail-section">
+                    <h3>Source</h3>
+                    ${detailRow('Has Binding', node.has_source_binding ? 'Yes' : 'No')}
+                    ${detailRow('Type', node.source_type || '-')}
+                </div>
+
+                <div class="detail-section">
+                    <h3>Ownership</h3>
+                    ${detailRow('Owner', ownership.accountable_owner || ownership.adop || '-')}
+                    ${detailRow('Specialist', ownership.data_specialist || ownership.ads || '-')}
+                    ${detailRow('Support', ownership.support_channel || '-')}
+                </div>
+
+                <div class="detail-section">
+                    <h3>Governance Roles</h3>
+                    ${detailRow('ADOP', ownership.adop || '-')}
+                    ${detailRow('ADS', ownership.ads || '-')}
+                    ${detailRow('ADAL', ownership.adal || '-')}
+                </div>
+
+                <div class="detail-section">
+                    <h3>API</h3>
+                    <div class="detail-row" style="border:none">
+                        <a href="/describe/${node.path}" target="_blank" style="color:#4ecca3">/describe/${node.path}</a>
+                    </div>
+                    ${node.has_source_binding ? `
+                        <div class="detail-row" style="border:none">
+                            <a href="/resolve/${node.path}" target="_blank" style="color:#4ecca3">/resolve/${node.path}</a>
+                        </div>
+                        <div class="detail-row" style="border:none">
+                            <a href="/metadata/${node.path}" target="_blank" style="color:#4ecca3">/metadata/${node.path}</a>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            document.getElementById('details').innerHTML = html;
+        }
+
+        function detailRow(label, value) {
+            return `<div class="detail-row"><span>${label}</span><span>${value}</span></div>`;
+        }
+
+        loadTree();
+    </script>
+</body>
+</html>
+"""
+
+
+@app.get("/ui", response_class=HTMLResponse)
+async def ui():
+    """Simple web UI for browsing the moniker catalog."""
+    return _UI_HTML
 
 
 def run():

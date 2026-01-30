@@ -48,11 +48,14 @@ from .client import (
     fetch,
     metadata,
     sample,
+    tree,
+    print_tree,
     # Result types
     FetchResult,
     MetadataResult,
     SampleResult,
     ResolvedSource,
+    TreeNode,
     # Exceptions
     MonikerError,
     ResolutionError,
@@ -77,11 +80,14 @@ __all__ = [
     "fetch",
     "metadata",
     "sample",
+    "tree",
+    "print_tree",
     # Result types
     "FetchResult",
     "MetadataResult",
     "SampleResult",
     "ResolvedSource",
+    "TreeNode",
     # Exceptions
     "MonikerError",
     "ResolutionError",
