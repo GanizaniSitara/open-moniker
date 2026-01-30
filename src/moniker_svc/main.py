@@ -175,6 +175,21 @@ class SampleDataResponse(BaseModel):
     data: list[dict[str, Any]]
 
 
+class TreeNodeResponse(BaseModel):
+    """A node in the catalog tree hierarchy."""
+    path: str
+    name: str
+    children: list["TreeNodeResponse"] = []
+    ownership: dict[str, Any] | None = None
+    source_type: str | None = None
+    has_source_binding: bool = False
+    description: str | None = None
+
+
+# Enable self-referencing in TreeNodeResponse
+TreeNodeResponse.model_rebuild()
+
+
 # Global service instance (initialized in lifespan)
 _service: MonikerService | None = None
 _telemetry_task: asyncio.Task | None = None
@@ -1233,6 +1248,159 @@ async def get_sample_data(
     )
 
 
+@app.get("/tree/{path:path}", response_model=TreeNodeResponse)
+async def get_tree(
+    path: str,
+    depth: int | None = Query(default=None, description="Maximum depth to traverse"),
+):
+    """
+    Get the catalog tree structure starting from a path.
+
+    Returns a hierarchical view of the catalog with metadata at each node.
+    Useful for understanding the available data domains and their organization.
+    """
+    service = get_service()
+
+    def build_tree_node(node_path: str, current_depth: int = 0) -> TreeNodeResponse:
+        # Check depth limit
+        if depth is not None and current_depth > depth:
+            return None
+
+        # Get node info
+        node = service.registry.get(node_path)
+        if node is None:
+            return None
+
+        # Get name (last segment of path)
+        name = node_path.split("/")[-1] if "/" in node_path else node_path
+
+        # Get ownership
+        ownership = None
+        if node.ownership:
+            ownership = {
+                "accountable_owner": node.ownership.accountable_owner,
+                "data_specialist": node.ownership.data_specialist,
+                "support_channel": node.ownership.support_channel,
+            }
+            # Also include governance roles if set
+            if node.ownership.adop:
+                ownership["adop"] = node.ownership.adop
+            if node.ownership.ads:
+                ownership["ads"] = node.ownership.ads
+            if node.ownership.adal:
+                ownership["adal"] = node.ownership.adal
+
+        # Get source type
+        source_type = None
+        has_source_binding = False
+        if node.source_binding:
+            has_source_binding = True
+            source_type = node.source_binding.type.value
+
+        # Build children recursively
+        children = []
+        if depth is None or current_depth < depth:
+            child_paths = service.registry.children(node_path)
+            for child_name in child_paths:
+                child_path = f"{node_path}/{child_name}" if node_path else child_name
+                child_node = build_tree_node(child_path, current_depth + 1)
+                if child_node:
+                    children.append(child_node)
+
+        return TreeNodeResponse(
+            path=node_path,
+            name=name,
+            children=children,
+            ownership=ownership,
+            source_type=source_type,
+            has_source_binding=has_source_binding,
+            description=node.description,
+        )
+
+    tree = build_tree_node(path)
+    if tree is None:
+        raise HTTPException(status_code=404, detail=f"Path not found: {path}")
+
+    return tree
+
+
+@app.get("/tree", response_model=list[TreeNodeResponse])
+async def get_tree_root(
+    depth: int | None = Query(default=None, description="Maximum depth to traverse"),
+):
+    """
+    Get the catalog tree structure from the root.
+
+    Returns all top-level domains with their hierarchical structure.
+    """
+    service = get_service()
+
+    def build_tree_node(node_path: str, current_depth: int = 0) -> TreeNodeResponse:
+        # Check depth limit
+        if depth is not None and current_depth > depth:
+            return None
+
+        # Get node info
+        node = service.registry.get(node_path)
+        if node is None:
+            return None
+
+        # Get name (last segment of path)
+        name = node_path.split("/")[-1] if "/" in node_path else node_path
+
+        # Get ownership
+        ownership = None
+        if node.ownership:
+            ownership = {
+                "accountable_owner": node.ownership.accountable_owner,
+                "data_specialist": node.ownership.data_specialist,
+                "support_channel": node.ownership.support_channel,
+            }
+            if node.ownership.adop:
+                ownership["adop"] = node.ownership.adop
+            if node.ownership.ads:
+                ownership["ads"] = node.ownership.ads
+            if node.ownership.adal:
+                ownership["adal"] = node.ownership.adal
+
+        # Get source type
+        source_type = None
+        has_source_binding = False
+        if node.source_binding:
+            has_source_binding = True
+            source_type = node.source_binding.type.value
+
+        # Build children recursively
+        children = []
+        if depth is None or current_depth < depth:
+            child_paths = service.registry.children(node_path)
+            for child_name in child_paths:
+                child_path = f"{node_path}/{child_name}" if node_path else child_name
+                child_node = build_tree_node(child_path, current_depth + 1)
+                if child_node:
+                    children.append(child_node)
+
+        return TreeNodeResponse(
+            path=node_path,
+            name=name,
+            children=children,
+            ownership=ownership,
+            source_type=source_type,
+            has_source_binding=has_source_binding,
+            description=node.description,
+        )
+
+    # Get root-level nodes
+    root_children = service.registry.children("")
+    trees = []
+    for child_name in root_children:
+        tree = build_tree_node(child_name)
+        if tree:
+            trees.append(tree)
+
+    return trees
+
+
 @app.get("/")
 async def root():
     """Root endpoint with service info."""
@@ -1246,6 +1414,8 @@ async def root():
             "/list/{path}": "List children in catalog",
             "/describe/{path}": "Get metadata and ownership",
             "/lineage/{path}": "Get full ownership lineage",
+            "/tree/{path}": "Get hierarchical tree view with metadata",
+            "/tree": "Get all root-level domains as tree",
             # Data fetch endpoints (server executes query)
             "/fetch/{path}": "Fetch data (server executes query, returns data)",
             "/sample/{path}": "Get sample rows from a data source",

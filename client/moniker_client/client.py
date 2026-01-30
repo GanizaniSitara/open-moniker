@@ -86,6 +86,73 @@ class SampleResult:
 
 
 @dataclass
+class TreeNode:
+    """A node in the moniker tree hierarchy."""
+    path: str
+    name: str
+    children: list["TreeNode"] = field(default_factory=list)
+    ownership: dict[str, Any] | None = None
+    source_type: str | None = None
+    has_source_binding: bool = False
+    description: str | None = None
+
+    def print(
+        self,
+        indent: str = "",
+        is_last: bool = True,
+        show_ownership: bool = True,
+        show_source: bool = True,
+        _is_root: bool = True,
+    ) -> str:
+        """
+        Return a string representation of this tree node and its children.
+
+        Args:
+            indent: Current indentation prefix
+            is_last: Whether this is the last child of parent
+            show_ownership: Include ownership annotations
+            show_source: Include source type annotations
+        """
+        lines = []
+
+        # Build the line prefix
+        if not _is_root:
+            connector = "└── " if is_last else "├── "
+        else:
+            connector = ""
+
+        # Build annotations
+        annotations = []
+        if show_ownership and self.ownership:
+            owner = self.ownership.get("accountable_owner") or self.ownership.get("adop")
+            if owner:
+                annotations.append(f"owner: {owner}")
+        if show_source and self.source_type:
+            annotations.append(f"source: {self.source_type}")
+
+        annotation_str = f"  [{', '.join(annotations)}]" if annotations else ""
+
+        # Add this node
+        lines.append(f"{indent}{connector}{self.name}/{annotation_str}")
+
+        # Prepare indent for children
+        if not _is_root:
+            child_indent = indent + ("    " if is_last else "│   ")
+        else:
+            child_indent = ""
+
+        # Add children
+        for i, child in enumerate(self.children):
+            is_last_child = (i == len(self.children) - 1)
+            lines.append(child.print(child_indent, is_last_child, show_ownership, show_source, _is_root=False))
+
+        return "\n".join(lines)
+
+    def __str__(self) -> str:
+        return self.print()
+
+
+@dataclass
 class ResolvedSource:
     """Resolved source information from the service."""
     moniker: str
@@ -219,6 +286,38 @@ class Moniker:
     def children(self) -> list[str]:
         """List child paths."""
         return self.client.list_children(self._path)
+
+    def tree(self, depth: int | None = None) -> TreeNode:
+        """
+        Get the tree structure starting from this moniker.
+
+        Args:
+            depth: Maximum depth to traverse (None for unlimited)
+
+        Returns:
+            TreeNode representing this moniker and its descendants
+        """
+        return self.client.tree(self._path, depth=depth)
+
+    def print_tree(
+        self,
+        depth: int | None = None,
+        show_ownership: bool = True,
+        show_source: bool = True,
+    ) -> str:
+        """
+        Get a human-readable tree representation.
+
+        Args:
+            depth: Maximum depth to traverse (None for unlimited)
+            show_ownership: Include ownership annotations
+            show_source: Include source type annotations
+
+        Returns:
+            Formatted tree string
+        """
+        tree = self.tree(depth=depth)
+        return tree.print(show_ownership=show_ownership, show_source=show_source)
 
 
 @dataclass
@@ -525,6 +624,48 @@ class MonikerClient:
             data=data["data"],
         )
 
+    def tree(self, moniker: str = "", depth: int | None = None) -> TreeNode:
+        """
+        Get the tree structure of the catalog starting from a path.
+
+        Args:
+            moniker: Starting path (empty for root)
+            depth: Maximum depth to traverse (None for unlimited)
+
+        Returns:
+            TreeNode representing the hierarchy with metadata
+        """
+        if moniker and not moniker.startswith("moniker://"):
+            moniker = f"moniker://{moniker}"
+
+        path = moniker.replace("moniker://", "") if moniker else ""
+
+        params = {}
+        if depth is not None:
+            params["depth"] = depth
+
+        with httpx.Client(timeout=self.config.timeout) as client:
+            response = client.get(
+                f"{self.config.service_url}/tree/{path}" if path else f"{self.config.service_url}/tree",
+                headers=self._get_headers(),
+                params=params if params else None,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        def build_tree(node_data: dict) -> TreeNode:
+            return TreeNode(
+                path=node_data["path"],
+                name=node_data["name"],
+                children=[build_tree(c) for c in node_data.get("children", [])],
+                ownership=node_data.get("ownership"),
+                source_type=node_data.get("source_type"),
+                has_source_binding=node_data.get("has_source_binding", False),
+                description=node_data.get("description"),
+            )
+
+        return build_tree(data)
+
     def _resolve(self, moniker: str) -> ResolvedSource:
         """Internal resolve with caching."""
         # Check cache
@@ -687,3 +828,42 @@ def sample(moniker: str, limit: int = 5) -> SampleResult:
         print(result.data)  # Sample rows
     """
     return _get_client().sample(moniker, limit=limit)
+
+
+def tree(moniker: str = "", depth: int | None = None) -> TreeNode:
+    """
+    Get the tree structure of the catalog.
+
+    Usage:
+        from moniker_client import tree
+
+        # Get full tree
+        t = tree()
+        print(t)  # Pretty-printed tree
+
+        # Get tree from specific path
+        t = tree("risk")
+        print(t.print(show_ownership=True))
+
+        # Limit depth
+        t = tree(depth=2)
+    """
+    return _get_client().tree(moniker, depth=depth)
+
+
+def print_tree(
+    moniker: str = "",
+    depth: int | None = None,
+    show_ownership: bool = True,
+    show_source: bool = True,
+) -> str:
+    """
+    Get a human-readable tree representation of the catalog.
+
+    Usage:
+        from moniker_client import print_tree
+        print(print_tree())  # Full tree
+        print(print_tree("commodities", depth=3))  # Subtree
+    """
+    t = tree(moniker, depth=depth)
+    return t.print(show_ownership=show_ownership, show_source=show_source)
