@@ -144,6 +144,7 @@ python demo.py
 
 ### Run All Tests
 
+**Linux/Mac:**
 ```bash
 # Set up Python path
 export PYTHONPATH="$PWD/src:$PWD/client:$PWD/external/moniker-data/src"
@@ -156,6 +157,36 @@ python -m pytest external/moniker-tests/tests/ -v
 
 # Run both
 python -m pytest tests/ external/moniker-tests/tests/ -v
+```
+
+**Windows (PowerShell):**
+```powershell
+# Set up Python path
+$env:PYTHONPATH="$PWD\src;$PWD\client;$PWD\external\moniker-data\src"
+
+# Run main test suite (68 tests)
+python -m pytest tests/ -v
+
+# Run external integration tests (37 tests)
+python -m pytest external/moniker-tests/tests/ -v
+
+# Run both
+python -m pytest tests/ external/moniker-tests/tests/ -v
+```
+
+**Windows (CMD):**
+```cmd
+:: Set up Python path
+set PYTHONPATH=%CD%\src;%CD%\client;%CD%\external\moniker-data\src
+
+:: Run main test suite (68 tests)
+python -m pytest tests/ -v
+
+:: Run external integration tests (37 tests)
+python -m pytest external\moniker-tests\tests\ -v
+
+:: Run both
+python -m pytest tests/ external\moniker-tests\tests\ -v
 ```
 
 ### Test the Client API Interactively
@@ -178,12 +209,28 @@ print(parent.path)      # risk.cvar/DESK_A/20240115
 
 ### Test the API Endpoints
 
+**Linux/Mac:**
 ```bash
 # Start the server
 PYTHONPATH="$PWD/src:$PWD/external/moniker-data/src" uvicorn moniker_svc.main:app --reload
+```
 
-# In another terminal, test endpoints:
+**Windows (PowerShell):**
+```powershell
+# Start the server
+$env:PYTHONPATH="$PWD\src;$PWD\external\moniker-data\src"
+uvicorn moniker_svc.main:app --reload
+```
 
+**Windows (CMD):**
+```cmd
+:: Start the server
+set PYTHONPATH=%CD%\src;%CD%\external\moniker-data\src
+uvicorn moniker_svc.main:app --reload
+```
+
+**Test endpoints (all platforms):**
+```bash
 # Resolve a moniker
 curl http://localhost:8000/resolve/risk.cvar/DESK_A/20240115/ALL
 
@@ -203,7 +250,6 @@ curl http://localhost:8000/list/risk
 ### Test Coverage
 
 ```bash
-# Run with coverage report
 python -m pytest tests/ --cov=src/moniker_svc --cov-report=term-missing
 ```
 
