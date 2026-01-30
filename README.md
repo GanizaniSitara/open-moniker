@@ -72,13 +72,49 @@ Service runs at http://localhost:8000
 ```bash
 # Install the client library
 pip install -e client/
-
-# In Python
-python
 ```
 
+#### Object-Oriented API (Recommended)
+
 ```python
-from moniker_client import read, describe, lineage
+from moniker_client import Moniker
+
+# Create a moniker object
+m = Moniker("risk.cvar/DESK_A/20240115/ALL")
+
+# Get AI-discoverable metadata
+meta = m.metadata()
+print(meta.semantic_tags)      # ['risk', 'cvar', 'var', 'portfolio-risk']
+print(meta.cost_indicators)    # {'row_estimate': 50000, 'query_complexity': 'medium'}
+print(meta.description)        # Human-readable description
+
+# Fetch data (server-side execution)
+result = m.fetch(limit=100)
+print(result.columns)          # Column names
+print(result.data)             # List of row dicts
+print(result.execution_time_ms)
+
+# Quick sample (lightweight preview)
+preview = m.sample(5)
+print(preview.data)
+
+# Read data (client-side execution via adapter)
+data = m.read()
+
+# Get ownership info
+info = m.describe()
+print(info['ownership']['accountable_owner'])
+
+# Navigate the hierarchy
+parent = m.parent()
+child = m / "subpath"          # Using / operator
+children = m.children()        # List child paths
+```
+
+#### Functional API (Also Available)
+
+```python
+from moniker_client import read, describe, fetch, metadata, sample
 
 # Read data
 data = read("market-data/prices/equity/AAPL")
@@ -86,10 +122,15 @@ data = read("market-data/prices/equity/AAPL")
 # Get ownership info
 info = describe("market-data/prices/equity")
 print(f"Owner: {info['ownership']['accountable_owner']}")
-print(f"Support: {info['ownership']['support_channel']}")
 
-# Get full lineage
-lin = lineage("market-data/prices/equity/AAPL")
+# Server-side fetch
+result = fetch("risk.cvar/DESK_A/20240115/ALL", limit=100)
+
+# AI metadata
+meta = metadata("risk.cvar")
+
+# Quick sample
+preview = sample("govies.treasury/US/10Y/ALL")
 ```
 
 ### Run the Demo
@@ -97,6 +138,73 @@ lin = lineage("market-data/prices/equity/AAPL")
 ```bash
 pip install colorama
 python demo.py
+```
+
+## Testing
+
+### Run All Tests
+
+```bash
+# Set up Python path
+export PYTHONPATH="$PWD/src:$PWD/client:$PWD/external/moniker-data/src"
+
+# Run main test suite (68 tests)
+python -m pytest tests/ -v
+
+# Run external integration tests (37 tests)
+python -m pytest external/moniker-tests/tests/ -v
+
+# Run both
+python -m pytest tests/ external/moniker-tests/tests/ -v
+```
+
+### Test the Client API Interactively
+
+```python
+# Test Moniker object creation and navigation
+from moniker_client import Moniker
+
+m = Moniker("risk.cvar/DESK_A/20240115/ALL")
+print(m.path)           # risk.cvar/DESK_A/20240115/ALL
+print(m.uri)            # moniker://risk.cvar/DESK_A/20240115/ALL
+
+# Navigate
+child = m / "subpath"
+print(child.path)       # risk.cvar/DESK_A/20240115/ALL/subpath
+
+parent = m.parent()
+print(parent.path)      # risk.cvar/DESK_A/20240115
+```
+
+### Test the API Endpoints
+
+```bash
+# Start the server
+PYTHONPATH="$PWD/src:$PWD/external/moniker-data/src" uvicorn moniker_svc.main:app --reload
+
+# In another terminal, test endpoints:
+
+# Resolve a moniker
+curl http://localhost:8000/resolve/risk.cvar/DESK_A/20240115/ALL
+
+# Get AI-discoverable metadata
+curl http://localhost:8000/metadata/risk.cvar
+
+# Get sample data
+curl http://localhost:8000/sample/risk.cvar
+
+# Fetch data (server-side execution)
+curl "http://localhost:8000/fetch/risk.cvar/DESK_A/20240115/USD?limit=10"
+
+# List available paths
+curl http://localhost:8000/list/risk
+```
+
+### Test Coverage
+
+```bash
+# Run with coverage report
+python -m pytest tests/ --cov=src/moniker_svc --cov-report=term-missing
 ```
 
 ## Configuration
@@ -412,7 +520,7 @@ prices.equity:
 ```
 open-moniker-svc/
 ├── src/moniker_svc/           # Resolution Service
-│   ├── main.py                # FastAPI application
+│   ├── main.py                # FastAPI application + API endpoints
 │   ├── service.py             # Core resolution logic
 │   ├── catalog/               # Hierarchy + ownership
 │   │   ├── types.py           # Ownership, SourceBinding, CatalogNode
@@ -429,7 +537,7 @@ open-moniker-svc/
 │   └── cache/                 # In-memory cache
 │
 ├── client/moniker_client/     # Python Client Library
-│   ├── client.py              # MonikerClient, read(), describe()
+│   ├── client.py              # Moniker, MonikerClient, read(), fetch(), etc.
 │   ├── config.py              # ClientConfig
 │   └── adapters/              # Direct source connections
 │       ├── snowflake.py
@@ -437,6 +545,21 @@ open-moniker-svc/
 │       ├── rest.py
 │       ├── bloomberg.py
 │       └── ...
+│
+├── external/                  # External packages (for separate repos)
+│   ├── moniker-data/          # Mock adapters and test fixtures
+│   │   └── src/moniker_data/
+│   │       ├── adapters/      # MockOracleAdapter, MockSnowflakeAdapter, etc.
+│   │       ├── fixtures/      # Sample data generators
+│   │       └── schemas/       # JSON Schema contracts
+│   │
+│   └── moniker-tests/         # Integration tests
+│       └── tests/
+│           ├── risk/          # CVaR risk tests
+│           ├── govies/        # Treasury tests
+│           ├── rates/         # Swap rate tests
+│           ├── mortgages/     # MBS pool tests
+│           └── commods/       # Commodity tests
 │
 ├── examples/                  # Usage examples for notebooks
 ├── tests/                     # Unit tests
