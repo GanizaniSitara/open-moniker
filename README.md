@@ -5,16 +5,20 @@ A unified data access layer for enterprise data governance. Canonical identifica
 ## Example: AAPL Price Time Series
 
 ```python
-from moniker_client import read
+from moniker_client import Moniker
 
-# Fetch today's AAPL prices
-data = read("prices.equity/AAPL")
+# Create a moniker for AAPL equity prices
+m = Moniker("prices.equity/AAPL")
+
+# Fetch today's prices
+data = m.fetch()
 
 # Fetch historical data for a specific date
-historical = read("prices.equity/AAPL@20260115")
+m_hist = Moniker("prices.equity/AAPL@20260115")
+historical = m_hist.fetch()
 
-# Get the latest available snapshot
-latest = read("prices.equity/AAPL@latest")
+# Get sample data (quick preview)
+sample = m.sample(limit=5)
 ```
 
 **What happens under the hood:**
@@ -110,27 +114,7 @@ curl http://localhost:8050/
 
 ## Using the Client Library
 
-### Simple Read API
-
-```python
-from moniker_client import read, describe, lineage
-
-# Read data - returns dict or DataFrame
-data = read("prices.equity/AAPL")
-data = read("prices.equity/AAPL@20260115")      # Historical date
-data = read("prices.equity/AAPL@latest")        # Latest snapshot
-
-# Get metadata and ownership
-info = describe("prices.equity/AAPL")
-print(info["ownership"]["accountable_owner"])   # market-data-governance@firm.com
-print(info["ownership"]["support_channel"])     # #market-data
-
-# Trace data lineage
-lin = lineage("prices.equity/AAPL")
-print(lin["path_hierarchy"])                    # ['prices', 'prices.equity', ...]
-```
-
-### Object-Oriented API
+### Moniker Class (Recommended)
 
 ```python
 from moniker_client import Moniker
@@ -149,22 +133,51 @@ print(result.data)            # [{'portfolio_id': 'DESK_A', ...}, ...]
 meta = m.metadata()
 print(meta.semantic_tags)     # ['risk', 'cvar', 'portfolio-risk']
 print(meta.cost_indicators)   # {'row_estimate': 50000}
+
+# Navigate to child paths
+child = m / "DESK_A"          # Creates Moniker("risk.cvar/DESK_A")
+child_data = child.fetch()
+```
+
+### Functional API
+
+```python
+from moniker_client import fetch, describe, lineage, sample
+
+# Fetch data
+data = fetch("prices.equity/AAPL")
+data = fetch("prices.equity/AAPL@20260115")     # Historical date
+data = fetch("prices.equity/AAPL@latest")       # Latest snapshot
+
+# Get metadata and ownership
+info = describe("prices.equity/AAPL")
+print(info["ownership"]["accountable_owner"])   # market-data-governance@firm.com
+print(info["ownership"]["support_channel"])     # #market-data
+
+# Trace data lineage
+lin = lineage("prices.equity/AAPL")
+print(lin["path_hierarchy"])                    # ['prices', 'prices.equity', ...]
+
+# Quick sample
+preview = sample("risk.cvar", limit=5)
 ```
 
 ### Version and Namespace Syntax
 
 ```python
+from moniker_client import Moniker
+
 # Date versions (YYYYMMDD format)
-read("prices.equity/AAPL@20260115")
+m = Moniker("prices.equity/AAPL@20260115")
 
 # Special versions
-read("prices.equity/AAPL@latest")
+m = Moniker("prices.equity/AAPL@latest")
 
 # User namespace (for user-specific views)
-read("user@analytics.risk/views/my-watchlist")
+m = Moniker("user@analytics.risk/views/my-watchlist")
 
 # Schema revision
-read("risk.cvar/DESK_A@20260115/v2")
+m = Moniker("risk.cvar/DESK_A@20260115/v2")
 ```
 
 ## Run Tests
