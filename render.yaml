@@ -1,0 +1,29 @@
+# Render.com deployment configuration
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: moniker-svc
+    runtime: python
+    plan: free  # or starter, standard, etc.
+
+    # Build settings
+    buildCommand: |
+      pip install -r requirements.txt
+
+    # Start command
+    startCommand: |
+      PYTHONPATH=src:external/moniker-data/src uvicorn moniker_svc.main:app --host 0.0.0.0 --port $PORT
+
+    # Environment variables
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: PYTHONPATH
+        value: src:external/moniker-data/src
+
+    # Health check
+    healthCheckPath: /health
+
+    # Auto-deploy on push to main
+    autoDeploy: true

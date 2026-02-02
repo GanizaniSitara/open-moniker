@@ -183,6 +183,39 @@ Browse the catalog visually at **http://localhost:8000/ui**
 - Click nodes to see ownership, source type, governance roles
 - Links to API endpoints for each node
 
+## Deploy to Render.com
+
+**Option 1: One-click deploy**
+1. Fork this repo
+2. Go to [render.com/new](https://render.com/new)
+3. Connect your GitHub repo
+4. Render auto-detects `render.yaml` and deploys
+
+**Option 2: Manual setup**
+1. New → Web Service → Connect repo
+2. Settings:
+   - **Runtime**: Python
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `PYTHONPATH=src:external/moniker-data/src uvicorn moniker_svc.main:app --host 0.0.0.0 --port $PORT`
+3. Add environment variable: `PYTHON_VERSION=3.11`
+
+Once deployed, access:
+- **Web UI**: `https://your-app.onrender.com/ui`
+- **API docs**: `https://your-app.onrender.com/docs`
+- **Health check**: `https://your-app.onrender.com/health`
+
+**Test the deployed API:**
+```bash
+# Get the tree structure
+curl https://your-app.onrender.com/tree
+
+# Fetch sample data
+curl https://your-app.onrender.com/sample/risk.cvar
+
+# Run tests against deployed instance
+MONIKER_SERVICE_URL=https://your-app.onrender.com python -m pytest external/moniker-tests/tests/ -v
+```
+
 ## License
 
 MIT
