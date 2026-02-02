@@ -2,56 +2,6 @@
 
 A unified data access layer for enterprise data governance. Canonical identification for all firm data assets with hierarchical ownership and access telemetry.
 
-## Example: AAPL Price Time Series
-
-```python
-from moniker_client import Moniker
-
-# Create a moniker for AAPL equity prices
-m = Moniker("prices.equity/AAPL")
-
-# Fetch today's prices
-data = m.fetch()
-
-# Fetch historical data for a specific date
-m_hist = Moniker("prices.equity/AAPL@20260115")
-historical = m_hist.fetch()
-
-# Get sample data (quick preview)
-sample = m.sample(limit=5)
-```
-
-**What happens under the hood:**
-
-1. Client calls `GET /resolve/prices.equity/AAPL`
-2. Service returns connection info + query template
-3. Client executes query against Snowflake/Oracle/etc
-4. Data returned as pandas DataFrame or dict
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Your Code                                                      │
-│    data = read("prices.equity/AAPL@20260115")                   │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ GET /resolve/prices.equity/AAPL@20260115
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  Moniker Service                                                │
-│    Returns: {                                                   │
-│      "source_type": "snowflake",                                │
-│      "connection": {"account": "firm.snowflake"},               │
-│      "query": "SELECT * FROM PRICES WHERE symbol='AAPL'         │
-│               AND trade_date = TO_DATE('20260115','YYYYMMDD')"  │
-│    }                                                            │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ Client executes query
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  Snowflake                                                      │
-│    → Returns price data                                         │
-└─────────────────────────────────────────────────────────────────┘
-```
-
 ## Architecture
 
 ```
