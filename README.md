@@ -114,70 +114,36 @@ curl http://localhost:8050/
 
 ## Using the Client Library
 
-### Moniker Class (Recommended)
-
 ```python
 from moniker_client import Moniker
 
-# Navigate the catalog
-m = Moniker("risk.cvar")
-print(m.describe())           # Ownership, documentation, governance roles
-print(m.children())           # ['DESK_A', 'DESK_B', ...]
+# Create a moniker for AAPL equity prices
+m = Moniker("prices.equity/AAPL")
 
 # Fetch data
-result = m.fetch(limit=10)
-print(result.columns)         # ['portfolio_id', 'currency', 'cvar_95', ...]
-print(result.data)            # [{'portfolio_id': 'DESK_A', ...}, ...]
+data = m.fetch()
+print(data.columns)           # ['symbol', 'open', 'high', 'low', 'close', 'volume']
+print(data.data)              # [{'symbol': 'AAPL', 'close': 187.50, ...}]
 
-# AI-friendly metadata
-meta = m.metadata()
-print(meta.semantic_tags)     # ['risk', 'cvar', 'portfolio-risk']
-print(meta.cost_indicators)   # {'row_estimate': 50000}
-
-# Navigate to child paths
-child = m / "DESK_A"          # Creates Moniker("risk.cvar/DESK_A")
-child_data = child.fetch()
-```
-
-### Functional API
-
-```python
-from moniker_client import fetch, describe, lineage, sample
-
-# Fetch data
-data = fetch("prices.equity/AAPL")
-data = fetch("prices.equity/AAPL@20260115")     # Historical date
-data = fetch("prices.equity/AAPL@latest")       # Latest snapshot
-
-# Get metadata and ownership
-info = describe("prices.equity/AAPL")
+# Get ownership and metadata
+info = m.describe()
 print(info["ownership"]["accountable_owner"])   # market-data-governance@firm.com
 print(info["ownership"]["support_channel"])     # #market-data
 
 # Trace data lineage
-lin = lineage("prices.equity/AAPL")
+lin = m.lineage()
 print(lin["path_hierarchy"])                    # ['prices', 'prices.equity', ...]
 
+# Historical data with date version
+m_hist = Moniker("prices.equity/AAPL@20260115")
+historical = m_hist.fetch()
+
 # Quick sample
-preview = sample("risk.cvar", limit=5)
-```
+preview = m.sample(limit=5)
 
-### Version and Namespace Syntax
-
-```python
-from moniker_client import Moniker
-
-# Date versions (YYYYMMDD format)
-m = Moniker("prices.equity/AAPL@20260115")
-
-# Special versions
-m = Moniker("prices.equity/AAPL@latest")
-
-# User namespace (for user-specific views)
-m = Moniker("user@analytics.risk/views/my-watchlist")
-
-# Schema revision
-m = Moniker("risk.cvar/DESK_A@20260115/v2")
+# Navigate to children
+m_prices = Moniker("prices.equity")
+print(m_prices.children())    # ['AAPL', 'MSFT', 'GOOGL', ...]
 ```
 
 ## Run Tests
