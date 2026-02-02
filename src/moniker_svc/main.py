@@ -1259,7 +1259,8 @@ async def get_tree(
     Returns a hierarchical view of the catalog with metadata at each node.
     Useful for understanding the available data domains and their organization.
     """
-    service = get_service()
+    if not _service:
+        raise HTTPException(status_code=503, detail="Service not initialized")
 
     def build_tree_node(node_path: str, current_depth: int = 0) -> TreeNodeResponse:
         # Check depth limit
@@ -1267,7 +1268,7 @@ async def get_tree(
             return None
 
         # Get node info
-        node = service.registry.get(node_path)
+        node = _service.catalog.get(node_path)
         if node is None:
             return None
 
@@ -1295,14 +1296,13 @@ async def get_tree(
         has_source_binding = False
         if node.source_binding:
             has_source_binding = True
-            source_type = node.source_binding.type.value
+            source_type = node.source_binding.source_type.value
 
         # Build children recursively
         children = []
         if depth is None or current_depth < depth:
-            child_paths = service.registry.children(node_path)
-            for child_name in child_paths:
-                child_path = f"{node_path}/{child_name}" if node_path else child_name
+            child_paths = _service.catalog.children_paths(node_path)
+            for child_path in child_paths:
                 child_node = build_tree_node(child_path, current_depth + 1)
                 if child_node:
                     children.append(child_node)
@@ -1333,7 +1333,8 @@ async def get_tree_root(
 
     Returns all top-level domains with their hierarchical structure.
     """
-    service = get_service()
+    if not _service:
+        raise HTTPException(status_code=503, detail="Service not initialized")
 
     def build_tree_node(node_path: str, current_depth: int = 0) -> TreeNodeResponse:
         # Check depth limit
@@ -1341,7 +1342,7 @@ async def get_tree_root(
             return None
 
         # Get node info
-        node = service.registry.get(node_path)
+        node = _service.catalog.get(node_path)
         if node is None:
             return None
 
@@ -1368,14 +1369,13 @@ async def get_tree_root(
         has_source_binding = False
         if node.source_binding:
             has_source_binding = True
-            source_type = node.source_binding.type.value
+            source_type = node.source_binding.source_type.value
 
         # Build children recursively
         children = []
         if depth is None or current_depth < depth:
-            child_paths = service.registry.children(node_path)
-            for child_name in child_paths:
-                child_path = f"{node_path}/{child_name}" if node_path else child_name
+            child_paths = _service.catalog.children_paths(node_path)
+            for child_path in child_paths:
                 child_node = build_tree_node(child_path, current_depth + 1)
                 if child_node:
                     children.append(child_node)
@@ -1391,10 +1391,10 @@ async def get_tree_root(
         )
 
     # Get root-level nodes
-    root_children = service.registry.children("")
+    root_children = _service.catalog.children_paths("")
     trees = []
-    for child_name in root_children:
-        tree = build_tree_node(child_name)
+    for child_path in root_children:
+        tree = build_tree_node(child_path)
         if tree:
             trees.append(tree)
 
