@@ -1590,6 +1590,8 @@ _LANDING_HTML = """
             transition: filter 0.2s;
         }
         .card a:hover { filter: brightness(0.9); }
+        .card.docs a { background: var(--c-olive); }
+        .card.api a { background: var(--c-teal); }
         .section-title {
             font-size: var(--fs-800);
             color: var(--c-navy);
@@ -1639,22 +1641,22 @@ _LANDING_HTML = """
 
         <h3 class="section-title">API Documentation</h3>
         <div class="grid">
-            <div class="card">
+            <div class="card docs">
                 <h2>Swagger UI</h2>
                 <p>Interactive API documentation with try-it-out functionality.</p>
                 <a href="/docs">Open Swagger</a>
             </div>
-            <div class="card">
+            <div class="card docs">
                 <h2>ReDoc</h2>
                 <p>Clean, readable API reference documentation.</p>
                 <a href="/redoc">Open ReDoc</a>
             </div>
-            <div class="card">
+            <div class="card docs">
                 <h2>OpenAPI Schema</h2>
                 <p>Raw OpenAPI 3.0 specification in JSON format.</p>
                 <a href="/openapi.json">View Schema</a>
             </div>
-            <div class="card">
+            <div class="card docs">
                 <h2>Health Check</h2>
                 <p>Service health, telemetry stats, and cache metrics.</p>
                 <a href="/health">Check Health</a>
@@ -1663,17 +1665,17 @@ _LANDING_HTML = """
 
         <h3 class="section-title">API Endpoints</h3>
         <div class="grid">
-            <div class="card">
+            <div class="card api">
                 <h2>Catalog Tree</h2>
                 <p>View full catalog hierarchy as JSON tree structure.</p>
                 <a href="/tree">View Tree API</a>
             </div>
-            <div class="card">
+            <div class="card api">
                 <h2>Domains</h2>
                 <p>List all configured data domains with governance info.</p>
                 <a href="/domains">Domains API</a>
             </div>
-            <div class="card">
+            <div class="card api">
                 <h2>Catalog Paths</h2>
                 <p>List all registered catalog paths.</p>
                 <a href="/catalog">Catalog API</a>
