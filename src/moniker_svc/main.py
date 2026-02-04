@@ -1479,50 +1479,222 @@ async def get_tree_root(
     return trees
 
 
-@app.get("/", tags=["Health"])
+_LANDING_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moniker Service</title>
+    <style>
+        :root {
+            --font-sans: Arial, Helvetica, sans-serif;
+            --fs-900: 20px;
+            --fs-800: 18px;
+            --fs-700: 16px;
+            --fs-600: 14px;
+            --fs-500: 12px;
+            --fw-regular: 400;
+            --fw-bold: 700;
+            --sp-1: 4px;
+            --sp-2: 8px;
+            --sp-3: 12px;
+            --sp-4: 16px;
+            --sp-5: 24px;
+            --sp-6: 32px;
+            --radius-1: 4px;
+            --radius-2: 8px;
+            --c-navy: #022D5E;
+            --c-gray: #53565A;
+            --c-peacock: #005587;
+            --c-teal: #00897B;
+            --c-olive: #789D4A;
+            --c-cerulean: #008BCD;
+            --c-red: #D0002B;
+            --c-green: #009639;
+            --color-bg: #f8f9fa;
+            --color-surface: #ffffff;
+            --color-text: #111111;
+            --color-muted: var(--c-gray);
+            --border: rgba(83, 86, 90, 0.25);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-sans);
+            font-size: var(--fs-700);
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.45;
+        }
+        header {
+            background: var(--c-navy);
+            padding: var(--sp-5);
+            border-bottom: 3px solid var(--c-peacock);
+        }
+        header h1 {
+            font-size: var(--fs-900);
+            color: white;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header p {
+            color: rgba(255,255,255,0.8);
+            max-width: 1200px;
+            margin: var(--sp-2) auto 0;
+            font-size: var(--fs-600);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--sp-5);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--sp-5);
+            margin-top: var(--sp-5);
+        }
+        .card {
+            background: var(--color-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-2);
+            padding: var(--sp-5);
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .card h2 {
+            font-size: var(--fs-800);
+            color: var(--c-navy);
+            margin-bottom: var(--sp-2);
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+        }
+        .card p {
+            color: var(--color-muted);
+            font-size: var(--fs-600);
+            margin-bottom: var(--sp-4);
+        }
+        .card a {
+            display: inline-block;
+            background: var(--c-peacock);
+            color: white;
+            padding: var(--sp-2) var(--sp-4);
+            border-radius: var(--radius-1);
+            text-decoration: none;
+            font-weight: var(--fw-bold);
+            font-size: var(--fs-600);
+            transition: filter 0.2s;
+        }
+        .card a:hover { filter: brightness(0.9); }
+        .card.api a { background: var(--c-teal); }
+        .card.docs a { background: var(--c-olive); }
+        .section-title {
+            font-size: var(--fs-800);
+            color: var(--c-navy);
+            margin-top: var(--sp-6);
+            padding-bottom: var(--sp-2);
+            border-bottom: 2px solid var(--c-peacock);
+        }
+        .icon { font-size: 24px; }
+        footer {
+            text-align: center;
+            padding: var(--sp-5);
+            color: var(--color-muted);
+            font-size: var(--fs-500);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Moniker Service</h1>
+        <p>Data catalog resolution and governance platform</p>
+    </header>
+
+    <div class="container">
+        <h3 class="section-title">Administration</h3>
+        <div class="grid">
+            <div class="card">
+                <h2>Catalog Browser</h2>
+                <p>Browse the moniker catalog hierarchy, view ownership and metadata for data assets.</p>
+                <a href="/ui">Open Catalog Browser</a>
+            </div>
+            <div class="card">
+                <h2>Domain Configuration</h2>
+                <p>Manage data domains with governance metadata: ownership, confidentiality, PII flags.</p>
+                <a href="/domains/ui">Configure Domains</a>
+            </div>
+            <div class="card">
+                <h2>SQL Catalog</h2>
+                <p>Browse discovered SQL statements, schemas, and table relationships.</p>
+                <a href="/sql/ui">SQL Catalog Browser</a>
+            </div>
+            <div class="card">
+                <h2>Catalog Config</h2>
+                <p>Edit catalog nodes, source bindings, and ownership configuration.</p>
+                <a href="/config/ui">Catalog Config UI</a>
+            </div>
+        </div>
+
+        <h3 class="section-title">API Documentation</h3>
+        <div class="grid">
+            <div class="card docs">
+                <h2>Swagger UI</h2>
+                <p>Interactive API documentation with try-it-out functionality.</p>
+                <a href="/docs">Open Swagger</a>
+            </div>
+            <div class="card docs">
+                <h2>ReDoc</h2>
+                <p>Clean, readable API reference documentation.</p>
+                <a href="/redoc">Open ReDoc</a>
+            </div>
+            <div class="card api">
+                <h2>OpenAPI Schema</h2>
+                <p>Raw OpenAPI 3.0 specification in JSON format.</p>
+                <a href="/openapi.json">View Schema</a>
+            </div>
+            <div class="card api">
+                <h2>Health Check</h2>
+                <p>Service health, telemetry stats, and cache metrics.</p>
+                <a href="/health">Check Health</a>
+            </div>
+        </div>
+
+        <h3 class="section-title">API Endpoints</h3>
+        <div class="grid">
+            <div class="card api">
+                <h2>Catalog Tree</h2>
+                <p>View full catalog hierarchy as JSON tree structure.</p>
+                <a href="/tree">View Tree API</a>
+            </div>
+            <div class="card api">
+                <h2>Domains</h2>
+                <p>List all configured data domains with governance info.</p>
+                <a href="/domains">Domains API</a>
+            </div>
+            <div class="card api">
+                <h2>Catalog Paths</h2>
+                <p>List all registered catalog paths.</p>
+                <a href="/catalog">Catalog API</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        Moniker Service v0.2.0 &mdash; Data Catalog Resolution Platform
+    </footer>
+</body>
+</html>
+"""
+
+
+@app.get("/", response_class=HTMLResponse, tags=["Health"])
 async def root():
-    """Root endpoint with service info and available endpoints."""
-    return {
-        "service": "Moniker Resolution Service",
-        "version": "0.2.0",
-        "description": "Resolves monikers to source connection info. Also provides server-side fetch for convenience.",
-        "documentation": {
-            "/docs": "Swagger UI",
-            "/redoc": "ReDoc documentation",
-            "/openapi.json": "OpenAPI schema",
-        },
-        "endpoints": {
-            # Resolution endpoints (client executes query)
-            "/resolve/{path}": "Resolve moniker to source connection info (client executes)",
-            "/list/{path}": "List children in catalog",
-            "/describe/{path}": "Get metadata and ownership",
-            "/lineage/{path}": "Get full ownership lineage",
-            "/tree/{path}": "Get hierarchical tree view with metadata",
-            "/tree": "Get all root-level domains as tree",
-            # Data fetch endpoints (server executes query)
-            "/fetch/{path}": "Fetch data (server executes query, returns data)",
-            "/sample/{path}": "Get sample rows from a data source",
-            "/metadata/{path}": "Rich metadata for AI/agent discoverability",
-            # Domains
-            "/domains": "List and manage data domains",
-            "/domains/ui": "Domain configuration UI",
-            # Catalog and telemetry
-            "/catalog": "List all catalog paths",
-            "/telemetry/access": "POST - Report access telemetry from client",
-            "/health": "Health check",
-            "/ui": "Web UI for browsing the catalog",
-            "/sql/schemas": "List SQL schemas (taxonomy)",
-            "/sql/tables": "List SQL tables",
-            "/sql/statements": "List SQL statements",
-            "/sql/import": "POST - Import from source DB",
-            "/sql/summary": "SQL catalog statistics",
-        },
-        "ai_endpoints": {
-            "/metadata/{path}": "Optimized for AI agents - includes semantic tags, relationships, cost indicators",
-            "/sample/{path}": "Quick data samples for understanding structure",
-        },
-        "client_library": "pip install moniker-client",
-    }
+    """Landing page with links to all UIs and documentation."""
+    return HTMLResponse(content=_LANDING_HTML)
 
 
 # Simple HTML UI for tree visualization
