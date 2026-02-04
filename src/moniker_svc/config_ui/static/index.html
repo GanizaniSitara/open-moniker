@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catalog Config</title>
+    <style>
+        /* Corporate Design Tokens */
+        :root {
+            --font-sans: Arial, Helvetica, sans-serif;
+            --fs-900: 20px;
+            --fs-800: 18px;
+            --fs-700: 16px;
+            --fs-600: 14px;
+            --fs-500: 12px;
+            --fs-400: 11px;
+            --fw-regular: 400;
+            --fw-bold: 700;
+            --lh-tight: 1.15;
+            --lh-normal: 1.45;
+
+            --sp-1: 4px;
+            --sp-2: 8px;
+            --sp-3: 12px;
+            --sp-4: 16px;
+            --sp-5: 24px;
+            --sp-6: 32px;
+
+            --radius-1: 4px;
+            --radius-2: 8px;
+
+            --c-navy: #022D5E;
+            --c-gray: #53565A;
+            --c-peacock: #005587;
+            --c-olive: #789D4A;
+            --c-wine: #621244;
+            --c-cerulean: #008BCD;
+            --c-teal: #00897B;
+            --c-red: #D0002B;
+            --c-yellow: #FFD100;
+            --c-green: #009639;
+
+            --color-bg: #f8f9fa;
+            --color-surface: #ffffff;
+            --color-text: #111111;
+            --color-muted: var(--c-gray);
+            --border: rgba(83, 86, 90, 0.25);
+            --focus-ring: 0 0 0 3px rgba(0, 85, 135, 0.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-sans);
+            font-size: var(--fs-600);
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: var(--lh-normal);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: var(--c-navy);
+            padding: var(--sp-4) var(--sp-5);
+            border-bottom: 3px solid var(--c-peacock);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: var(--fs-900);
+            font-weight: var(--fw-bold);
+            color: white;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: var(--sp-3);
+        }
+
+        /* Buttons */
+        .btn {
+            background: var(--c-peacock);
+            color: white;
+            border: none;
+            padding: var(--sp-2) var(--sp-4);
+            border-radius: var(--radius-1);
+            cursor: pointer;
+            font-size: var(--fs-600);
+            font-weight: var(--fw-bold);
+            font-family: var(--font-sans);
+            transition: filter 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp-2);
+        }
+
+        .btn:hover { filter: brightness(0.9); }
+        .btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+        .btn-secondary { background: rgba(255, 255, 255, 0.15); }
+        .btn-success { background: var(--c-green); }
+        .btn-danger { background: var(--c-red); }
+        .btn-sm { padding: var(--sp-1) var(--sp-3); font-size: var(--fs-500); }
+
+        /* Main layout */
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Tree panel */
+        .tree-panel {
+            width: 300px;
+            background: var(--color-surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            background: var(--c-navy);
+            padding: var(--sp-3) var(--sp-4);
+            font-weight: var(--fw-bold);
+            font-size: var(--fs-600);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header-actions {
+            display: flex;
+            gap: var(--sp-2);
+        }
+
+        .tree-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--sp-3);
+        }
+
+        /* Tree styles */
+        .tree { font-size: var(--fs-600); }
+        .tree ul { list-style: none; padding-left: 18px; }
+        .tree > ul { padding-left: 0; }
+        .tree li { position: relative; }
+        .tree li::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 0;
+            border-left: 1px solid var(--border);
+            height: 100%;
+        }
+        .tree li::after {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 12px;
+            border-top: 1px solid var(--border);
+            width: 8px;
+        }
+        .tree li:last-child::before { height: 12px; }
+        .tree > ul > li::before, .tree > ul > li::after { display: none; }
+
+        .node {
+            cursor: pointer;
+            padding: var(--sp-1) var(--sp-2);
+            border-radius: var(--radius-1);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp-2);
+            transition: background 0.15s;
+            max-width: 100%;
+        }
+
+        .node:hover { background: rgba(0, 85, 135, 0.08); }
+        .node.selected { background: var(--c-peacock); color: white; }
+        .node-name { font-weight: var(--fw-bold); color: var(--c-navy); white-space: nowrap; }
+        .node.selected .node-name { color: white; }
+
+        .node-badge {
+            font-size: var(--fs-400);
+            padding: 1px 5px;
+            border-radius: 3px;
+            background: rgba(0, 150, 57, 0.15);
+            color: var(--c-green);
+            font-weight: var(--fw-bold);
+        }
+        .node.selected .node-badge { background: rgba(255,255,255,0.2); color: white; }
+
+        .toggle {
+            display: inline-block;
+            width: 14px;
+            text-align: center;
+            color: var(--c-gray);
+            cursor: pointer;
+            user-select: none;
+            font-size: 10px;
+        }
+        .toggle:hover { color: var(--c-peacock); }
+        .collapsed > ul { display: none; }
+        .collapsed > .node .toggle::before { content: '\25B6'; }
+        li:not(.collapsed) > .node .toggle::before { content: '\25BC'; }
+        li.leaf > .node .toggle { visibility: hidden; }
+
+        /* Form panel */
+        .form-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .form-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--sp-5);
+        }
+
+        .form-actions {
+            padding: var(--sp-4) var(--sp-5);
+            border-top: 1px solid var(--border);
+            background: var(--color-surface);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Form styles */
+        .form-section {
+            margin-bottom: var(--sp-5);
+            background: var(--color-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-2);
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: var(--color-bg);
+            padding: var(--sp-3) var(--sp-4);
+            font-weight: var(--fw-bold);
+            font-size: var(--fs-500);
+            color: var(--c-navy);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .section-header:hover { background: rgba(0, 85, 135, 0.05); }
+        .section-toggle { color: var(--c-gray); font-size: 10px; }
+        .form-section.collapsed .section-content { display: none; }
+        .form-section.collapsed .section-toggle::before { content: '\25B6'; }
+        .form-section:not(.collapsed) .section-toggle::before { content: '\25BC'; }
+
+        .section-content {
+            padding: var(--sp-4);
+        }
+
+        .form-row {
+            margin-bottom: var(--sp-4);
+        }
+
+        .form-row:last-child { margin-bottom: 0; }
+
+        .form-row label {
+            display: block;
+            font-size: var(--fs-500);
+            font-weight: var(--fw-bold);
+            color: var(--c-navy);
+            margin-bottom: var(--sp-1);
+            text-transform: uppercase;
+        }
+
+        .form-row input,
+        .form-row textarea,
+        .form-row select {
+            width: 100%;
+            padding: var(--sp-2) var(--sp-3);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-1);
+            font-family: var(--font-sans);
+            font-size: var(--fs-600);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-row input:focus,
+        .form-row textarea:focus,
+        .form-row select:focus {
+            outline: none;
+            border-color: var(--c-peacock);
+            box-shadow: var(--focus-ring);
+        }
+
+        .form-row textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .form-row input[readonly] {
+            background: var(--color-bg);
+            color: var(--c-gray);
+        }
+
+        .form-hint {
+            font-size: var(--fs-500);
+            color: var(--c-gray);
+            margin-top: var(--sp-1);
+        }
+
+        /* Ownership inheritance display */
+        .inherited-value {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            margin-top: var(--sp-1);
+        }
+
+        .inherited-badge {
+            font-size: var(--fs-400);
+            padding: 1px 6px;
+            border-radius: 3px;
+            background: rgba(0, 85, 135, 0.1);
+            color: var(--c-peacock);
+        }
+
+        .inherited-source {
+            font-size: var(--fs-500);
+            color: var(--c-gray);
+        }
+
+        /* Tags input */
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--sp-2);
+            padding: var(--sp-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-1);
+            min-height: 36px;
+            cursor: text;
+        }
+
+        .tags-container:focus-within {
+            border-color: var(--c-peacock);
+            box-shadow: var(--focus-ring);
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp-1);
+            padding: 2px var(--sp-2);
+            background: var(--c-peacock);
+            color: white;
+            border-radius: var(--radius-1);
+            font-size: var(--fs-500);
+        }
+
+        .tag-remove {
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        .tag-remove:hover { opacity: 1; }
+
+        .tags-input {
+            border: none;
+            outline: none;
+            flex: 1;
+            min-width: 100px;
+            font-family: var(--font-sans);
+            font-size: var(--fs-600);
+        }
+
+        /* Two column layout for forms */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--sp-4);
+        }
+
+        @media (max-width: 900px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Dynamic config fields */
+        .config-field {
+            margin-bottom: var(--sp-3);
+        }
+
+        .config-field:last-child { margin-bottom: 0; }
+
+        .config-field label {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+        }
+
+        .config-field .required::after {
+            content: '*';
+            color: var(--c-red);
+        }
+
+        /* Path display */
+        .path-display {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: var(--fs-600);
+            background: var(--c-navy);
+            color: white;
+            padding: var(--sp-3) var(--sp-4);
+            border-radius: var(--radius-1);
+            word-break: break-all;
+        }
+
+        /* Empty state */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--c-gray);
+            text-align: center;
+            padding: var(--sp-6);
+        }
+
+        .empty-state h3 {
+            color: var(--c-navy);
+            margin-bottom: var(--sp-2);
+        }
+
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            bottom: var(--sp-5);
+            right: var(--sp-5);
+            z-index: 1000;
+        }
+
+        .toast {
+            background: var(--c-navy);
+            color: white;
+            padding: var(--sp-3) var(--sp-4);
+            border-radius: var(--radius-2);
+            margin-top: var(--sp-2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success { background: var(--c-green); }
+        .toast.error { background: var(--c-red); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: var(--sp-6);
+            color: var(--c-gray);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: var(--color-surface);
+            border-radius: var(--radius-2);
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            background: var(--c-navy);
+            color: white;
+            padding: var(--sp-4);
+            font-weight: var(--fw-bold);
+            border-radius: var(--radius-2) var(--radius-2) 0 0;
+        }
+
+        .modal-body { padding: var(--sp-5); }
+        .modal-footer {
+            padding: var(--sp-4);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--sp-2);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Catalog Config</h1>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="saveToYaml()">Save to YAML</button>
+            <button class="btn btn-secondary" onclick="reloadFromYaml()">Reload</button>
+            <button class="btn btn-success" onclick="showNewNodeModal()">+ New Node</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="tree-panel">
+            <div class="panel-header">
+                <span>Catalog Tree</span>
+                <div class="panel-header-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="expandAll()">Expand</button>
+                    <button class="btn btn-sm btn-secondary" onclick="collapseAll()">Collapse</button>
+                </div>
+            </div>
+            <div class="tree-container">
+                <div id="tree" class="tree"><div class="loading">Loading...</div></div>
+            </div>
+        </div>
+
+        <div class="form-panel">
+            <div class="panel-header">
+                <span id="form-title">Node Details</span>
+            </div>
+            <div class="form-container" id="form-container">
+                <div class="empty-state">
+                    <h3>Select a Node</h3>
+                    <p>Click on a node in the tree to view and edit its configuration</p>
+                </div>
+            </div>
+            <div class="form-actions" id="form-actions" style="display: none;">
+                <button class="btn btn-danger" onclick="deleteNode()">Delete</button>
+                <div>
+                    <button class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
+                    <button class="btn btn-success" onclick="saveNode()">Save Node</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <div class="modal-overlay" id="new-node-modal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">Create New Node</div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <label for="new-node-path">Path</label>
+                    <input type="text" id="new-node-path" placeholder="e.g., market-data/prices/equity">
+                    <div class="form-hint">Use / to create hierarchy. Parent nodes will be created automatically.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideNewNodeModal()">Cancel</button>
+                <button class="btn btn-success" onclick="createNode()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/config';
+
+        let nodes = [];
+        let sourceTypes = [];
+        let selectedPath = null;
+        let originalNode = null;
+
+        // =============================================================================
+        // API Functions
+        // =============================================================================
+
+        async function fetchJSON(url, options = {}) {
+            const resp = await fetch(url, {
+                headers: { 'Content-Type': 'application/json' },
+                ...options,
+            });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+                throw new Error(err.detail || 'Request failed');
+            }
+            return resp.json();
+        }
+
+        async function loadNodes() {
+            try {
+                const data = await fetchJSON(`${API_BASE}/nodes`);
+                nodes = data.nodes;
+                renderTree();
+            } catch (e) {
+                showToast('Failed to load nodes: ' + e.message, 'error');
+            }
+        }
+
+        async function loadSourceTypes() {
+            try {
+                const data = await fetchJSON(`${API_BASE}/source-types`);
+                sourceTypes = data.source_types;
+            } catch (e) {
+                console.error('Failed to load source types:', e);
+            }
+        }
+
+        async function loadNode(path) {
+            try {
+                const data = await fetchJSON(`${API_BASE}/nodes/${encodeURIComponent(path)}`);
+                originalNode = data;
+                renderForm(data);
+                selectedPath = path;
+                document.getElementById('form-actions').style.display = 'flex';
+            } catch (e) {
+                showToast('Failed to load node: ' + e.message, 'error');
+            }
+        }
+
+        async function saveNode() {
+            if (!selectedPath) return;
+
+            const formData = collectFormData();
+
+            try {
+                await fetchJSON(`${API_BASE}/nodes/${encodeURIComponent(selectedPath)}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(formData),
+                });
+                showToast('Node saved successfully', 'success');
+                await loadNodes();
+                await loadNode(selectedPath);
+            } catch (e) {
+                showToast('Failed to save: ' + e.message, 'error');
+            }
+        }
+
+        async function deleteNode() {
+            if (!selectedPath) return;
+            if (!confirm(`Delete node "${selectedPath}"?`)) return;
+
+            try {
+                await fetchJSON(`${API_BASE}/nodes/${encodeURIComponent(selectedPath)}`, {
+                    method: 'DELETE',
+                });
+                showToast('Node deleted', 'success');
+                selectedPath = null;
+                originalNode = null;
+                document.getElementById('form-container').innerHTML = `
+                    <div class="empty-state">
+                        <h3>Node Deleted</h3>
+                        <p>Select another node from the tree</p>
+                    </div>
+                `;
+                document.getElementById('form-actions').style.display = 'none';
+                await loadNodes();
+            } catch (e) {
+                showToast('Failed to delete: ' + e.message, 'error');
+            }
+        }
+
+        async function createNode() {
+            const path = document.getElementById('new-node-path').value.trim();
+            if (!path) {
+                showToast('Path is required', 'error');
+                return;
+            }
+
+            try {
+                await fetchJSON(`${API_BASE}/nodes`, {
+                    method: 'POST',
+                    body: JSON.stringify({ path }),
+                });
+                showToast('Node created', 'success');
+                hideNewNodeModal();
+                await loadNodes();
+                selectNode(path);
+            } catch (e) {
+                showToast('Failed to create: ' + e.message, 'error');
+            }
+        }
+
+        async function saveToYaml() {
+            try {
+                const data = await fetchJSON(`${API_BASE}/save`, { method: 'POST' });
+                showToast(data.message, 'success');
+            } catch (e) {
+                showToast('Failed to save: ' + e.message, 'error');
+            }
+        }
+
+        async function reloadFromYaml() {
+            if (!confirm('Reload catalog from YAML? Unsaved changes will be lost.')) return;
+
+            try {
+                const data = await fetchJSON(`${API_BASE}/reload`, { method: 'POST' });
+                showToast(data.message, 'success');
+                await loadNodes();
+                if (selectedPath) {
+                    await loadNode(selectedPath);
+                }
+            } catch (e) {
+                showToast('Failed to reload: ' + e.message, 'error');
+            }
+        }
+
+        // =============================================================================
+        // Tree Rendering
+        // =============================================================================
+
+        function buildTree(nodes) {
+            const tree = {};
+            const nodeMap = {};
+
+            // Index nodes by path
+            nodes.forEach(n => { nodeMap[n.path] = n; });
+
+            // Build hierarchy
+            nodes.forEach(n => {
+                const parts = n.path.split('/');
+                let current = tree;
+
+                parts.forEach((part, i) => {
+                    const partialPath = parts.slice(0, i + 1).join('/');
+                    if (!current[part]) {
+                        current[part] = {
+                            _path: partialPath,
+                            _node: nodeMap[partialPath] || null,
+                            _children: {},
+                        };
+                    }
+                    current = current[part]._children;
+                });
+            });
+
+            return tree;
+        }
+
+        function renderTree() {
+            const tree = buildTree(nodes);
+            const container = document.getElementById('tree');
+
+            if (Object.keys(tree).length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No Nodes</h3>
+                        <p>Click "+ New Node" to create one</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '<ul>' + renderTreeLevel(tree) + '</ul>';
+        }
+
+        function renderTreeLevel(level) {
+            return Object.entries(level)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([name, data]) => {
+                    const hasChildren = Object.keys(data._children).length > 0;
+                    const node = data._node;
+                    const isSelected = data._path === selectedPath;
+                    const hasSource = node && node.source_binding;
+
+                    const badges = hasSource
+                        ? `<span class="node-badge">${node.source_binding.type}</span>`
+                        : '';
+
+                    const childrenHtml = hasChildren
+                        ? '<ul>' + renderTreeLevel(data._children) + '</ul>'
+                        : '';
+
+                    const classes = [
+                        hasChildren ? '' : 'leaf',
+                    ].filter(Boolean).join(' ');
+
+                    return `
+                        <li class="${classes}" data-path="${data._path}">
+                            <span class="node ${isSelected ? 'selected' : ''}" onclick="selectNode('${data._path}')">
+                                <span class="toggle" onclick="toggleTreeNode(event, this)"></span>
+                                <span class="node-name">${name}/</span>
+                                ${badges}
+                            </span>
+                            ${childrenHtml}
+                        </li>
+                    `;
+                })
+                .join('');
+        }
+
+        function toggleTreeNode(e, el) {
+            e.stopPropagation();
+            el.closest('li').classList.toggle('collapsed');
+        }
+
+        function selectNode(path) {
+            // Update tree selection
+            document.querySelectorAll('.tree .node.selected').forEach(el => el.classList.remove('selected'));
+            const li = document.querySelector(`.tree li[data-path="${path}"]`);
+            if (li) {
+                li.querySelector('.node').classList.add('selected');
+            }
+
+            loadNode(path);
+        }
+
+        function expandAll() {
+            document.querySelectorAll('.tree li.collapsed').forEach(el => el.classList.remove('collapsed'));
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.tree li').forEach(el => {
+                if (el.querySelector('ul')) el.classList.add('collapsed');
+            });
+        }
+
+        // =============================================================================
+        // Form Rendering
+        // =============================================================================
+
+        function renderForm(data) {
+            const node = data.node;
+            const resolved = data.resolved_ownership;
+
+            document.getElementById('form-title').textContent = node.path;
+
+            const container = document.getElementById('form-container');
+            container.innerHTML = `
+                <div class="path-display">moniker://${node.path}</div>
+
+                <!-- Basic Info -->
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Basic Info</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-row">
+                            <label>Path</label>
+                            <input type="text" value="${node.path}" readonly>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="display_name">Display Name</label>
+                                <input type="text" id="display_name" value="${escapeHtml(node.display_name || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="classification">Classification</label>
+                                <select id="classification">
+                                    <option value="public" ${node.classification === 'public' ? 'selected' : ''}>Public</option>
+                                    <option value="internal" ${node.classification === 'internal' ? 'selected' : ''}>Internal</option>
+                                    <option value="confidential" ${node.classification === 'confidential' ? 'selected' : ''}>Confidential</option>
+                                    <option value="restricted" ${node.classification === 'restricted' ? 'selected' : ''}>Restricted</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <label for="description">Description</label>
+                            <textarea id="description">${escapeHtml(node.description || '')}</textarea>
+                        </div>
+                        <div class="form-row">
+                            <label>Tags</label>
+                            <div class="tags-container" id="tags-container" onclick="focusTagInput()">
+                                ${(node.tags || []).map(t => `<span class="tag">${escapeHtml(t)}<span class="tag-remove" onclick="removeTag(this, event)">&times;</span></span>`).join('')}
+                                <input type="text" class="tags-input" id="tags-input" placeholder="Add tag..." onkeydown="handleTagInput(event)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ownership -->
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Ownership</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        ${renderOwnershipField('accountable_owner', 'Accountable Owner', node.ownership, resolved)}
+                        ${renderOwnershipField('data_specialist', 'Data Specialist', node.ownership, resolved)}
+                        ${renderOwnershipField('support_channel', 'Support Channel', node.ownership, resolved)}
+                        <hr style="margin: var(--sp-4) 0; border: none; border-top: 1px solid var(--border);">
+                        <div class="form-hint" style="margin-bottom: var(--sp-3);">Formal Governance Roles (BCBS 239)</div>
+                        ${renderOwnershipField('adop', 'ADOP (Data Owner)', node.ownership, resolved)}
+                        ${renderOwnershipField('ads', 'ADS (Data Steward)', node.ownership, resolved)}
+                        ${renderOwnershipField('adal', 'ADAL (Access Lead)', node.ownership, resolved)}
+                    </div>
+                </div>
+
+                <!-- Source Binding -->
+                <div class="form-section ${node.source_binding ? '' : 'collapsed'}">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Source Binding</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-row">
+                            <label for="source_type">Source Type</label>
+                            <select id="source_type" onchange="renderSourceConfig()">
+                                <option value="">-- None --</option>
+                                ${sourceTypes.map(st => `<option value="${st.type}" ${node.source_binding?.type === st.type ? 'selected' : ''}>${st.display_name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div id="source-config-fields">
+                            ${node.source_binding ? renderSourceConfigFields(node.source_binding.type, node.source_binding.config) : ''}
+                        </div>
+                        <div class="form-row">
+                            <label>
+                                <input type="checkbox" id="read_only" ${node.source_binding?.read_only !== false ? 'checked' : ''}>
+                                Read Only
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Quality -->
+                <div class="form-section collapsed">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Data Quality</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-hint">Data quality monitoring configuration</div>
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="dq_owner">DQ Owner</label>
+                                <input type="text" id="dq_owner" value="${escapeHtml(node.data_quality?.dq_owner || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="quality_score">Quality Score</label>
+                                <input type="number" id="quality_score" min="0" max="100" value="${node.data_quality?.quality_score || ''}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SLA -->
+                <div class="form-section collapsed">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>SLA</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="sla_freshness">Freshness</label>
+                                <input type="text" id="sla_freshness" placeholder="e.g., T+1, 15min, real-time" value="${escapeHtml(node.sla?.freshness || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="sla_availability">Availability</label>
+                                <input type="text" id="sla_availability" placeholder="e.g., 99.9%" value="${escapeHtml(node.sla?.availability || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="sla_support_hours">Support Hours</label>
+                                <input type="text" id="sla_support_hours" placeholder="e.g., 24/7, business hours ET" value="${escapeHtml(node.sla?.support_hours || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="sla_escalation">Escalation Contact</label>
+                                <input type="text" id="sla_escalation" value="${escapeHtml(node.sla?.escalation_contact || '')}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documentation -->
+                <div class="form-section collapsed">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Documentation</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="doc_glossary">Glossary URL</label>
+                                <input type="url" id="doc_glossary" value="${escapeHtml(node.documentation?.glossary || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="doc_runbook">Runbook URL</label>
+                                <input type="url" id="doc_runbook" value="${escapeHtml(node.documentation?.runbook || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="doc_onboarding">Onboarding URL</label>
+                                <input type="url" id="doc_onboarding" value="${escapeHtml(node.documentation?.onboarding || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="doc_contact">Contact URL</label>
+                                <input type="url" id="doc_contact" value="${escapeHtml(node.documentation?.contact || '')}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Access Policy -->
+                <div class="form-section collapsed">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Access Policy</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-hint">Query guardrails to prevent expensive operations</div>
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="ap_min_filters">Min Filters Required</label>
+                                <input type="number" id="ap_min_filters" min="0" value="${node.access_policy?.min_filters || 0}">
+                            </div>
+                            <div class="form-row">
+                                <label for="ap_base_rows">Base Row Count</label>
+                                <input type="number" id="ap_base_rows" min="1" value="${node.access_policy?.base_row_count || 100}">
+                            </div>
+                            <div class="form-row">
+                                <label for="ap_max_warn">Max Rows (Warn)</label>
+                                <input type="number" id="ap_max_warn" min="0" value="${node.access_policy?.max_rows_warn || ''}">
+                            </div>
+                            <div class="form-row">
+                                <label for="ap_max_block">Max Rows (Block)</label>
+                                <input type="number" id="ap_max_block" min="0" value="${node.access_policy?.max_rows_block || ''}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Schema -->
+                <div class="form-section collapsed">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Data Schema</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-row">
+                            <label for="schema_description">Schema Description</label>
+                            <textarea id="schema_description">${escapeHtml(node.data_schema?.description || '')}</textarea>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="schema_granularity">Granularity</label>
+                                <input type="text" id="schema_granularity" placeholder="e.g., daily, per-security" value="${escapeHtml(node.data_schema?.granularity || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="schema_row_count">Typical Row Count</label>
+                                <input type="text" id="schema_row_count" placeholder="e.g., 1K-10K, 1M-10M" value="${escapeHtml(node.data_schema?.typical_row_count || '')}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderOwnershipField(field, label, ownership, resolved) {
+            const localValue = ownership?.[field] || '';
+            const resolvedValue = resolved?.[field] || '';
+            const resolvedSource = resolved?.[field + '_source'] || '';
+            const isInherited = !localValue && resolvedValue;
+
+            return `
+                <div class="form-row">
+                    <label for="own_${field}">${label}</label>
+                    <input type="text" id="own_${field}" value="${escapeHtml(localValue)}" placeholder="${isInherited ? 'Inherited: ' + resolvedValue : ''}">
+                    ${isInherited ? `
+                        <div class="inherited-value">
+                            <span class="inherited-badge">inherited</span>
+                            <span class="inherited-source">from: ${resolvedSource}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderSourceConfigFields(sourceType, config) {
+            if (!sourceType) return '';
+
+            const typeInfo = sourceTypes.find(st => st.type === sourceType);
+            if (!typeInfo) return '';
+
+            const schema = typeInfo.config_schema;
+
+            return Object.entries(schema).map(([key, fieldDef]) => {
+                const value = config?.[key] || '';
+                const displayValue = typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
+
+                let inputHtml;
+                if (fieldDef.type === 'text' || fieldDef.type === 'json') {
+                    inputHtml = `<textarea id="src_${key}" rows="3">${escapeHtml(displayValue)}</textarea>`;
+                } else if (fieldDef.type === 'select' && fieldDef.options) {
+                    inputHtml = `<select id="src_${key}">
+                        ${fieldDef.options.map(opt => `<option value="${opt}" ${value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                    </select>`;
+                } else if (fieldDef.type === 'number') {
+                    inputHtml = `<input type="number" id="src_${key}" value="${displayValue}">`;
+                } else {
+                    inputHtml = `<input type="text" id="src_${key}" value="${escapeHtml(displayValue)}">`;
+                }
+
+                return `
+                    <div class="config-field">
+                        <label for="src_${key}" class="${fieldDef.required ? 'required' : ''}">${key}</label>
+                        ${inputHtml}
+                        ${fieldDef.description ? `<div class="form-hint">${fieldDef.description}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderSourceConfig() {
+            const sourceType = document.getElementById('source_type').value;
+            const container = document.getElementById('source-config-fields');
+            container.innerHTML = renderSourceConfigFields(sourceType, {});
+        }
+
+        function toggleSection(header) {
+            header.closest('.form-section').classList.toggle('collapsed');
+        }
+
+        // =============================================================================
+        // Form Data Collection
+        // =============================================================================
+
+        function collectFormData() {
+            const data = {
+                display_name: document.getElementById('display_name')?.value || '',
+                description: document.getElementById('description')?.value || '',
+                classification: document.getElementById('classification')?.value || 'internal',
+                tags: collectTags(),
+            };
+
+            // Ownership
+            const ownership = {};
+            ['accountable_owner', 'data_specialist', 'support_channel', 'adop', 'ads', 'adal'].forEach(field => {
+                const val = document.getElementById(`own_${field}`)?.value;
+                if (val) ownership[field] = val;
+            });
+            if (Object.keys(ownership).length > 0) {
+                data.ownership = ownership;
+            }
+
+            // Source binding
+            const sourceType = document.getElementById('source_type')?.value;
+            if (sourceType) {
+                const config = collectSourceConfig(sourceType);
+                data.source_binding = {
+                    type: sourceType,
+                    config: config,
+                    read_only: document.getElementById('read_only')?.checked !== false,
+                };
+            } else {
+                data.source_binding = null;
+            }
+
+            // SLA
+            const sla = {};
+            if (document.getElementById('sla_freshness')?.value) sla.freshness = document.getElementById('sla_freshness').value;
+            if (document.getElementById('sla_availability')?.value) sla.availability = document.getElementById('sla_availability').value;
+            if (document.getElementById('sla_support_hours')?.value) sla.support_hours = document.getElementById('sla_support_hours').value;
+            if (document.getElementById('sla_escalation')?.value) sla.escalation_contact = document.getElementById('sla_escalation').value;
+            if (Object.keys(sla).length > 0) data.sla = sla;
+
+            // Documentation
+            const doc = {};
+            if (document.getElementById('doc_glossary')?.value) doc.glossary = document.getElementById('doc_glossary').value;
+            if (document.getElementById('doc_runbook')?.value) doc.runbook = document.getElementById('doc_runbook').value;
+            if (document.getElementById('doc_onboarding')?.value) doc.onboarding = document.getElementById('doc_onboarding').value;
+            if (document.getElementById('doc_contact')?.value) doc.contact = document.getElementById('doc_contact').value;
+            if (Object.keys(doc).length > 0) data.documentation = doc;
+
+            // Access policy
+            const ap = {};
+            const minFilters = parseInt(document.getElementById('ap_min_filters')?.value);
+            if (minFilters > 0) ap.min_filters = minFilters;
+            const baseRows = parseInt(document.getElementById('ap_base_rows')?.value);
+            if (baseRows && baseRows !== 100) ap.base_row_count = baseRows;
+            const maxWarn = parseInt(document.getElementById('ap_max_warn')?.value);
+            if (maxWarn) ap.max_rows_warn = maxWarn;
+            const maxBlock = parseInt(document.getElementById('ap_max_block')?.value);
+            if (maxBlock) ap.max_rows_block = maxBlock;
+            if (Object.keys(ap).length > 0) data.access_policy = ap;
+
+            // Schema
+            const schema = {};
+            if (document.getElementById('schema_description')?.value) schema.description = document.getElementById('schema_description').value;
+            if (document.getElementById('schema_granularity')?.value) schema.granularity = document.getElementById('schema_granularity').value;
+            if (document.getElementById('schema_row_count')?.value) schema.typical_row_count = document.getElementById('schema_row_count').value;
+            if (Object.keys(schema).length > 0) data.schema = schema;
+
+            return data;
+        }
+
+        function collectTags() {
+            const tags = [];
+            document.querySelectorAll('#tags-container .tag').forEach(el => {
+                const text = el.childNodes[0].textContent.trim();
+                if (text) tags.push(text);
+            });
+            return tags;
+        }
+
+        function collectSourceConfig(sourceType) {
+            const typeInfo = sourceTypes.find(st => st.type === sourceType);
+            if (!typeInfo) return {};
+
+            const config = {};
+            Object.keys(typeInfo.config_schema).forEach(key => {
+                const el = document.getElementById(`src_${key}`);
+                if (el) {
+                    let value = el.value;
+                    const fieldDef = typeInfo.config_schema[key];
+
+                    // Parse JSON fields
+                    if ((fieldDef.type === 'json' || fieldDef.type === 'text') && value) {
+                        try {
+                            value = JSON.parse(value);
+                        } catch (e) {
+                            // Keep as string if not valid JSON
+                        }
+                    }
+
+                    // Parse number fields
+                    if (fieldDef.type === 'number' && value) {
+                        value = parseInt(value) || parseFloat(value) || value;
+                    }
+
+                    if (value !== '' && value !== null) {
+                        config[key] = value;
+                    }
+                }
+            });
+            return config;
+        }
+
+        // =============================================================================
+        // Tags Input
+        // =============================================================================
+
+        function focusTagInput() {
+            document.getElementById('tags-input').focus();
+        }
+
+        function handleTagInput(e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                const input = e.target;
+                const value = input.value.trim().replace(',', '');
+                if (value) {
+                    const tag = document.createElement('span');
+                    tag.className = 'tag';
+                    tag.innerHTML = `${escapeHtml(value)}<span class="tag-remove" onclick="removeTag(this, event)">&times;</span>`;
+                    input.parentNode.insertBefore(tag, input);
+                    input.value = '';
+                }
+            } else if (e.key === 'Backspace' && !e.target.value) {
+                const tags = e.target.parentNode.querySelectorAll('.tag');
+                if (tags.length > 0) {
+                    tags[tags.length - 1].remove();
+                }
+            }
+        }
+
+        function removeTag(el, e) {
+            e.stopPropagation();
+            el.closest('.tag').remove();
+        }
+
+        // =============================================================================
+        // UI Helpers
+        // =============================================================================
+
+        function cancelEdit() {
+            if (originalNode) {
+                renderForm(originalNode);
+            }
+        }
+
+        function showNewNodeModal() {
+            document.getElementById('new-node-path').value = '';
+            document.getElementById('new-node-modal').style.display = 'flex';
+            document.getElementById('new-node-path').focus();
+        }
+
+        function hideNewNodeModal() {
+            document.getElementById('new-node-modal').style.display = 'none';
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // =============================================================================
+        // Initialization
+        // =============================================================================
+
+        async function init() {
+            await loadSourceTypes();
+            await loadNodes();
+        }
+
+        init();
+    </script>
+</body>
+</html>

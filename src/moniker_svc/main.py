@@ -39,6 +39,7 @@ from .telemetry.sinks.console import ConsoleSink
 from .telemetry.sinks.file import RotatingFileSink
 from .telemetry.sinks.zmq import ZmqSink
 from .sql_catalog import routes as sql_catalog_routes
+from .config_ui import routes as config_ui_routes
 
 
 logger = logging.getLogger(__name__)
@@ -632,6 +633,15 @@ async def lifespan(app: FastAPI):
         )
         logger.info(f"SQL Catalog enabled (db_path={config.sql_catalog.db_path})")
 
+    # Initialize Config UI if enabled
+    if config.config_ui.enabled:
+        config_ui_routes.configure(
+            catalog=catalog,
+            yaml_output_path=config.config_ui.yaml_output_path,
+            catalog_definition_file=config.catalog.definition_file,
+        )
+        logger.info(f"Config UI enabled (yaml_output_path={config.config_ui.yaml_output_path})")
+
     logger.info("Moniker resolution service started")
 
     yield
@@ -669,6 +679,9 @@ app = FastAPI(
 
 # Mount SQL Catalog router
 app.include_router(sql_catalog_routes.router)
+
+# Mount Config UI router
+app.include_router(config_ui_routes.router)
 
 
 @app.exception_handler(MonikerParseError)
@@ -1460,30 +1473,109 @@ _UI_HTML = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Moniker Catalog</title>
     <style>
+        /* Corporate Design Tokens */
+        :root {
+            --font-sans: Arial, Helvetica, sans-serif;
+            --c-navy: #022D5E;
+            --c-gray: #53565A;
+            --c-peacock: #005587;
+            --c-olive: #789D4A;
+            --c-green: #009639;
+            --c-red: #D0002B;
+            --color-bg: #f8f9fa;
+            --color-surface: #ffffff;
+            --color-text: #111111;
+            --border: rgba(83, 86, 90, 0.25);
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
-            background: #1a1a2e; color: #eee; padding: 20px;
-            display: flex; height: 100vh;
+            font-family: var(--font-sans);
+            background: var(--color-bg);
+            color: var(--color-text);
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
-        .panel { background: #16213e; border-radius: 8px; padding: 16px; overflow: auto; }
-        .tree-panel { flex: 1; margin-right: 16px; }
-        .detail-panel { width: 400px; }
-        h1 { font-size: 18px; margin-bottom: 16px; color: #e94560; }
-        h2 { font-size: 14px; margin-bottom: 12px; color: #0f3460; background: #e94560; padding: 8px; border-radius: 4px; }
+
+        /* Header */
+        .header {
+            background: var(--c-navy);
+            padding: 16px 24px;
+            border-bottom: 3px solid var(--c-peacock);
+        }
+        .header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: white;
+            margin: 0;
+        }
+
+        /* Main content */
+        .main {
+            display: flex;
+            flex: 1;
+            padding: 24px;
+            gap: 24px;
+            overflow: hidden;
+        }
+
+        .panel {
+            background: var(--color-surface);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            overflow: auto;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+        .tree-panel { flex: 1; }
+        .detail-panel { width: 420px; }
+
+        .panel-header {
+            background: var(--c-navy);
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 14px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-small {
+            background: var(--c-peacock);
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 700;
+            font-family: var(--font-sans);
+            cursor: pointer;
+            transition: filter 0.2s;
+        }
+        .btn-small:hover {
+            filter: brightness(0.9);
+        }
+        .panel-content {
+            padding: 16px;
+        }
 
         /* Tree styles */
-        .tree { font-size: 13px; line-height: 1.6; }
+        .tree { font-size: 14px; line-height: 1.6; }
         .tree ul { list-style: none; padding-left: 20px; }
         .tree > ul { padding-left: 0; }
         .tree li { position: relative; }
         .tree li::before {
             content: ''; position: absolute; left: -14px; top: 0;
-            border-left: 1px solid #444; height: 100%;
+            border-left: 1px solid var(--border); height: 100%;
         }
         .tree li::after {
             content: ''; position: absolute; left: -14px; top: 12px;
-            border-top: 1px solid #444; width: 10px;
+            border-top: 1px solid var(--border); width: 10px;
         }
         .tree li:last-child::before { height: 12px; }
         .tree > ul > li::before, .tree > ul > li::after { display: none; }
@@ -1492,48 +1584,89 @@ _UI_HTML = """
             cursor: pointer; padding: 4px 8px; border-radius: 4px;
             display: inline-block; transition: background 0.2s;
         }
-        .node:hover { background: #0f3460; }
-        .node.selected { background: #e94560; color: white; }
-        .node-name { font-weight: 600; }
+        .node:hover { background: rgba(0, 85, 135, 0.08); }
+        .node.selected { background: var(--c-peacock); color: white; }
+        .node-name { font-weight: 700; color: var(--c-navy); }
+        .node.selected .node-name { color: white; }
         .node-badge {
             font-size: 10px; padding: 2px 6px; border-radius: 3px;
-            margin-left: 6px; background: #0f3460;
+            margin-left: 6px; background: var(--color-bg); color: var(--c-gray);
+            font-weight: 700;
         }
-        .node-badge.source { background: #1e5128; }
-        .node-badge.owner { background: #4a0e0e; }
+        .node-badge.source { background: rgba(0, 150, 57, 0.15); color: var(--c-green); }
+        .node-badge.owner { background: rgba(98, 18, 68, 0.15); color: #621244; }
+        .node.selected .node-badge { background: rgba(255,255,255,0.2); color: white; }
 
         .toggle {
             display: inline-block; width: 16px; text-align: center;
-            color: #666; cursor: pointer; user-select: none;
+            color: var(--c-gray); cursor: pointer; user-select: none;
         }
-        .toggle:hover { color: #e94560; }
+        .toggle:hover { color: var(--c-peacock); }
         .collapsed > ul { display: none; }
         .collapsed > .node .toggle { transform: rotate(-90deg); }
 
         /* Detail panel */
         .detail-section { margin-bottom: 16px; }
-        .detail-section h3 { font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase; }
-        .detail-row { font-size: 13px; padding: 4px 0; border-bottom: 1px solid #222; }
-        .detail-row span:first-child { color: #888; }
-        .detail-row span:last-child { color: #4ecca3; float: right; }
-        .path-display {
-            font-family: monospace; font-size: 12px; background: #0f3460;
-            padding: 8px; border-radius: 4px; word-break: break-all; margin-bottom: 12px;
+        .detail-section h3 {
+            font-size: 11px;
+            color: var(--c-navy);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
-        .empty { color: #666; font-style: italic; }
+        .detail-row {
+            font-size: 13px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+        }
+        .detail-row span:first-child { color: var(--c-gray); }
+        .detail-row span:last-child { color: var(--c-navy); font-weight: 700; }
+        .path-display {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            background: var(--c-navy);
+            color: white;
+            padding: 10px 12px;
+            border-radius: 4px;
+            word-break: break-all;
+            margin-bottom: 16px;
+        }
+        .empty { color: var(--c-gray); font-style: italic; }
+
+        /* Links */
+        a { color: var(--c-peacock); text-decoration: none; font-weight: 700; }
+        a:hover { text-decoration: underline; }
 
         /* Loading */
-        .loading { text-align: center; padding: 40px; color: #666; }
+        .loading { text-align: center; padding: 40px; color: var(--c-gray); }
     </style>
 </head>
 <body>
-    <div class="panel tree-panel">
+    <div class="header">
         <h1>Moniker Catalog</h1>
-        <div id="tree" class="tree"><div class="loading">Loading...</div></div>
     </div>
-    <div class="panel detail-panel">
-        <h2>Node Details</h2>
-        <div id="details"><p class="empty">Click a node to view details</p></div>
+    <div class="main">
+        <div class="panel tree-panel">
+            <div class="panel-header">
+                <span>Catalog Tree</span>
+                <div class="header-actions">
+                    <button class="btn-small" onclick="expandAll()">Expand All</button>
+                    <button class="btn-small" onclick="collapseAll()">Collapse All</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div id="tree" class="tree"><div class="loading">Loading...</div></div>
+            </div>
+        </div>
+        <div class="panel detail-panel">
+            <div class="panel-header">Node Details</div>
+            <div class="panel-content">
+                <div id="details"><p class="empty">Click a node to view details</p></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1616,14 +1749,14 @@ _UI_HTML = """
                 <div class="detail-section">
                     <h3>API</h3>
                     <div class="detail-row" style="border:none">
-                        <a href="/describe/${node.path}" target="_blank" style="color:#4ecca3">/describe/${node.path}</a>
+                        <a href="/describe/${node.path}" target="_blank">/describe/${node.path}</a>
                     </div>
                     ${node.has_source_binding ? `
                         <div class="detail-row" style="border:none">
-                            <a href="/resolve/${node.path}" target="_blank" style="color:#4ecca3">/resolve/${node.path}</a>
+                            <a href="/resolve/${node.path}" target="_blank">/resolve/${node.path}</a>
                         </div>
                         <div class="detail-row" style="border:none">
-                            <a href="/metadata/${node.path}" target="_blank" style="color:#4ecca3">/metadata/${node.path}</a>
+                            <a href="/metadata/${node.path}" target="_blank">/metadata/${node.path}</a>
                         </div>
                     ` : ''}
                 </div>
@@ -1633,6 +1766,16 @@ _UI_HTML = """
 
         function detailRow(label, value) {
             return `<div class="detail-row"><span>${label}</span><span>${value}</span></div>`;
+        }
+
+        function expandAll() {
+            document.querySelectorAll('.tree li.collapsed').forEach(el => el.classList.remove('collapsed'));
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.tree li').forEach(el => {
+                if (el.querySelector('ul')) el.classList.add('collapsed');
+            });
         }
 
         loadTree();

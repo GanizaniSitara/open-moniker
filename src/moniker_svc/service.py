@@ -755,3 +755,29 @@ class MonikerService:
         )
 
         self.telemetry.emit(event)
+
+    def reload_catalog(self, new_catalog: CatalogRegistry) -> int:
+        """
+        Hot-reload the catalog with a new set of nodes.
+
+        This atomically replaces the catalog contents, allowing for
+        live updates without service restart.
+
+        Args:
+            new_catalog: The new catalog registry to use
+
+        Returns:
+            Number of nodes in the new catalog
+        """
+        # Get all nodes from the new catalog
+        new_nodes = new_catalog.all_nodes()
+
+        # Atomically replace the catalog contents
+        self.catalog.atomic_replace(new_nodes)
+
+        # Clear the cache since catalog changed
+        self.cache.clear()
+
+        logger.info(f"Catalog hot-reloaded with {len(new_nodes)} nodes")
+
+        return len(new_nodes)

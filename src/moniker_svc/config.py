@@ -59,6 +59,13 @@ class SqlCatalogConfig:
 
 
 @dataclass
+class ConfigUIConfig:
+    """Config UI configuration."""
+    enabled: bool = True
+    yaml_output_path: str = "catalog_output.yaml"
+
+
+@dataclass
 class Config:
     """Main configuration container."""
     server: ServerConfig = field(default_factory=ServerConfig)
@@ -67,6 +74,7 @@ class Config:
     catalog: CatalogConfig = field(default_factory=CatalogConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
     sql_catalog: SqlCatalogConfig = field(default_factory=SqlCatalogConfig)
+    config_ui: ConfigUIConfig = field(default_factory=ConfigUIConfig)
 
     @classmethod
     def from_dict(cls, data: dict) -> Config:
@@ -79,6 +87,7 @@ class Config:
             catalog=CatalogConfig(**data.get("catalog", {})),
             auth=AuthConfig.from_dict(auth_data) if auth_data else AuthConfig(),
             sql_catalog=SqlCatalogConfig(**data.get("sql_catalog", {})),
+            config_ui=ConfigUIConfig(**data.get("config_ui", {})),
         )
 
     @classmethod
