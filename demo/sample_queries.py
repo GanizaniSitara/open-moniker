@@ -450,37 +450,35 @@ def option_space():
 # =============================================================================
 
 MENU = f"""
-{C.CYAN}+------------------------------------------------------------------------------+
-|                           MONIKER SERVICE DEMO                               |
-+------------------------------------------------------------------------------+{C.RESET}
-|  {C.BOLD}1.{C.RESET}  Health Check                                                            |
-|                                                                              |
-|  {C.GRAY}--- Resolution (returns connection info) ---{C.RESET}                                |
-|  {C.BOLD}2.{C.RESET}  Resolve - {C.ORANGE}prices{C.RESET}.{C.GREEN}equity{C.RESET}/{C.GREEN}AAPL{C.RESET}                              (Snowflake) |
-|  {C.BOLD}3.{C.RESET}  Resolve - {C.ORANGE}analytics{C.RESET}.{C.ORANGE}risk{C.RESET}/{C.ORANGE}var{C.RESET}/portfolio-123                  (REST) |
-|  {C.BOLD}4.{C.RESET}  Resolve - {C.ORANGE}reference{C.RESET}.{C.ORANGE}security{C.RESET}/{C.GREEN}ISIN{C.RESET}/{C.GREEN}US0378331005{C.RESET}        (Oracle) |
-|                                                                              |
-|  {C.GRAY}--- Fetch (server-side execution) ---{C.RESET}                                       |
-|  {C.BOLD}5.{C.RESET}  Fetch   - {C.ORANGE}prices{C.RESET}.{C.GREEN}equity{C.RESET}/{C.GREEN}AAPL{C.RESET}                                          |
-|  {C.BOLD}6.{C.RESET}  Fetch   - {C.ORANGE}commodities{C.RESET}.{C.ORANGE}derivatives{C.RESET}/crypto/{C.GREEN}ETH{C.RESET}                        |
-|                                                                              |
-|  {C.GRAY}--- Metadata & Discovery ---{C.RESET}                                                |
-|  {C.BOLD}7.{C.RESET}  Describe - {C.ORANGE}analytics{C.RESET}                                                    |
-|  {C.BOLD}8.{C.RESET}  Lineage  - {C.ORANGE}analytics{C.RESET}.{C.ORANGE}risk{C.RESET}/{C.ORANGE}var{C.RESET}                                        |
-|  {C.BOLD}9.{C.RESET}  List     - {C.ORANGE}reference{C.RESET}                                         (children) |
-|  {C.BOLD}10.{C.RESET} Sample   - {C.ORANGE}indices{C.RESET}.{C.ORANGE}sovereign{C.RESET}/developed/EU.GovBondAgg/{C.GREEN}EUR{C.RESET}/{C.RED}{C.BOLD}ALL{C.RESET}       |
-|  {C.BOLD}11.{C.RESET} Metadata - {C.ORANGE}holdings{C.RESET}/positions                                          |
-|  {C.BOLD}12.{C.RESET} Tree     - {C.ORANGE}analytics{C.RESET}                                        (hierarchy) |
-|                                                                              |
-|  {C.GRAY}--- Batch & Catalog ---{C.RESET}                                                     |
-|  {C.BOLD}13.{C.RESET} Batch Validate - Multiple monikers                                      |
-|  {C.BOLD}14.{C.RESET} List Data Domains                                                       |
-|  {C.BOLD}15.{C.RESET} Domain Metadata - {C.ORANGE}analytics{C.RESET}                                             |
-|  {C.BOLD}16.{C.RESET} Domain Metadata - {C.ORANGE}reference{C.RESET}                                             |
-|  {C.BOLD}17.{C.RESET} List Full Mapping                                                       |
-|                                                                              |
-|  {C.BOLD}SPACE{C.RESET} - Service Info    {C.BOLD}Q{C.RESET} - Quit                                            |
-{C.CYAN}+------------------------------------------------------------------------------+{C.RESET}
+  {C.CYAN}{C.BOLD}MONIKER SERVICE DEMO{C.RESET}
+
+  {C.BOLD}1.{C.RESET}  Health Check
+
+  {C.GRAY}--- Resolution (returns connection info) ---{C.RESET}
+  {C.BOLD}2.{C.RESET}  Resolve {C.ORANGE}prices{C.RESET}.{C.ORANGE}equity{C.RESET}/{C.GREEN}AAPL{C.RESET}  (Snowflake)
+  {C.BOLD}3.{C.RESET}  Resolve {C.ORANGE}analytics{C.RESET}.{C.ORANGE}risk{C.RESET}/{C.ORANGE}var{C.RESET}/portfolio-123  (REST)
+  {C.BOLD}4.{C.RESET}  Resolve {C.ORANGE}reference{C.RESET}.{C.ORANGE}security{C.RESET}/{C.GREEN}ISIN{C.RESET}/{C.GREEN}US0378331005{C.RESET}  (Oracle)
+
+  {C.GRAY}--- Fetch (server-side execution) ---{C.RESET}
+  {C.BOLD}5.{C.RESET}  Fetch {C.ORANGE}prices{C.RESET}.{C.ORANGE}equity{C.RESET}/{C.GREEN}AAPL{C.RESET}
+  {C.BOLD}6.{C.RESET}  Fetch {C.ORANGE}commodities{C.RESET}.{C.ORANGE}derivatives{C.RESET}/crypto/{C.GREEN}ETH{C.RESET}
+
+  {C.GRAY}--- Metadata & Discovery ---{C.RESET}
+  {C.BOLD}7.{C.RESET}  Describe {C.ORANGE}analytics{C.RESET}
+  {C.BOLD}8.{C.RESET}  Lineage {C.ORANGE}analytics{C.RESET}.{C.ORANGE}risk{C.RESET}/{C.ORANGE}var{C.RESET}
+  {C.BOLD}9.{C.RESET}  List {C.ORANGE}reference{C.RESET}  (children)
+  {C.BOLD}10.{C.RESET} Sample {C.ORANGE}indices{C.RESET}.{C.ORANGE}sovereign{C.RESET}/developed/EU.GovBondAgg/{C.GREEN}EUR{C.RESET}/{C.RED}{C.BOLD}ALL{C.RESET}
+  {C.BOLD}11.{C.RESET} Metadata {C.ORANGE}holdings{C.RESET}/positions
+  {C.BOLD}12.{C.RESET} Tree {C.ORANGE}analytics{C.RESET}  (hierarchy)
+
+  {C.GRAY}--- Batch & Catalog ---{C.RESET}
+  {C.BOLD}13.{C.RESET} Batch Validate - Multiple monikers
+  {C.BOLD}14.{C.RESET} List Data Domains
+  {C.BOLD}15.{C.RESET} Domain Metadata {C.ORANGE}analytics{C.RESET}
+  {C.BOLD}16.{C.RESET} Domain Metadata {C.ORANGE}reference{C.RESET}
+  {C.BOLD}17.{C.RESET} List Full Mapping
+
+  {C.BOLD}SPACE{C.RESET} - Service Info    {C.BOLD}Q{C.RESET} - Quit
 """
 
 
