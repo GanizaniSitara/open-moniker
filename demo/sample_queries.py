@@ -20,7 +20,7 @@ import yaml
 from colorama import init, Fore, Style
 init(autoreset=True)
 
-BASE_URL = "http://localhost:8050"
+BASE_URL = "http://localhost:8060"
 
 # Global - populated at startup
 DEMO_MONIKERS: list[dict] = []
@@ -399,7 +399,7 @@ def option_configure_domains():
 
             print(f"  - {colorize_path(d['name']):15} {d.get('short_code', ''):5} - {d.get('display_name', '')}{conf_badge}{pii_badge}")
 
-        print(f"\n  {C.BOLD}Domain Config UI:{C.RESET} {C.CYAN}http://localhost:8050/domains/ui{C.RESET}")
+        print(f"\n  {C.BOLD}Domain Config UI:{C.RESET} {C.CYAN}http://localhost:8060/domains/ui{C.RESET}")
 
 
 def option_info():
@@ -431,10 +431,10 @@ def option_info():
     {C.PURPLE}Purple{C.RESET}        - Tenors (KRD12Y, 5Y, 3M)
 
   {C.BOLD}URLs:{C.RESET}
-    Catalog UI:   {C.CYAN}http://localhost:8050/ui{C.RESET}
-    Config UI:    {C.CYAN}http://localhost:8050/config/ui{C.RESET}
-    Domains UI:   {C.CYAN}http://localhost:8050/domains/ui{C.RESET}
-    Swagger/API:  {C.CYAN}http://localhost:8050/docs{C.RESET}
+    Catalog UI:   {C.CYAN}http://localhost:8060/ui{C.RESET}
+    Config UI:    {C.CYAN}http://localhost:8060/config/ui{C.RESET}
+    Domains UI:   {C.CYAN}http://localhost:8060/domains/ui{C.RESET}
+    Swagger/API:  {C.CYAN}http://localhost:8060/docs{C.RESET}
 """)
 
 
