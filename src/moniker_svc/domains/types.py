@@ -27,7 +27,7 @@ class Domain:
     # Display and identification
     display_name: str = ""      # Human-readable name, e.g., "Market Indices"
     short_code: str = ""        # Short code, e.g., "IDX", "CMD", "REF"
-    category: str = ""          # e.g., "Market Data", "Reference Data"
+    data_category: str = ""          # e.g., "Market Data", "Reference Data"
     color: str = "#6B7280"      # Hex color for UI display (default: gray)
 
     # Ownership and governance
@@ -70,7 +70,7 @@ class Domain:
             id=id_val,
             display_name=data.get("display_name", ""),
             short_code=data.get("short_code", ""),
-            category=data.get("category", ""),
+            data_category=data.get("data_category", ""),
             color=data.get("color", "#6B7280"),
             owner=data.get("owner", ""),
             tech_custodian=data.get("tech_custodian", ""),

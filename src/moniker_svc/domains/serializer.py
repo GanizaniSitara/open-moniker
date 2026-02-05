@@ -43,7 +43,7 @@ def save_domains_to_yaml(
             "id": domain.id,
             "display_name": domain.display_name,
             "short_code": domain.short_code,
-            "category": domain.category,
+            "data_category": domain.data_category,
             "color": domain.color,
             "owner": domain.owner,
             "tech_custodian": domain.tech_custodian,

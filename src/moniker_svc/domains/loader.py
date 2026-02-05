@@ -61,7 +61,7 @@ def load_domains_from_csv(
     """
     Load domains from a CSV file.
 
-    Expected columns: name, id, display_name, short_code, category, color, owner,
+    Expected columns: name, id, display_name, short_code, data_category, color, owner,
     tech_custodian, business_steward, confidentiality,
     pii, help_channel, wiki_link, notes
 
@@ -97,7 +97,7 @@ def load_domains_from_csv(
                 id=id_int,
                 display_name=row.get("display_name", ""),
                 short_code=row.get("short_code", ""),
-                category=row.get("category", ""),
+                data_category=row.get("data_category", ""),
                 color=row.get("color", "#6B7280"),
                 owner=row.get("owner", ""),
                 tech_custodian=row.get("tech_custodian", ""),

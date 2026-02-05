@@ -18,7 +18,7 @@ class DomainModel(BaseModel):
                 "id": 1,
                 "display_name": "Market Indices",
                 "short_code": "IDX",
-                "category": "Market Data",
+                "data_category": "Market Data",
                 "color": "#4A90D9",
                 "owner": "indices-governance@firm.com",
                 "tech_custodian": "quant-tech@firm.com",
@@ -36,7 +36,7 @@ class DomainModel(BaseModel):
     id: Optional[int] = Field(None, description="Numeric ID for ordering")
     display_name: str = Field("", description="Human-readable name")
     short_code: str = Field("", description="Short code (e.g., IDX, CMD, REF)")
-    category: str = Field("", description="Data category classification")
+    data_category: str = Field("", description="Data category classification")
     color: str = Field("#6B7280", description="Hex color code for UI display")
     owner: str = Field("", description="Executive/business owner")
     tech_custodian: str = Field("", description="Technical custodian")
@@ -58,7 +58,7 @@ class CreateDomainRequest(BaseModel):
                 "id": 14,
                 "display_name": "Derivatives",
                 "short_code": "DRV",
-                "category": "Market Data",
+                "data_category": "Market Data",
                 "color": "#8E44AD",
                 "owner": "derivatives-desk@firm.com",
                 "confidentiality": "internal",
@@ -70,7 +70,7 @@ class CreateDomainRequest(BaseModel):
     id: Optional[int] = Field(None, description="Numeric ID for ordering")
     display_name: str = Field("", description="Human-readable name")
     short_code: str = Field("", description="Short code")
-    category: str = Field("", description="Data category")
+    data_category: str = Field("", description="Data category")
     color: str = Field("#6B7280", description="Hex color code")
     owner: str = Field("", description="Executive/business owner")
     tech_custodian: str = Field("", description="Technical custodian")
@@ -98,7 +98,7 @@ class UpdateDomainRequest(BaseModel):
     id: Optional[int] = Field(None, description="Numeric ID for ordering")
     display_name: Optional[str] = Field(None, description="Human-readable name")
     short_code: Optional[str] = Field(None, description="Short code")
-    category: Optional[str] = Field(None, description="Data category")
+    data_category: Optional[str] = Field(None, description="Data category")
     color: Optional[str] = Field(None, description="Hex color code")
     owner: Optional[str] = Field(None, description="Executive/business owner")
     tech_custodian: Optional[str] = Field(None, description="Technical custodian")

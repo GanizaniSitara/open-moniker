@@ -511,7 +511,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Category</label>
-                        <input type="text" class="form-control" id="field-category" placeholder="e.g., Market Data">
+                        <input type="text" class="form-control" id="field-data_category" placeholder="e.g., Market Data">
                     </div>
                     <div class="form-group">
                         <label>Color</label>
@@ -655,7 +655,7 @@
                         </div>
                     </td>
                     <td class="editable" data-field="display_name" contenteditable="true">${escapeHtml(d.display_name)}</td>
-                    <td class="editable" data-field="category" contenteditable="true">${escapeHtml(d.category)}</td>
+                    <td class="editable" data-field="data_category" contenteditable="true">${escapeHtml(d.data_category)}</td>
                     <td class="editable truncate" data-field="owner" contenteditable="true" title="${escapeHtml(d.owner)}">${escapeHtml(d.owner)}</td>
                     <td class="editable truncate" data-field="tech_custodian" contenteditable="true" title="${escapeHtml(d.tech_custodian)}">${escapeHtml(d.tech_custodian)}</td>
                     <td class="editable truncate" data-field="business_steward" contenteditable="true" title="${escapeHtml(d.business_steward)}">${escapeHtml(d.business_steward)}</td>
@@ -773,7 +773,7 @@
             document.getElementById('field-id').value = domain.id !== null ? domain.id : '';
             document.getElementById('field-display_name').value = domain.display_name;
             document.getElementById('field-short_code').value = domain.short_code;
-            document.getElementById('field-category').value = domain.category;
+            document.getElementById('field-data_category').value = domain.data_category;
             document.getElementById('field-color').value = domain.color;
             document.getElementById('field-color-picker').value = domain.color;
             document.getElementById('field-owner').value = domain.owner;
@@ -800,7 +800,7 @@
                 id: idVal ? parseInt(idVal, 10) : null,
                 display_name: document.getElementById('field-display_name').value.trim(),
                 short_code: document.getElementById('field-short_code').value.trim(),
-                category: document.getElementById('field-category').value.trim(),
+                category: document.getElementById('field-data_category').value.trim(),
                 color: document.getElementById('field-color').value.trim(),
                 owner: document.getElementById('field-owner').value.trim(),
                 tech_custodian: document.getElementById('field-tech_custodian').value.trim(),
