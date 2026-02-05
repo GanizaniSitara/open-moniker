@@ -927,7 +927,7 @@
         let originalNode = null;
 
         // Domain state (for checking if top-level nodes have domain mappings)
-        let domainNames = new Set();
+        let domainsData = [];  // Full domain objects sorted by category, then name
 
         // Placeholder state
         let placeholderPanelVisible = false;
@@ -1002,10 +1002,16 @@
         async function loadDomains() {
             try {
                 const data = await fetchJSON('/domains');
-                domainNames = new Set(data.domains.map(d => d.name));
+                // Sort by category first, then by name within category
+                domainsData = (data.domains || []).sort((a, b) => {
+                    const catA = (a.category || '').toLowerCase();
+                    const catB = (b.category || '').toLowerCase();
+                    if (catA !== catB) return catA.localeCompare(catB);
+                    return (a.name || '').localeCompare(b.name || '');
+                });
             } catch (e) {
                 console.error('Failed to load domains:', e);
-                domainNames = new Set();
+                domainsData = [];
             }
         }
 
@@ -1170,13 +1176,15 @@
                     // Domain is explicitly set on the node, not derived from path
                     const isTopLevelNode = !data._path.includes('/');
                     const nodeDomain = node?.domain || null;
-                    const hasDomain = isTopLevelNode && nodeDomain && domainNames.has(nodeDomain);
+                    const domainInfo = nodeDomain ? domainsData.find(d => d.name === nodeDomain) : null;
+                    const hasDomain = isTopLevelNode && domainInfo;
                     const missingDomain = isTopLevelNode && !hasDomain;
 
                     // Build badges
                     let badges = '';
                     if (isTopLevelNode && hasDomain) {
-                        badges += `<span class="domain-badge" title="Domain: ${nodeDomain}">${nodeDomain}</span>`;
+                        const badgeLabel = domainInfo.short_code || domainInfo.display_name || nodeDomain;
+                        badges += `<span class="domain-badge" title="Domain: ${domainInfo.display_name || nodeDomain}">${badgeLabel}</span>`;
                     }
                     if (hasSource) {
                         badges += `<span class="node-badge">${node.source_binding.type}</span>`;
@@ -1246,16 +1254,35 @@
                 return '';
             }
 
-            // Build domain options from loaded domain names
-            const domainOptions = Array.from(domainNames).sort();
-            const hasDomain = currentDomain && domainNames.has(currentDomain);
+            // Build domain options grouped by category (domainsData is pre-sorted by category, then name)
+            const hasDomain = currentDomain && domainsData.some(d => d.name === currentDomain);
+
+            // Group domains by category for optgroup display
+            let optionsHtml = '<option value="">-- None --</option>';
+            let currentCategory = null;
+
+            for (const d of domainsData) {
+                const category = d.category || 'Uncategorized';
+                if (category !== currentCategory) {
+                    if (currentCategory !== null) {
+                        optionsHtml += '</optgroup>';
+                    }
+                    optionsHtml += `<optgroup label="${escapeHtml(category)}">`;
+                    currentCategory = category;
+                }
+                const displayLabel = d.display_name || d.name;
+                const isSelected = currentDomain === d.name ? 'selected' : '';
+                optionsHtml += `<option value="${escapeHtml(d.name)}" ${isSelected}>${escapeHtml(displayLabel)}</option>`;
+            }
+            if (currentCategory !== null) {
+                optionsHtml += '</optgroup>';
+            }
 
             return `
                 <div class="domain-info ${hasDomain ? 'domain-exists' : 'domain-missing'}">
                     <span class="domain-info-label">Domain:</span>
                     <select id="node_domain" class="domain-select" style="min-width: 150px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border);">
-                        <option value="">-- None --</option>
-                        ${domainOptions.map(d => `<option value="${escapeHtml(d)}" ${currentDomain === d ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('')}
+                        ${optionsHtml}
                     </select>
                     <span class="domain-info-status">${hasDomain ? 'Configured' : 'Not mapped'}</span>
                     <a href="/domains/ui" class="btn btn-sm btn-secondary" target="_blank">Manage Domains</a>
