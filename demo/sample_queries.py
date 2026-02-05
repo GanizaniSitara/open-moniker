@@ -4,6 +4,9 @@ Sample Queries Demo - Interactive demonstration of the Moniker Service.
 
 Run with: python demo/sample_queries.py
 Requires the service to be running: python start.py
+
+ADDING NEW MONIKERS:
+Simply add an entry to DEMO_MONIKERS list below. The menu is auto-generated.
 """
 
 import json
@@ -13,10 +16,141 @@ from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
 
 # Initialize colorama for Windows support
-from colorama import init, Fore, Back, Style
+from colorama import init, Fore, Style
 init(autoreset=True)
 
 BASE_URL = "http://localhost:8050"
+
+
+# =============================================================================
+# DEMO MONIKERS - Add new demos here!
+# =============================================================================
+
+DEMO_MONIKERS = [
+    # --- Resolution demos (returns connection info) ---
+    {
+        "moniker": "prices.equity/AAPL",
+        "action": "resolve",
+        "desc": "Equity Price (Snowflake)",
+        "note": "Returns connection info for Snowflake - client connects directly.",
+    },
+    {
+        "moniker": "analytics.risk/var/portfolio-123",
+        "action": "resolve",
+        "desc": "Risk VaR (REST)",
+        "note": "Returns REST API connection info.",
+    },
+    {
+        "moniker": "reference.security/ISIN/US0378331005",
+        "action": "resolve",
+        "desc": "Security Master (Oracle)",
+        "note": "Returns Oracle connection info.",
+    },
+    {
+        "moniker": "spm.position/20260109/700",
+        "action": "resolve",
+        "desc": "SPM Position by date/account",
+        "note": "Path segments: date (20260109), account (700).",
+    },
+
+    # --- Fetch demos (server-side execution) ---
+    {
+        "moniker": "prices.equity/AAPL",
+        "action": "fetch",
+        "desc": "Equity Price",
+        "note": "Server executes the query and returns data directly.",
+    },
+    {
+        "moniker": "commodities.derivatives/crypto/ETH",
+        "action": "fetch",
+        "desc": "Digital Assets (REST)",
+        "note": "Server calls REST API and returns data.",
+    },
+
+    # --- Metadata & Discovery ---
+    {
+        "moniker": "analytics",
+        "action": "describe",
+        "desc": "Describe Analytics domain",
+        "note": "Returns metadata, ownership, classification.",
+    },
+    {
+        "moniker": "analytics.risk/var",
+        "action": "lineage",
+        "desc": "Ownership Lineage",
+        "note": "Shows where each ownership field is inherited from.",
+    },
+    {
+        "moniker": "reference",
+        "action": "list",
+        "desc": "List Children",
+        "note": "Lists child paths under reference.",
+    },
+    {
+        "moniker": "indices.sovereign/developed/EU.GovBondAgg/EUR/ALL",
+        "action": "sample",
+        "desc": "Sample Index Data",
+        "note": "Quick preview of data structure.",
+    },
+    {
+        "moniker": "holdings/positions",
+        "action": "metadata",
+        "desc": "Rich Metadata (AI agents)",
+        "note": "Returns comprehensive info for AI discoverability.",
+    },
+    {
+        "moniker": "analytics",
+        "action": "tree",
+        "desc": "Catalog Tree",
+        "note": "Hierarchical view of the catalog.",
+    },
+
+    # --- Complex patterns ---
+    {
+        "moniker": "index.global/BBGGlobalAggTreasury/GBP/MWS_LIBOR",
+        "action": "resolve",
+        "desc": "Complex Index Path",
+        "note": "Multi-segment: index family / currency / benchmark.",
+    },
+    {
+        "moniker": "rates.gov/DKK/DK0.125Mar2026/KRD/KRD12Y",
+        "action": "resolve",
+        "desc": "Gov Rates with KRD tenor",
+        "note": "Path: currency / bond ID / risk type / tenor.",
+    },
+    {
+        "moniker": "securities/012345678@20260101/details.corporate.actions",
+        "action": "resolve",
+        "desc": "Versioned Sub-resource",
+        "note": "Point-in-time view with sub-resource projection.",
+    },
+
+    # --- Version type examples ---
+    {
+        "moniker": "prices.equity/AAPL@20260115",
+        "action": "resolve",
+        "desc": "Date Version (@YYYYMMDD)",
+        "note": "Specific date version.",
+    },
+    {
+        "moniker": "prices.equity/AAPL@latest",
+        "action": "resolve",
+        "desc": "Latest Version (@latest)",
+        "note": "Most recent available data.",
+    },
+    {
+        "moniker": "prices.equity/AAPL@3M",
+        "action": "resolve",
+        "desc": "Lookback Version (@3M)",
+        "note": "Three months lookback period.",
+    },
+    {
+        "moniker": "risk.cvar/portfolio-123@all",
+        "action": "resolve",
+        "desc": "All Version (@all)",
+        "note": "Full time series.",
+    },
+]
 
 
 # =============================================================================
@@ -29,9 +163,8 @@ class C:
     BOLD = Style.BRIGHT
     DIM = Style.DIM
 
-    # Colors
     WHITE = Fore.WHITE
-    ORANGE = Fore.YELLOW  # Colorama doesn't have orange, use yellow
+    ORANGE = Fore.YELLOW
     RED = Fore.RED
     BLUE = Fore.BLUE
     GREEN = Fore.GREEN
@@ -43,12 +176,10 @@ class C:
 
 def colorize_path(path: str) -> str:
     """Colorize a moniker path with semantic highlighting."""
-    # Split into parts
     parts = re.split(r'([/@.])', path)
     result = []
 
-    # Patterns
-    date_pattern = re.compile(r'^@?\d{8}$')  # @20260101 or 20260101
+    date_pattern = re.compile(r'^@?\d{8}$')
     tenor_pattern = re.compile(r'^(KRD|DV01|CR01)?\d*[YMWD]$|^KRD\d+[YMWD]?$', re.IGNORECASE)
     keyword_pattern = re.compile(r'^(ALL|LATEST|ANY)$', re.IGNORECASE)
     business_fields = {'AAPL', 'MSFT', 'GOOG', 'TSLA', 'ETH', 'BTC', 'EUR', 'USD', 'GBP', 'DKK',
@@ -57,8 +188,7 @@ def colorize_path(path: str) -> str:
     domain_keywords = {'prices', 'analytics', 'reference', 'holdings', 'indices', 'index',
                        'commodities', 'commods', 'instruments', 'reports', 'risk', 'security',
                        'sovereign', 'derivatives', 'calendars', 'regulatory', 'var', 'views',
-                       'global', 'futures', 'digital', 'gov', 'securities'}
-    # Sub-resource keywords (paths after @version)
+                       'global', 'futures', 'digital', 'gov', 'securities', 'spm', 'position'}
     subresource_keywords = {'details', 'history', 'metadata', 'schema', 'audit', 'corporate', 'actions'}
 
     for part in parts:
@@ -78,7 +208,7 @@ def colorize_path(path: str) -> str:
             result.append(C.GREEN + part + C.RESET)
         elif part.lower() in domain_keywords:
             result.append(C.ORANGE + part + C.RESET)
-        elif part.startswith('US') and len(part) > 8:  # ISIN-like
+        elif part.startswith('US') and len(part) > 8:
             result.append(C.GREEN + part + C.RESET)
         else:
             result.append(C.WHITE + part + C.RESET)
@@ -97,7 +227,7 @@ def colorize_moniker(moniker: str) -> str:
 # API Functions
 # =============================================================================
 
-def fetch(endpoint: str, method: str = "GET", data: dict = None) -> dict | None:
+def fetch_api(endpoint: str, method: str = "GET", data: dict = None) -> dict | None:
     """Fetch from the API and return JSON response."""
     url = f"{BASE_URL}{endpoint}"
     try:
@@ -121,11 +251,6 @@ def fetch(endpoint: str, method: str = "GET", data: dict = None) -> dict | None:
         return None
 
 
-def print_json(data: dict, indent: int = 2):
-    """Pretty print JSON data."""
-    print(json.dumps(data, indent=indent, default=str))
-
-
 def header(title: str):
     """Print a section header."""
     print("\n" + C.CYAN + "=" * 60 + C.RESET)
@@ -134,182 +259,150 @@ def header(title: str):
 
 
 # =============================================================================
-# Menu Options
+# Generic Handlers - Display results for each action type
 # =============================================================================
 
-def option_1_health():
-    """Health Check"""
-    header("1. Health Check")
-    print("\nChecking service health...")
-    result = fetch("/health")
-    if result:
-        print(f"\n  Status: {C.GREEN}{result['status']}{C.RESET}")
-        print(f"  Cache size: {result['cache']['size']}")
-        print(f"  Telemetry emitted: {result['telemetry']['emitted']}")
-        print("\n  Full response:")
-        print_json(result)
-
-
-def option_2_resolve_equity():
-    """Resolve - Equity Price (Snowflake)"""
-    header("2. Resolve Moniker - Equity Price")
-    moniker = "prices.equity/AAPL"
+def handle_resolve(moniker: str, note: str = ""):
+    """Generic resolve handler - works for any source type."""
     print(f"\nResolving: {colorize_moniker('moniker://' + moniker)}")
-    print("This returns connection info for Snowflake - client connects directly.\n")
-    result = fetch(f"/resolve/{moniker}")
+    if note:
+        print(f"{C.GRAY}{note}{C.RESET}\n")
+
+    result = fetch_api(f"/resolve/{moniker}")
     if result:
-        print(f"  Source Type: {C.ORANGE}{result['source_type']}{C.RESET}")
-        print(f"  Binding Path: {colorize_path(result['binding_path'])}")
-        print(f"  Connection: {result['connection']}")
-        print(f"\n  Query to execute:")
+        print(f"  {C.BOLD}Source Type:{C.RESET} {C.ORANGE}{result['source_type']}{C.RESET}")
+        print(f"  {C.BOLD}Binding Path:{C.RESET} {colorize_path(result['binding_path'])}")
+
+        # Connection info (format varies by source type)
+        conn = result.get('connection', {})
+        print(f"\n  {C.BOLD}Connection:{C.RESET}")
+        for key, val in conn.items():
+            if val and key not in ('password', 'secret', 'token'):
+                print(f"    {key}: {C.GREEN}{val}{C.RESET}")
+
+        # Query/path
         query = result.get('query', '')
-        print(f"  {query[:200]}..." if len(query) > 200 else f"  {query}")
+        if query:
+            print(f"\n  {C.BOLD}Query:{C.RESET}")
+            # Truncate long queries
+            if len(query) > 300:
+                print(f"    {query[:300]}...")
+            else:
+                print(f"    {query}")
 
 
-def option_3_resolve_rest():
-    """Resolve - Risk VaR (REST API)"""
-    header("3. Resolve Moniker - Risk VaR (REST)")
-    moniker = "analytics.risk/var/portfolio-123"
-    print(f"\nResolving: {colorize_moniker('moniker://' + moniker)}")
-    print("This returns REST API connection info.\n")
-    result = fetch(f"/resolve/{moniker}")
-    if result:
-        print(f"  Source Type: {C.ORANGE}{result['source_type']}{C.RESET}")
-        print(f"  Base URL: {result['connection'].get('base_url')}")
-        print(f"  Auth Type: {result['connection'].get('auth_type')}")
-        print(f"  Path: {result['query']}")
-
-
-def option_4_resolve_oracle():
-    """Resolve - Security Master (Oracle)"""
-    header("4. Resolve Moniker - Security Master (Oracle)")
-    moniker = "reference.security/ISIN/US0378331005"
-    print(f"\nResolving: {colorize_moniker('moniker://' + moniker)}")
-    print("This returns Oracle connection info.\n")
-    result = fetch(f"/resolve/{moniker}")
-    if result:
-        print(f"  Source Type: {C.ORANGE}{result['source_type']}{C.RESET}")
-        print(f"  DSN: {result['connection'].get('dsn')}")
-        print(f"\n  Query:")
-        print(f"  {result.get('query', 'N/A')}")
-
-
-def option_5_fetch_equity():
-    """Fetch - Equity Price (Server-side execution)"""
-    header("5. Fetch Data - Equity Price")
-    moniker = "prices.equity/AAPL"
+def handle_fetch(moniker: str, note: str = ""):
+    """Generic fetch handler - server-side execution."""
     print(f"\nFetching: {colorize_moniker('moniker://' + moniker)}")
-    print("Server executes the query and returns data directly.\n")
-    result = fetch(f"/fetch/{moniker}?limit=5")
-    if result:
-        print(f"  Rows returned: {C.GREEN}{result['row_count']}{C.RESET}")
-        print(f"  Columns: {result['columns']}")
-        print(f"  Execution time: {result['execution_time_ms']}ms")
-        print(f"\n  Data sample:")
-        for row in result['data'][:3]:
-            print(f"    {row}")
+    if note:
+        print(f"{C.GRAY}{note}{C.RESET}\n")
 
-
-def option_6_fetch_crypto():
-    """Fetch - Crypto (REST pass-through)"""
-    header("6. Fetch Data - Digital Assets")
-    moniker = "commodities.derivatives/crypto/ETH"
-    print(f"\nFetching: {colorize_moniker('moniker://' + moniker)}")
-    print("Server calls REST API and returns data.\n")
-    result = fetch(f"/fetch/{moniker}?limit=5")
+    result = fetch_api(f"/fetch/{moniker}?limit=5")
     if result:
-        print(f"  Source Type: {C.ORANGE}{result['source_type']}{C.RESET}")
-        print(f"  Rows: {result['row_count']}")
-        if result['data']:
-            print(f"\n  Data sample:")
+        print(f"  {C.BOLD}Source Type:{C.RESET} {C.ORANGE}{result.get('source_type', 'N/A')}{C.RESET}")
+        print(f"  {C.BOLD}Rows returned:{C.RESET} {C.GREEN}{result.get('row_count', 0)}{C.RESET}")
+        print(f"  {C.BOLD}Columns:{C.RESET} {result.get('columns', [])}")
+        if result.get('execution_time_ms'):
+            print(f"  {C.BOLD}Execution time:{C.RESET} {result['execution_time_ms']}ms")
+
+        if result.get('data'):
+            print(f"\n  {C.BOLD}Data sample:{C.RESET}")
             for row in result['data'][:3]:
                 print(f"    {row}")
 
 
-def option_7_describe():
-    """Describe - Get metadata about a path"""
-    header("7. Describe Moniker")
-    moniker = "analytics"
+def handle_describe(moniker: str, note: str = ""):
+    """Generic describe handler."""
     print(f"\nDescribing: {colorize_moniker('moniker://' + moniker)}")
-    print("Returns metadata, ownership, classification.\n")
-    result = fetch(f"/describe/{moniker}")
+    if note:
+        print(f"{C.GRAY}{note}{C.RESET}\n")
+
+    result = fetch_api(f"/describe/{moniker}")
     if result:
-        print(f"  Path: {colorize_path(result['path'])}")
-        print(f"  Display Name: {result['display_name']}")
-        print(f"  Classification: {C.YELLOW}{result['classification']}{C.RESET}")
-        print(f"  Has Source: {result['has_source_binding']}")
-        print(f"\n  Ownership:")
-        for key, val in result['ownership'].items():
-            if val and not key.endswith('_source'):
-                print(f"    {key}: {C.GREEN}{val}{C.RESET}")
+        print(f"  {C.BOLD}Path:{C.RESET} {colorize_path(result['path'])}")
+        print(f"  {C.BOLD}Display Name:{C.RESET} {result.get('display_name', 'N/A')}")
+        print(f"  {C.BOLD}Classification:{C.RESET} {C.YELLOW}{result.get('classification', 'N/A')}{C.RESET}")
+        print(f"  {C.BOLD}Has Source:{C.RESET} {result.get('has_source_binding', False)}")
+
+        ownership = result.get('ownership', {})
+        if ownership:
+            print(f"\n  {C.BOLD}Ownership:{C.RESET}")
+            for key, val in ownership.items():
+                if val and not key.endswith('_source') and not key.endswith('_at'):
+                    print(f"    {key}: {C.GREEN}{val}{C.RESET}")
 
 
-def option_8_lineage():
-    """Lineage - Ownership provenance"""
-    header("8. Ownership Lineage")
-    moniker = "analytics.risk/var"
+def handle_lineage(moniker: str, note: str = ""):
+    """Generic lineage handler."""
     print(f"\nLineage for: {colorize_moniker('moniker://' + moniker)}")
-    print("Shows where each ownership field is inherited from.\n")
-    result = fetch(f"/lineage/{moniker}")
+    if note:
+        print(f"{C.GRAY}{note}{C.RESET}\n")
+
+    result = fetch_api(f"/lineage/{moniker}")
     if result:
-        print(f"  Path: {colorize_path(result['path'])}")
-        print(f"\n  Ownership inheritance:")
-        for key, val in result['ownership'].items():
-            if not key.endswith('_at') and val:
+        print(f"  {C.BOLD}Path:{C.RESET} {colorize_path(result['path'])}")
+        print(f"\n  {C.BOLD}Ownership inheritance:{C.RESET}")
+        for key, val in result.get('ownership', {}).items():
+            if not key.endswith('_at') and not key.endswith('_defined_at') and val:
                 source = result['ownership'].get(f"{key}_defined_at", "unknown")
                 print(f"    {key}: {C.GREEN}{val}{C.RESET} (from: {C.ORANGE}{source}{C.RESET})")
 
 
-def option_9_list_children():
-    """List - Children of a path"""
-    header("9. List Children")
-    moniker = "reference"
+def handle_list(moniker: str, note: str = ""):
+    """Generic list handler."""
     print(f"\nListing children of: {colorize_moniker('moniker://' + moniker)}")
-    result = fetch(f"/list/{moniker}")
+    if note:
+        print(f"{C.GRAY}{note}{C.RESET}\n")
+
+    result = fetch_api(f"/list/{moniker}")
     if result:
-        print(f"  Path: {colorize_path(result['path'])}")
-        children_colored = [colorize_path(c) for c in result['children']]
-        print(f"  Children: {children_colored}")
+        print(f"  {C.BOLD}Path:{C.RESET} {colorize_path(result['path'])}")
+        children = result.get('children', [])
+        print(f"  {C.BOLD}Children ({len(children)}):{C.RESET}")
+        for child in children:
+            print(f"    - {colorize_path(child)}")
 
 
-def option_10_sample():
-    """Sample - Quick data preview"""
-    header("10. Sample Data")
-    moniker = "indices.sovereign/developed/EU.GovBondAgg/EUR/ALL"
+def handle_sample(moniker: str, note: str = ""):
+    """Generic sample handler."""
     print(f"\nSampling: {colorize_moniker('moniker://' + moniker)}")
-    print("Quick preview of data structure.\n")
-    result = fetch(f"/sample/{moniker}?limit=3")
+    if note:
+        print(f"{C.GRAY}{note}{C.RESET}\n")
+
+    result = fetch_api(f"/sample/{moniker}?limit=3")
     if result:
-        print(f"  Columns: {result['columns']}")
-        print(f"  Row count: {result['row_count']}")
-        if result['data']:
-            print(f"\n  Sample rows:")
+        print(f"  {C.BOLD}Columns:{C.RESET} {result.get('columns', [])}")
+        print(f"  {C.BOLD}Row count:{C.RESET} {result.get('row_count', 0)}")
+
+        if result.get('data'):
+            print(f"\n  {C.BOLD}Sample rows:{C.RESET}")
             for row in result['data']:
                 print(f"    {row}")
 
 
-def option_11_metadata():
-    """Metadata - AI/Agent discoverability"""
-    header("11. Rich Metadata (for AI agents)")
-    moniker = "holdings/positions"
+def handle_metadata(moniker: str, note: str = ""):
+    """Generic metadata handler."""
     print(f"\nMetadata for: {colorize_moniker('moniker://' + moniker)}")
-    print("Returns comprehensive info for AI discoverability.\n")
-    result = fetch(f"/metadata/{moniker}")
+    if note:
+        print(f"{C.GRAY}{note}{C.RESET}\n")
+
+    result = fetch_api(f"/metadata/{moniker}")
     if result:
-        print(f"  Path: {colorize_path(result['path'])}")
-        print(f"  Display Name: {result['display_name']}")
+        print(f"  {C.BOLD}Path:{C.RESET} {colorize_path(result['path'])}")
+        print(f"  {C.BOLD}Display Name:{C.RESET} {result.get('display_name', 'N/A')}")
         if result.get('schema'):
-            print(f"  Granularity: {result['schema'].get('granularity')}")
+            print(f"  {C.BOLD}Granularity:{C.RESET} {result['schema'].get('granularity', 'N/A')}")
         if result.get('ownership'):
-            print(f"  Owner: {C.GREEN}{result['ownership'].get('accountable_owner')}{C.RESET}")
+            print(f"  {C.BOLD}Owner:{C.RESET} {C.GREEN}{result['ownership'].get('accountable_owner', 'N/A')}{C.RESET}")
 
 
-def option_12_tree():
-    """Tree - Hierarchical view"""
-    header("12. Catalog Tree")
-    moniker = "analytics"
-    print(f"\nTree view of: {colorize_path(moniker)}\n")
-    result = fetch(f"/tree/{moniker}")
+def handle_tree(moniker: str, note: str = ""):
+    """Generic tree handler."""
+    print(f"\nTree view of: {colorize_path(moniker)}")
+    if note:
+        print(f"{C.GRAY}{note}{C.RESET}\n")
+
+    result = fetch_api(f"/tree/{moniker}")
     if result:
         def print_tree(node, indent=0):
             prefix = "  " * indent
@@ -321,21 +414,46 @@ def option_12_tree():
         print_tree(result)
 
 
-def option_13_batch_validate():
+# Action handler mapping
+HANDLERS = {
+    'resolve': handle_resolve,
+    'fetch': handle_fetch,
+    'describe': handle_describe,
+    'lineage': handle_lineage,
+    'list': handle_list,
+    'sample': handle_sample,
+    'metadata': handle_metadata,
+    'tree': handle_tree,
+}
+
+
+# =============================================================================
+# Special Menu Options
+# =============================================================================
+
+def option_health():
+    """Health Check"""
+    header("Health Check")
+    print("\nChecking service health...")
+    result = fetch_api("/health")
+    if result:
+        print(f"\n  {C.BOLD}Status:{C.RESET} {C.GREEN}{result['status']}{C.RESET}")
+        print(f"  {C.BOLD}Cache size:{C.RESET} {result['cache']['size']}")
+        print(f"  {C.BOLD}Telemetry emitted:{C.RESET} {result['telemetry']['emitted']}")
+
+
+def option_batch_validate():
     """Batch Validate - Multiple monikers"""
-    header("13. Batch Moniker Validation")
-    monikers = [
-        "prices.equity/AAPL",
-        "prices.equity/MSFT@20260115",
-        "analytics.risk/var/portfolio-1",
-        "reference.security/ISIN/US0378331005",
-        "indices.sovereign/developed/ALL/EUR/ALL",
-        "invalid/path/does/not/exist",
-    ]
+    header("Batch Moniker Validation")
+
+    # Use monikers from DEMO_MONIKERS that have resolve action
+    monikers = [d['moniker'] for d in DEMO_MONIKERS if d['action'] == 'resolve'][:6]
+    monikers.append("invalid/path/does/not/exist")
+
     print(f"\nValidating {len(monikers)} monikers...\n")
 
     for moniker in monikers:
-        result = fetch(f"/describe/{moniker}")
+        result = fetch_api(f"/describe/{moniker}")
         print(f"  {colorize_moniker('moniker://' + moniker)}")
         if result:
             status = f"{C.GREEN}HAS SOURCE{C.RESET}" if result.get('has_source_binding') else f"{C.GRAY}NO SOURCE{C.RESET}"
@@ -344,13 +462,12 @@ def option_13_batch_validate():
             print(f"    -> {C.RED}NOT FOUND{C.RESET}")
 
 
-def option_14_list_domains():
-    """List Data Domains - Top-level catalog paths"""
-    header("14. List Data Domains")
+def option_list_domains():
+    """List Data Domains"""
+    header("List Data Domains")
     print("\nTop-level data domains in the catalog:\n")
-    result = fetch("/catalog")
+    result = fetch_api("/catalog")
     if result:
-        # Extract unique top-level domains
         domains = set()
         for path in result.get('paths', []):
             top = path.split('/')[0].split('.')[0]
@@ -359,8 +476,7 @@ def option_14_list_domains():
         domains = sorted(domains)
         print(f"  Found {C.GREEN}{len(domains)}{C.RESET} top-level domains:\n")
         for i, domain in enumerate(domains, 1):
-            # Get domain info
-            info = fetch(f"/describe/{domain}")
+            info = fetch_api(f"/describe/{domain}")
             if info:
                 desc = info.get('description', '')[:50] or info.get('display_name', domain)
                 print(f"  {i:2}. {colorize_path(domain):20} - {desc}")
@@ -368,195 +484,28 @@ def option_14_list_domains():
                 print(f"  {i:2}. {colorize_path(domain)}")
 
 
-def option_15_configure_domains():
-    """Configure Domains - View and manage data domains"""
-    header("15. Configure Domains")
+def option_configure_domains():
+    """Configure Domains"""
+    header("Configure Domains")
     print("\nData domains are top-level organizational units with governance metadata.\n")
-    result = fetch("/domains")
+    result = fetch_api("/domains")
     if result:
         domains = result.get('domains', [])
         print(f"  Found {C.GREEN}{len(domains)}{C.RESET} configured domains:\n")
 
         for d in domains:
-            color_dot = f"{C.BOLD}●{C.RESET}"  # Placeholder for color
             conf_badge = ""
             if d.get('confidentiality') in ('confidential', 'strictly_confidential'):
                 conf_badge = f" [{C.RED}{d['confidentiality'].upper()}{C.RESET}]"
             pii_badge = f" [{C.RED}PII{C.RESET}]" if d.get('pii') else ""
 
-            print(f"  {color_dot} {colorize_path(d['name']):15} {d.get('short_code', ''):5} - {d.get('display_name', '')}{conf_badge}{pii_badge}")
-            if d.get('owner'):
-                print(f"      Owner: {C.GREEN}{d['owner']}{C.RESET}")
+            print(f"  - {colorize_path(d['name']):15} {d.get('short_code', ''):5} - {d.get('display_name', '')}{conf_badge}{pii_badge}")
 
         print(f"\n  {C.BOLD}Domain Config UI:{C.RESET} {C.CYAN}http://localhost:8050/domains/ui{C.RESET}")
-        print(f"  {C.BOLD}API Endpoints:{C.RESET}")
-        print(f"    GET  /domains        - List all domains")
-        print(f"    GET  /domains/{{name}} - Get domain details")
-        print(f"    POST /domains        - Create domain")
-        print(f"    PUT  /domains/{{name}} - Update domain")
-        print(f"    POST /domains/save   - Save to YAML")
 
 
-def option_16_view_domain():
-    """View Domain - Show governance metadata for a specific domain"""
-    header("16. View Domain Governance")
-    domain_name = "indices"  # Default to indices, could prompt user
-    print(f"\nViewing governance metadata for '{colorize_path(domain_name)}' domain:\n")
-    result = fetch(f"/domains/{domain_name}")
-    if result:
-        domain = result.get('domain', {})
-        monikers = result.get('moniker_paths', [])
-
-        print(f"  {C.BOLD}Domain:{C.RESET} {domain.get('name')}")
-        print(f"  {C.BOLD}Display Name:{C.RESET} {domain.get('display_name')}")
-        print(f"  {C.BOLD}Short Code:{C.RESET} {domain.get('short_code')}")
-        print(f"  {C.BOLD}Color:{C.RESET} {domain.get('color')}")
-
-        print(f"\n  {C.BOLD}Governance:{C.RESET}")
-        print(f"    Owner:           {C.GREEN}{domain.get('owner')}{C.RESET}")
-        print(f"    Tech Custodian:  {domain.get('tech_custodian')}")
-        print(f"    Business Steward: {domain.get('business_steward')}")
-
-        print(f"\n  {C.BOLD}Classification:{C.RESET}")
-        print(f"    Category:        {domain.get('category')}")
-        conf = domain.get('confidentiality', 'internal')
-        conf_color = C.RED if conf in ('confidential', 'strictly_confidential') else C.YELLOW
-        print(f"    Confidentiality: {conf_color}{conf}{C.RESET}")
-        pii = domain.get('pii', False)
-        pii_color = C.RED if pii else C.GREEN
-        print(f"    Contains PII:    {pii_color}{'Yes' if pii else 'No'}{C.RESET}")
-
-        print(f"\n  {C.BOLD}Support:{C.RESET}")
-        print(f"    Help Channel:    {domain.get('help_channel')}")
-        print(f"    Wiki Link:       {domain.get('wiki_link')}")
-
-        if domain.get('notes'):
-            print(f"\n  {C.BOLD}Notes:{C.RESET} {domain.get('notes')}")
-
-        if monikers:
-            print(f"\n  {C.BOLD}Moniker Paths ({len(monikers)}):{C.RESET}")
-            for m in monikers[:5]:
-                print(f"    - {colorize_path(m)}")
-            if len(monikers) > 5:
-                print(f"    ... and {len(monikers) - 5} more")
-
-
-def option_17_list_mappings():
-    """List Mappings - Full catalog structure"""
-    header("17. Full Catalog Mapping")
-    print("\nAll registered paths with source bindings:\n")
-    result = fetch("/catalog")
-    if result:
-        paths = sorted(result.get('paths', []))
-        print(f"  Total paths: {C.GREEN}{len(paths)}{C.RESET}\n")
-
-        # Group by top-level domain
-        by_domain = {}
-        for path in paths:
-            domain = path.split('/')[0].split('.')[0]
-            if domain not in by_domain:
-                by_domain[domain] = []
-            by_domain[domain].append(path)
-
-        for domain in sorted(by_domain.keys()):
-            print(f"  {colorize_path(domain)}/")
-            for path in by_domain[domain]:
-                # Check if it has a source binding
-                info = fetch(f"/describe/{path}")
-                if info and info.get('has_source_binding'):
-                    print(f"    -> {colorize_path(path)} [{C.ORANGE}{info.get('source_type')}{C.RESET}]")
-                else:
-                    print(f"    -> {colorize_path(path)}")
-
-
-def option_18_complex_index():
-    """Complex Index - Multi-segment hierarchy"""
-    header("18. Complex Index - Bloomberg Global Treasury")
-    moniker = "index.global/BBGGlobalAggTreasury/GBP/MWS_LIBOR"
-    print(f"\nResolving: {colorize_moniker('moniker://' + moniker)}")
-    print("Multi-segment path: index family / currency / benchmark\n")
-    result = fetch(f"/resolve/{moniker}")
-    if result:
-        print(f"  Source Type: {C.ORANGE}{result['source_type']}{C.RESET}")
-        print(f"  Binding Path: {colorize_path(result['binding_path'])}")
-    else:
-        print(f"\n  {C.GRAY}(No binding - this is an example complex path structure){C.RESET}")
-        print(f"  Path segments: index.global / BBGGlobalAggTreasury / GBP / MWS_LIBOR")
-        print(f"  Use case: Global treasury indices with currency and benchmark type")
-
-
-def option_19_gov_rates():
-    """Government Rates - Danish Bond with KRD"""
-    header("19. Government Rates - Danish Bond KRD")
-    moniker = "rates.gov/DKK/DK0.125Mar2026/KRD/KRD12Y"
-    print(f"\nResolving: {colorize_moniker('moniker://' + moniker)}")
-    print("Path includes: currency / bond ID (opaque) / risk type / tenor\n")
-    result = fetch(f"/resolve/{moniker}")
-    if result:
-        print(f"  Source Type: {C.ORANGE}{result['source_type']}{C.RESET}")
-        print(f"  Binding Path: {colorize_path(result['binding_path'])}")
-    else:
-        print(f"\n  {C.GRAY}(No binding - this shows opaque segment handling){C.RESET}")
-        print(f"  Segments:")
-        print(f"    [0] {C.GREEN}DKK{C.RESET}            - Currency")
-        print(f"    [1] DK0.125Mar2026  - Bond ID (opaque, includes coupon & maturity)")
-        print(f"    [2] KRD             - Risk type (Key Rate Duration)")
-        print(f"    [3] {C.PURPLE}KRD12Y{C.RESET}         - Tenor (12-year KRD)")
-
-
-def option_20_versioned_subresource():
-    """Versioned Sub-resource - Security details at specific date"""
-    header("20. Versioned Sub-resource - Security Details")
-    examples = [
-        ("securities/012345678@20260101/details", "Single sub-resource"),
-        ("securities/012345678@20260101/details.corporate.actions", "Multi-level sub-resource"),
-    ]
-
-    for moniker, desc in examples:
-        print(f"\n  {C.BOLD}{desc}:{C.RESET}")
-        print(f"  Parsing: {colorize_moniker('moniker://' + moniker)}")
-
-        # Parse locally to show components
-        result = fetch(f"/describe/{moniker.split('@')[0]}")
-        print(f"    Path: securities/012345678")
-        print(f"    Version: {C.BLUE}20260101{C.RESET} (type: DATE)")
-        sub = moniker.split('/')[-1] if '/' in moniker.split('@')[1] else None
-        if sub:
-            print(f"    Sub-resource: {C.CYAN}{sub}{C.RESET}")
-
-    print(f"\n  {C.GRAY}Use case: Point-in-time views of security data with specific projections{C.RESET}")
-
-
-def option_21_temporal_versions():
-    """Temporal Version Types - Different version semantics"""
-    header("21. Temporal Version Types")
-    print(f"\n  The {C.BOLD}@version{C.RESET} suffix supports multiple semantic types:\n")
-
-    examples = [
-        ("prices.equity/AAPL@20260115", "DATE", "Specific date (YYYYMMDD)"),
-        ("prices.equity/AAPL@latest", "LATEST", "Most recent available data"),
-        ("rates.swap/USD/10Y@3M", "TENOR", "Three months lookback"),
-        ("risk.cvar/portfolio-123@all", "ALL", "Full time series"),
-    ]
-
-    for moniker, vtype, desc in examples:
-        color = {
-            "DATE": C.BLUE,
-            "LATEST": C.RED + C.BOLD,
-            "TENOR": C.PURPLE,
-            "ALL": C.RED + C.BOLD,
-        }.get(vtype, C.WHITE)
-
-        print(f"  {colorize_moniker('moniker://' + moniker)}")
-        print(f"    Type: {color}{vtype}{C.RESET} - {desc}")
-        print()
-
-    print(f"  {C.GRAY}Version type determines how the source interprets the temporal filter.{C.RESET}")
-    print(f"  {C.GRAY}Template placeholders: {{version_type}}, {{is_date}}, {{is_tenor}}, {{tenor_value}}, {{tenor_unit}}{C.RESET}")
-
-
-def option_space():
-    """Space info"""
+def option_info():
+    """Service Info"""
     header("Moniker Service Info")
     print(f"""
   {C.BOLD}Moniker Service - Data Catalog Resolution{C.RESET}
@@ -592,75 +541,104 @@ def option_space():
 
 
 # =============================================================================
-# Main Menu
+# Menu Generation
 # =============================================================================
 
-MENU = f"""
-  {C.CYAN}{C.BOLD}MONIKER SERVICE DEMO{C.RESET}
+def build_menu():
+    """Build menu string and option handlers from DEMO_MONIKERS."""
+    lines = [
+        f"\n  {C.CYAN}{C.BOLD}MONIKER SERVICE DEMO{C.RESET}",
+        "",
+        f"  {C.BOLD}H.{C.RESET}  Health Check",
+        "",
+    ]
 
-  {C.BOLD}1.{C.RESET}  Health Check
+    # Group monikers by action
+    by_action = {}
+    for item in DEMO_MONIKERS:
+        action = item['action']
+        if action not in by_action:
+            by_action[action] = []
+        by_action[action].append(item)
 
-  {C.GRAY}--- Resolution (returns connection info) ---{C.RESET}
-  {C.BOLD}2.{C.RESET}  Resolve {C.ORANGE}prices{C.RESET}.{C.ORANGE}equity{C.RESET}/{C.GREEN}AAPL{C.RESET}  (Snowflake)
-  {C.BOLD}3.{C.RESET}  Resolve {C.ORANGE}analytics{C.RESET}.{C.ORANGE}risk{C.RESET}/{C.ORANGE}var{C.RESET}/portfolio-123  (REST)
-  {C.BOLD}4.{C.RESET}  Resolve {C.ORANGE}reference{C.RESET}.{C.ORANGE}security{C.RESET}/{C.GREEN}ISIN{C.RESET}/{C.GREEN}US0378331005{C.RESET}  (Oracle)
+    # Section headers
+    section_names = {
+        'resolve': "Resolution (returns connection info)",
+        'fetch': "Fetch (server-side execution)",
+        'describe': "Metadata & Discovery",
+        'lineage': "Metadata & Discovery",
+        'list': "Metadata & Discovery",
+        'sample': "Metadata & Discovery",
+        'metadata': "Metadata & Discovery",
+        'tree': "Metadata & Discovery",
+    }
 
-  {C.GRAY}--- Fetch (server-side execution) ---{C.RESET}
-  {C.BOLD}5.{C.RESET}  Fetch {C.ORANGE}prices{C.RESET}.{C.ORANGE}equity{C.RESET}/{C.GREEN}AAPL{C.RESET}
-  {C.BOLD}6.{C.RESET}  Fetch {C.ORANGE}commodities{C.RESET}.{C.ORANGE}derivatives{C.RESET}/crypto/{C.GREEN}ETH{C.RESET}
+    options = {}
+    option_num = 1
+    current_section = None
 
-  {C.GRAY}--- Metadata & Discovery ---{C.RESET}
-  {C.BOLD}7.{C.RESET}  Describe {C.ORANGE}analytics{C.RESET}
-  {C.BOLD}8.{C.RESET}  Lineage {C.ORANGE}analytics{C.RESET}.{C.ORANGE}risk{C.RESET}/{C.ORANGE}var{C.RESET}
-  {C.BOLD}9.{C.RESET}  List {C.ORANGE}reference{C.RESET}  (children)
-  {C.BOLD}10.{C.RESET} Sample {C.ORANGE}indices{C.RESET}.{C.ORANGE}sovereign{C.RESET}/developed/EU.GovBondAgg/{C.GREEN}EUR{C.RESET}/{C.RED}{C.BOLD}ALL{C.RESET}
-  {C.BOLD}11.{C.RESET} Metadata {C.ORANGE}holdings{C.RESET}/positions
-  {C.BOLD}12.{C.RESET} Tree {C.ORANGE}analytics{C.RESET}  (hierarchy)
+    for item in DEMO_MONIKERS:
+        action = item['action']
+        section = section_names.get(action, "Other")
 
-  {C.GRAY}--- Batch & Catalog ---{C.RESET}
-  {C.BOLD}13.{C.RESET} Batch Validate - Multiple monikers
-  {C.BOLD}14.{C.RESET} List Data Domains
+        # Add section header if changed
+        if section != current_section:
+            lines.append(f"  {C.GRAY}--- {section} ---{C.RESET}")
+            current_section = section
 
-  {C.GRAY}--- Domain Configuration ---{C.RESET}
-  {C.BOLD}15.{C.RESET} Configure Domains - View/manage governance
-  {C.BOLD}16.{C.RESET} View Domain {C.ORANGE}indices{C.RESET} - Governance details
-  {C.BOLD}17.{C.RESET} List Full Mapping
+        # Build menu line
+        moniker_colored = colorize_moniker(item['moniker'])
+        lines.append(f"  {C.BOLD}{option_num:2}.{C.RESET} [{action[:3].upper()}] {moniker_colored}")
 
-  {C.GRAY}--- Complex Moniker Patterns ---{C.RESET}
-  {C.BOLD}18.{C.RESET} Complex Index {C.ORANGE}index{C.RESET}.{C.ORANGE}global{C.RESET}/BBGGlobalAggTreasury/{C.GREEN}GBP{C.RESET}/MWS_LIBOR
-  {C.BOLD}19.{C.RESET} Gov Rates {C.ORANGE}rates{C.RESET}.{C.ORANGE}gov{C.RESET}/{C.GREEN}DKK{C.RESET}/DK0.125Mar2026/KRD/{C.PURPLE}KRD12Y{C.RESET}
-  {C.BOLD}20.{C.RESET} Versioned Sub-resource {C.ORANGE}securities{C.RESET}/ID{C.GRAY}@{C.RESET}{C.BLUE}20260101{C.RESET}/{C.CYAN}details{C.RESET}
-  {C.BOLD}21.{C.RESET} Temporal Versions ({C.BLUE}@date{C.RESET}, {C.RED}{C.BOLD}@latest{C.RESET}, {C.PURPLE}@3M{C.RESET}, {C.RED}{C.BOLD}@all{C.RESET})
+        # Store handler
+        options[str(option_num)] = (item['action'], item['moniker'], item.get('note', ''), item['desc'])
+        option_num += 1
 
-  {C.BOLD}SPACE{C.RESET} - Service Info    {C.BOLD}Q{C.RESET} - Quit
-"""
+    # Special options
+    lines.extend([
+        "",
+        f"  {C.GRAY}--- Batch & Catalog ---{C.RESET}",
+        f"  {C.BOLD}B.{C.RESET}  Batch Validate",
+        f"  {C.BOLD}D.{C.RESET}  List Data Domains",
+        f"  {C.BOLD}C.{C.RESET}  Configure Domains",
+        "",
+        f"  {C.BOLD}I.{C.RESET}  Service Info",
+        f"  {C.BOLD}Q.{C.RESET}  Quit",
+        "",
+    ])
+
+    return '\n'.join(lines), options
 
 
-OPTIONS = {
-    '1': option_1_health,
-    '2': option_2_resolve_equity,
-    '3': option_3_resolve_rest,
-    '4': option_4_resolve_oracle,
-    '5': option_5_fetch_equity,
-    '6': option_6_fetch_crypto,
-    '7': option_7_describe,
-    '8': option_8_lineage,
-    '9': option_9_list_children,
-    '10': option_10_sample,
-    '11': option_11_metadata,
-    '12': option_12_tree,
-    '13': option_13_batch_validate,
-    '14': option_14_list_domains,
-    '15': option_15_configure_domains,
-    '16': option_16_view_domain,
-    '17': option_17_list_mappings,
-    '18': option_18_complex_index,
-    '19': option_19_gov_rates,
-    '20': option_20_versioned_subresource,
-    '21': option_21_temporal_versions,
-    ' ': option_space,
-}
+def run_option(options: dict, choice: str):
+    """Run the selected option."""
+    if choice in options:
+        action, moniker, note, desc = options[choice]
+        header(f"{desc}")
+        handler = HANDLERS.get(action)
+        if handler:
+            handler(moniker, note)
+        else:
+            print(f"  {C.RED}Unknown action: {action}{C.RESET}")
+    elif choice == 'h':
+        option_health()
+    elif choice == 'b':
+        option_batch_validate()
+    elif choice == 'd':
+        option_list_domains()
+    elif choice == 'c':
+        option_configure_domains()
+    elif choice == 'i':
+        option_info()
+    else:
+        print(f"\n  {C.RED}Invalid option: {choice}{C.RESET}")
+        return False
+    return True
 
+
+# =============================================================================
+# Main
+# =============================================================================
 
 def main():
     print("\n" + C.CYAN + "=" * 60 + C.RESET)
@@ -668,18 +646,17 @@ def main():
     print(f"  Ensure service is running: {C.CYAN}python start.py{C.RESET}")
     print(C.CYAN + "=" * 60 + C.RESET)
 
+    menu_str, options = build_menu()
+
     while True:
-        print(MENU)
+        print(menu_str)
         choice = input(f"  {C.BOLD}Select option:{C.RESET} ").strip().lower()
 
         if choice == 'q':
             print(f"\n  {C.GREEN}Goodbye!{C.RESET}\n")
             break
-        elif choice in OPTIONS:
-            OPTIONS[choice]()
+        elif run_option(options, choice):
             input(f"\n  {C.GRAY}Press Enter to continue...{C.RESET}")
-        else:
-            print(f"\n  {C.RED}Invalid option: {choice}{C.RESET}")
 
 
 if __name__ == "__main__":
