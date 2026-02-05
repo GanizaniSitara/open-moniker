@@ -194,6 +194,27 @@
         }
         .node.selected .node-badge { background: rgba(255,255,255,0.2); color: white; }
 
+        /* Domain badge for top-level nodes */
+        .domain-badge {
+            font-size: var(--fs-400);
+            padding: 1px 5px;
+            border-radius: 3px;
+            background: rgba(0, 85, 135, 0.15);
+            color: var(--c-peacock);
+            font-weight: var(--fw-bold);
+        }
+        .node.selected .domain-badge { background: rgba(255,255,255,0.2); color: white; }
+
+        /* Missing domain warning (red underline) */
+        .node.missing-domain .node-name {
+            color: var(--c-red);
+            text-decoration: underline wavy var(--c-red);
+        }
+        .node.selected.missing-domain .node-name {
+            color: white;
+            text-decoration: underline wavy rgba(255,255,255,0.7);
+        }
+
         .toggle {
             display: inline-block;
             width: 14px;
@@ -861,6 +882,9 @@
         let selectedPath = null;
         let originalNode = null;
 
+        // Domain state (for checking if top-level nodes have domain mappings)
+        let domainNames = new Set();
+
         // Placeholder state
         let placeholderPanelVisible = false;
         let currentSegmentNames = [];
@@ -928,6 +952,16 @@
                 sourceTypes = data.source_types;
             } catch (e) {
                 console.error('Failed to load source types:', e);
+            }
+        }
+
+        async function loadDomains() {
+            try {
+                const data = await fetchJSON('/domains');
+                domainNames = new Set(data.domains.map(d => d.name));
+            } catch (e) {
+                console.error('Failed to load domains:', e);
+                domainNames = new Set();
             }
         }
 
@@ -1076,10 +1110,10 @@
                 return;
             }
 
-            container.innerHTML = '<ul>' + renderTreeLevel(tree) + '</ul>';
+            container.innerHTML = '<ul>' + renderTreeLevel(tree, true) + '</ul>';
         }
 
-        function renderTreeLevel(level) {
+        function renderTreeLevel(level, isTopLevel = false) {
             return Object.entries(level)
                 .sort(([a], [b]) => a.localeCompare(b))
                 .map(([name, data]) => {
@@ -1088,21 +1122,40 @@
                     const isSelected = data._path === selectedPath;
                     const hasSource = node && node.source_binding;
 
-                    const badges = hasSource
-                        ? `<span class="node-badge">${node.source_binding.type}</span>`
-                        : '';
+                    // Check domain mapping for top-level nodes
+                    // Domain matches either exact name (e.g., "indices") or prefix before "." (e.g., "indices.sovereign" -> "indices")
+                    const isTopLevelNode = !data._path.includes('/');
+                    const domainPrefix = name.includes('.') ? name.split('.')[0] : name;
+                    const hasDomain = isTopLevelNode && (domainNames.has(name) || domainNames.has(domainPrefix));
+                    const missingDomain = isTopLevelNode && !hasDomain;
+
+                    // Build badges
+                    let badges = '';
+                    if (isTopLevelNode && hasDomain) {
+                        const matchedDomain = domainNames.has(name) ? name : domainPrefix;
+                        badges += `<span class="domain-badge" title="Domain: ${matchedDomain}">${matchedDomain}</span>`;
+                    }
+                    if (hasSource) {
+                        badges += `<span class="node-badge">${node.source_binding.type}</span>`;
+                    }
 
                     const childrenHtml = hasChildren
-                        ? '<ul>' + renderTreeLevel(data._children) + '</ul>'
+                        ? '<ul>' + renderTreeLevel(data._children, false) + '</ul>'
                         : '';
 
-                    const classes = [
+                    const liClasses = [
                         hasChildren ? '' : 'leaf',
                     ].filter(Boolean).join(' ');
 
+                    const nodeClasses = [
+                        'node',
+                        isSelected ? 'selected' : '',
+                        missingDomain ? 'missing-domain' : '',
+                    ].filter(Boolean).join(' ');
+
                     return `
-                        <li class="${classes}" data-path="${data._path}">
-                            <span class="node ${isSelected ? 'selected' : ''}" onclick="selectNode('${data._path}')">
+                        <li class="${liClasses}" data-path="${data._path}">
+                            <span class="${nodeClasses}" onclick="selectNode('${data._path}')" ${missingDomain ? 'title="No domain mapping configured for this path"' : ''}>
                                 <span class="toggle" onclick="toggleTreeNode(event, this)"></span>
                                 <span class="node-name">${name}/</span>
                                 ${badges}
@@ -1852,7 +1905,7 @@
         // =============================================================================
 
         async function init() {
-            await loadSourceTypes();
+            await Promise.all([loadSourceTypes(), loadDomains()]);
             await loadNodes();
         }
 
