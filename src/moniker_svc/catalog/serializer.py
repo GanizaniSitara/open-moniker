@@ -280,7 +280,8 @@ class CatalogSerializer:
 
         for node in sorted(nodes, key=lambda n: n.path):
             node_data = self.serialize_node(node)
-            if node_data:  # Only include nodes with meaningful data
-                result[node.path] = node_data
+            # Always include nodes - path itself is meaningful even without custom data
+            # Empty dict {} is valid YAML and preserves the node's existence
+            result[node.path] = node_data if node_data else {}
 
         return result
