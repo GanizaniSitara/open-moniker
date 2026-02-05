@@ -688,8 +688,7 @@
 
         .sql-textarea {
             width: 100%;
-            min-height: 300px;
-            max-height: 500px;
+            min-height: 200px;
             padding: var(--sp-3);
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             font-size: var(--fs-600);
@@ -1592,6 +1591,7 @@
                             <textarea
                                 id="src_${key}"
                                 class="sql-textarea"
+                                rows="10"
                                 placeholder="SELECT * FROM table WHERE {filter[0]:column}..."
                                 onfocus="showPlaceholderPanel()"
                                 spellcheck="false"
