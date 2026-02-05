@@ -591,9 +591,13 @@ async def lifespan(app: FastAPI):
         logger.info("Using default config")
 
     # Load catalog from file or use demo
+    # Resolve catalog path relative to config file location
+    catalog_definition_path = None
     if config.catalog.definition_file:
-        logger.info(f"Loading catalog from: {config.catalog.definition_file}")
-        catalog = load_catalog(config.catalog.definition_file)
+        config_dir = Path(config_path).parent.resolve()
+        catalog_definition_path = (config_dir / config.catalog.definition_file).resolve()
+        logger.info(f"Loading catalog from: {catalog_definition_path}")
+        catalog = load_catalog(str(catalog_definition_path))
     else:
         logger.info("Using demo catalog (no definition_file configured)")
         catalog = create_demo_catalog()
@@ -643,9 +647,9 @@ async def lifespan(app: FastAPI):
         config_ui_routes.configure(
             catalog=catalog,
             yaml_output_path=config.config_ui.yaml_output_path,
-            catalog_definition_file=config.catalog.definition_file,
+            catalog_definition_file=str(catalog_definition_path) if catalog_definition_path else None,
         )
-        logger.info(f"Config UI enabled (yaml_output_path={config.config_ui.yaml_output_path})")
+        logger.info(f"Config UI enabled (catalog_file={catalog_definition_path})")
 
     # Initialize Domain Configuration
     global _domain_registry
