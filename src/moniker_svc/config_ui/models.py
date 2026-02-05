@@ -261,6 +261,8 @@ class SourceTypeInfo(BaseModel):
     type: str
     display_name: str
     config_schema: dict[str, Any]
+    execution_mode: str = "server"  # "client" or "server"
+    execution_hint: str = ""  # Human-readable explanation
 
 
 class SourceTypesResponse(BaseModel):

@@ -436,6 +436,49 @@
             resize: vertical;
         }
 
+        /* Execution mode banner */
+        .execution-mode-banner {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            padding: var(--sp-3) var(--sp-4);
+            margin-bottom: var(--sp-4);
+            border-radius: var(--radius-1);
+            font-size: var(--fs-200);
+        }
+
+        .execution-mode-banner.client-mode {
+            background: rgba(var(--c-peacock-rgb, 0, 128, 128), 0.15);
+            border-left: 3px solid var(--c-peacock);
+        }
+
+        .execution-mode-banner.server-mode {
+            background: rgba(var(--c-purple-rgb, 128, 0, 128), 0.1);
+            border-left: 3px solid var(--c-purple);
+        }
+
+        .exec-badge {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: var(--sp-1) var(--sp-2);
+            border-radius: var(--radius-1);
+        }
+
+        .client-mode .exec-badge {
+            background: var(--c-peacock);
+            color: white;
+        }
+
+        .server-mode .exec-badge {
+            background: var(--c-purple);
+            color: white;
+        }
+
+        .exec-hint {
+            color: var(--fg-muted);
+        }
+
         /* Path display */
         .path-display {
             font-family: 'Consolas', 'Monaco', monospace;
@@ -1365,7 +1408,18 @@
                 currentSegmentNames = [];
             }
 
-            return Object.entries(schema).map(([key, fieldDef]) => {
+            // Execution mode banner
+            const execMode = typeInfo.execution_mode || 'server';
+            const execHint = typeInfo.execution_hint || '';
+            const isClientMode = execMode === 'client';
+            const execBanner = `
+                <div class="execution-mode-banner ${isClientMode ? 'client-mode' : 'server-mode'}">
+                    <span class="exec-badge">${isClientMode ? 'CLIENT EXECUTES' : 'SERVER PROXIES'}</span>
+                    ${execHint ? `<span class="exec-hint">${execHint}</span>` : ''}
+                </div>
+            `;
+
+            const fields = Object.entries(schema).map(([key, fieldDef]) => {
                 const value = config?.[key] || '';
                 const displayValue = typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
 
@@ -1419,6 +1473,8 @@
                     </div>
                 `;
             }).join('');
+
+            return execBanner + fields;
         }
 
         function renderSourceConfig() {

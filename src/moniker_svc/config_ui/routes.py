@@ -386,6 +386,8 @@ async def reload_from_yaml():
 SOURCE_TYPE_SCHEMAS: dict[str, dict[str, Any]] = {
     "snowflake": {
         "display_name": "Snowflake",
+        "execution_mode": "client",
+        "execution_hint": "Client connects directly to Snowflake and executes the query",
         "config_schema": {
             "account": {"type": "string", "required": True, "description": "Snowflake account identifier"},
             "warehouse": {"type": "string", "required": True, "description": "Warehouse to use"},
@@ -399,6 +401,8 @@ SOURCE_TYPE_SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "oracle": {
         "display_name": "Oracle",
+        "execution_mode": "client",
+        "execution_hint": "Client connects directly to Oracle and executes the query",
         "config_schema": {
             "dsn": {"type": "string", "required": False, "description": "Oracle DSN string"},
             "host": {"type": "string", "required": False, "description": "Database host"},
@@ -411,6 +415,8 @@ SOURCE_TYPE_SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "rest": {
         "display_name": "REST API",
+        "execution_mode": "server",
+        "execution_hint": "Service proxies the request and returns data",
         "config_schema": {
             "base_url": {"type": "string", "required": True, "description": "Base URL for the API"},
             "path_template": {"type": "string", "required": True, "description": "Path template (e.g., /api/v2/{path})"},
@@ -422,6 +428,8 @@ SOURCE_TYPE_SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "static": {
         "display_name": "Static Files",
+        "execution_mode": "server",
+        "execution_hint": "Service reads files and returns data",
         "config_schema": {
             "base_path": {"type": "string", "required": True, "description": "Base directory path"},
             "file_pattern": {"type": "string", "required": True, "description": "File pattern template"},
@@ -431,6 +439,8 @@ SOURCE_TYPE_SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "excel": {
         "display_name": "Excel",
+        "execution_mode": "server",
+        "execution_hint": "Service reads Excel files and returns data",
         "config_schema": {
             "base_path": {"type": "string", "required": True, "description": "Base directory path"},
             "file_pattern": {"type": "string", "required": True, "description": "File pattern template"},
@@ -440,6 +450,8 @@ SOURCE_TYPE_SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "bloomberg": {
         "display_name": "Bloomberg",
+        "execution_mode": "client",
+        "execution_hint": "Client connects to Bloomberg Terminal/API",
         "config_schema": {
             "host": {"type": "string", "required": False, "description": "Bloomberg API host"},
             "port": {"type": "number", "required": False, "description": "Bloomberg API port"},
@@ -450,6 +462,8 @@ SOURCE_TYPE_SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "refinitiv": {
         "display_name": "Refinitiv",
+        "execution_mode": "client",
+        "execution_hint": "Client connects to Refinitiv Eikon/RDP",
         "config_schema": {
             "api_type": {"type": "select", "required": False, "description": "API type", "options": ["eikon", "rdp"]},
             "instruments": {"type": "string", "required": False, "description": "Instruments template"},
@@ -458,6 +472,8 @@ SOURCE_TYPE_SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "opensearch": {
         "display_name": "OpenSearch",
+        "execution_mode": "server",
+        "execution_hint": "Service queries OpenSearch and returns data",
         "config_schema": {
             "hosts": {"type": "json", "required": True, "description": "List of host URLs (JSON array)"},
             "index": {"type": "string", "required": True, "description": "Index name"},
@@ -466,6 +482,8 @@ SOURCE_TYPE_SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "composite": {
         "display_name": "Composite",
+        "execution_mode": "server",
+        "execution_hint": "Service combines multiple sources",
         "config_schema": {
             "sources": {"type": "json", "required": True, "description": "List of source monikers to combine"},
             "join_strategy": {"type": "select", "required": False, "description": "How to combine sources", "options": ["merge", "union", "join"]},
@@ -473,6 +491,8 @@ SOURCE_TYPE_SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "derived": {
         "display_name": "Derived",
+        "execution_mode": "server",
+        "execution_hint": "Service transforms data from another source",
         "config_schema": {
             "source_moniker": {"type": "string", "required": True, "description": "Source moniker to derive from"},
             "transform": {"type": "text", "required": False, "description": "Transformation expression"},
@@ -490,12 +510,16 @@ async def list_source_types():
         schema_info = SOURCE_TYPE_SCHEMAS.get(type_value.value, {
             "display_name": type_value.value.title(),
             "config_schema": {},
+            "execution_mode": "server",
+            "execution_hint": "",
         })
 
         source_types.append(SourceTypeInfo(
             type=type_value.value,
             display_name=schema_info["display_name"],
             config_schema=schema_info["config_schema"],
+            execution_mode=schema_info.get("execution_mode", "server"),
+            execution_hint=schema_info.get("execution_hint", ""),
         ))
 
     return SourceTypesResponse(source_types=source_types)
