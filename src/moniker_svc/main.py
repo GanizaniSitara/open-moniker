@@ -650,6 +650,7 @@ async def lifespan(app: FastAPI):
             yaml_output_path=config.config_ui.yaml_output_path,
             catalog_definition_file=str(catalog_definition_path) if catalog_definition_path else None,
             service_cache=cache,
+            show_file_paths=config.config_ui.show_file_paths,
         )
         logger.info(f"Config UI enabled (catalog_file={catalog_definition_path})")
 

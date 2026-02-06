@@ -44,6 +44,7 @@ _catalog: CatalogRegistry | None = None
 _yaml_output_path: str = "catalog_output.yaml"
 _catalog_definition_file: str | None = None
 _service_cache = None  # Optional cache to clear on changes
+_show_file_paths: bool = False  # Show file paths in save messages
 
 
 def configure(
@@ -51,6 +52,7 @@ def configure(
     yaml_output_path: str = "catalog_output.yaml",
     catalog_definition_file: str | None = None,
     service_cache=None,
+    show_file_paths: bool = False,
 ) -> None:
     """Configure the Config UI routes.
 
@@ -59,12 +61,14 @@ def configure(
         yaml_output_path: Path for YAML output file
         catalog_definition_file: Path to catalog definition file for reload
         service_cache: Optional cache to clear when catalog changes
+        show_file_paths: Show file paths in save success messages
     """
-    global _catalog, _yaml_output_path, _catalog_definition_file, _service_cache
+    global _catalog, _yaml_output_path, _catalog_definition_file, _service_cache, _show_file_paths
     _catalog = catalog
     _yaml_output_path = yaml_output_path
     _catalog_definition_file = catalog_definition_file
     _service_cache = service_cache
+    _show_file_paths = show_file_paths
 
 
 def _clear_cache():
@@ -411,11 +415,17 @@ async def save_to_yaml():
 
         logger.info(f"[SAVE] SUCCESS - wrote to {abs_path}")
 
+        # Build message based on config
+        if _show_file_paths:
+            message = f"Saved {len(nodes)} nodes to {abs_path}"
+        else:
+            message = f"Saved {len(nodes)} nodes"
+
         return SaveResponse(
             success=True,
-            path=str(abs_path),
+            path=str(abs_path) if _show_file_paths else "",
             node_count=len(nodes),
-            message=f"Saved {len(nodes)} nodes to {abs_path}",
+            message=message,
         )
     except Exception as e:
         logger.error(f"Failed to save catalog: {e}")

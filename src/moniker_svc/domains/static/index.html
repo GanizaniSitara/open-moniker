@@ -646,9 +646,7 @@
                             <span style="font-weight: var(--fw-bold); font-size: var(--fs-700);">${escapeHtml(d.short_code || '')}</span>
                         </div>
                     </td>
-                    <td>
-                        ${escapeHtml(d.name)}${d.display_name && d.display_name !== d.name ? ` - ${escapeHtml(d.display_name)}` : ''}
-                    </td>
+                    <td>${escapeHtml(d.display_name || d.name)}</td>
                     <td class="editable truncate" data-field="owner" contenteditable="true" title="${escapeHtml(d.owner)}">${escapeHtml(d.owner)}</td>
                     <td class="editable truncate" data-field="tech_custodian" contenteditable="true" title="${escapeHtml(d.tech_custodian)}">${escapeHtml(d.tech_custodian)}</td>
                     <td class="editable truncate" data-field="business_steward" contenteditable="true" title="${escapeHtml(d.business_steward)}">${escapeHtml(d.business_steward)}</td>

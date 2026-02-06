@@ -69,3 +69,9 @@ auth:
     # Test mode (local dev only!): set issuer to "test" and provide secret
     # issuer: "test"
     # test_secret: "your-test-secret-min-32-chars-long"
+
+# Config UI settings
+config_ui:
+  enabled: true
+  yaml_output_path: "catalog_output.yaml"
+  show_file_paths: false  # Show file paths in save success messages (useful for debugging)

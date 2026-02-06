@@ -1043,7 +1043,7 @@
                 });
                 // Auto-persist to YAML
                 const saveResult = await fetchJSON(`${API_BASE}/save`, { method: 'POST' });
-                showToast(`Saved to ${saveResult.path}`, 'success');
+                showToast(saveResult.message, 'success');
                 await loadNodes();
                 await loadNode(selectedPath);
             } catch (e) {

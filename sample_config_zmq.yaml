@@ -4,7 +4,7 @@
 # Use this to see real-time telemetry events from the service.
 #
 # Usage:
-#   cp config_zmq.sample.yaml config_zmq.yaml
+#   cp sample_config_zmq.yaml config_zmq.yaml
 #   cp sample_catalog.yaml catalog.yaml
 #   Terminal 1: python -m moniker_svc.main --config config_zmq.yaml
 #   Terminal 2: python telemetry_subscriber.py
@@ -37,3 +37,9 @@ cache:
 
 catalog:
   definition_file: "./catalog.yaml"
+
+# Config UI settings
+config_ui:
+  enabled: true
+  yaml_output_path: "catalog_output.yaml"
+  show_file_paths: false  # Show file paths in save success messages

@@ -63,6 +63,7 @@ class ConfigUIConfig:
     """Config UI configuration."""
     enabled: bool = True
     yaml_output_path: str = "catalog_output.yaml"
+    show_file_paths: bool = False  # Show file paths in save success messages (useful for debugging)
 
 
 @dataclass
