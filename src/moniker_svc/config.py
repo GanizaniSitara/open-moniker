@@ -53,7 +53,7 @@ class CatalogConfig:
 @dataclass
 class SqlCatalogConfig:
     """SQL Catalog configuration."""
-    enabled: bool = True
+    enabled: bool = False  # Disabled by default
     db_path: str = "sql_catalog.db"
     source_db_path: str | None = None
 
