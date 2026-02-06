@@ -716,7 +716,8 @@
                 });
 
                 // Auto-persist to YAML
-                await fetchJSON(`${API_BASE}/save`, { method: 'POST' });
+                const saveResult = await fetchJSON(`${API_BASE}/save`, { method: 'POST' });
+                showToast(`Saved to ${saveResult.file_path}`, 'success');
 
                 // Update local data
                 const domain = domains.find(d => d.name === name);
@@ -849,8 +850,8 @@
                 }
 
                 // Auto-persist to YAML
-                await fetchJSON(`${API_BASE}/save`, { method: 'POST' });
-                showToast(editingDomain ? 'Domain updated' : 'Domain created', 'success');
+                const saveResult = await fetchJSON(`${API_BASE}/save`, { method: 'POST' });
+                showToast(`Saved to ${saveResult.file_path}`, 'success');
 
                 closeModal();
                 loadDomains();
@@ -867,8 +868,8 @@
             try {
                 await fetchJSON(`${API_BASE}/${name}`, { method: 'DELETE' });
                 // Auto-persist to YAML
-                await fetchJSON(`${API_BASE}/save`, { method: 'POST' });
-                showToast('Domain deleted', 'success');
+                const saveResult = await fetchJSON(`${API_BASE}/save`, { method: 'POST' });
+                showToast(`Saved to ${saveResult.file_path}`, 'success');
                 loadDomains();
             } catch (e) {
                 showToast('Failed to delete: ' + e.message, 'error');

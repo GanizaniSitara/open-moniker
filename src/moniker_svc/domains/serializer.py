@@ -4,6 +4,7 @@ Domain configuration serializer.
 Save domains to YAML format.
 """
 
+import os
 from pathlib import Path
 from typing import List, Union
 
@@ -58,8 +59,10 @@ def save_domains_to_yaml(
         domain_data = {k: v for k, v in domain_data.items() if v is not None and (v or isinstance(v, bool) or isinstance(v, int))}
         data[domain.name] = domain_data
 
-    path = Path(file_path)
+    path = Path(file_path).resolve()
     with open(path, "w", encoding="utf-8") as f:
         f.write("# Data Domains Configuration\n")
         f.write("# Top-level organizational units for the moniker catalog\n\n")
         yaml.dump(data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        f.flush()
+        os.fsync(f.fileno())
