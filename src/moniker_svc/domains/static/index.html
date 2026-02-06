@@ -640,13 +640,14 @@
                 <tr data-name="${d.name}">
                     <td style="text-align: center; font-weight: bold; color: var(--c-gray);">${index + 1}</td>
                     <td class="editable" data-field="data_category" contenteditable="true">${escapeHtml(d.data_category)}</td>
-                    <td><span class="short-code">${escapeHtml(d.short_code || '')}</span></td>
                     <td>
-                        <div class="domain-name">
+                        <div style="display: flex; align-items: center; gap: var(--sp-2);">
                             <span class="domain-color-dot" style="background: ${d.color}"></span>
-                            <strong>${escapeHtml(d.name)}</strong>
-                            ${d.display_name && d.display_name !== d.name ? ` - ${escapeHtml(d.display_name)}` : ''}
+                            <span style="font-weight: var(--fw-bold); font-size: var(--fs-700);">${escapeHtml(d.short_code || '')}</span>
                         </div>
+                    </td>
+                    <td>
+                        ${escapeHtml(d.name)}${d.display_name && d.display_name !== d.name ? ` - ${escapeHtml(d.display_name)}` : ''}
                     </td>
                     <td class="editable truncate" data-field="owner" contenteditable="true" title="${escapeHtml(d.owner)}">${escapeHtml(d.owner)}</td>
                     <td class="editable truncate" data-field="tech_custodian" contenteditable="true" title="${escapeHtml(d.tech_custodian)}">${escapeHtml(d.tech_custodian)}</td>
