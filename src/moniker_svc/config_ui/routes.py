@@ -96,6 +96,7 @@ def _node_to_model(node: CatalogNode) -> CatalogNodeModel:
             adop=node.ownership.adop,
             ads=node.ownership.ads,
             adal=node.ownership.adal,
+            ui=node.ownership.ui,
         )
 
     source_binding = None
@@ -133,6 +134,7 @@ def _model_to_ownership(model: OwnershipModel | None) -> Ownership:
         adop=model.adop,
         ads=model.ads,
         adal=model.adal,
+        ui=model.ui,
     )
 
 
@@ -296,6 +298,8 @@ async def get_node(path: str):
             ads_source=resolved.ads_source,
             adal=resolved.adal,
             adal_source=resolved.adal_source,
+            ui=resolved.ui,
+            ui_source=resolved.ui_source,
         ),
     )
 

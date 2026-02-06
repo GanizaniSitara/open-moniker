@@ -111,6 +111,8 @@ class CatalogRegistry:
             ads_source: str | None = None
             adal: str | None = None
             adal_source: str | None = None
+            ui: str | None = None
+            ui_source: str | None = None
 
             # Walk from root to leaf, each level can override
             for p in paths:
@@ -136,6 +138,9 @@ class CatalogRegistry:
                     if node.ownership.adal:
                         adal = node.ownership.adal
                         adal_source = p
+                    if node.ownership.ui:
+                        ui = node.ownership.ui
+                        ui_source = p
 
             return ResolvedOwnership(
                 accountable_owner=accountable_owner,
@@ -150,6 +155,8 @@ class CatalogRegistry:
                 ads_source=ads_source,
                 adal=adal,
                 adal_source=adal_source,
+                ui=ui,
+                ui_source=ui_source,
             )
 
     def find_source_binding(self, path: str | MonikerPath) -> tuple[SourceBinding, str] | None:

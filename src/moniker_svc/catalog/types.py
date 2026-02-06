@@ -42,6 +42,9 @@ class Ownership:
     ads: str | None = None    # Accountable Data Steward - day-to-day data quality and standards
     adal: str | None = None   # Accountable Data Access Lead - controls access and permissions
 
+    # UI link - URL to a custom UI/dashboard for this node
+    ui: str | None = None
+
     def merge_with_parent(self, parent: Ownership) -> Ownership:
         """
         Merge this ownership with a parent, using parent values for any
@@ -54,6 +57,7 @@ class Ownership:
             adop=self.adop or parent.adop,
             ads=self.ads or parent.ads,
             adal=self.adal or parent.adal,
+            ui=self.ui or parent.ui,
         )
 
     def is_complete(self) -> bool:
@@ -306,6 +310,9 @@ class ResolvedOwnership:
     adal: str | None = None
     adal_source: str | None = None
 
+    ui: str | None = None
+    ui_source: str | None = None
+
     @property
     def ownership(self) -> Ownership:
         """Get as simple Ownership (without provenance)."""
@@ -316,6 +323,7 @@ class ResolvedOwnership:
             adop=self.adop,
             ads=self.ads,
             adal=self.adal,
+            ui=self.ui,
         )
 
     @property

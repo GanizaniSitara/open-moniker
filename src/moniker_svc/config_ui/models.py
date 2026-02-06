@@ -19,6 +19,7 @@ class OwnershipModel(BaseModel):
     adop: str | None = None
     ads: str | None = None
     adal: str | None = None
+    ui: str | None = None
 
 
 class ResolvedOwnershipModel(BaseModel):
@@ -35,6 +36,8 @@ class ResolvedOwnershipModel(BaseModel):
     ads_source: str | None = None
     adal: str | None = None
     adal_source: str | None = None
+    ui: str | None = None
+    ui_source: str | None = None
 
 
 # =============================================================================

@@ -1440,6 +1440,8 @@ async def get_tree(
                 ownership["ads"] = node.ownership.ads
             if node.ownership.adal:
                 ownership["adal"] = node.ownership.adal
+            if node.ownership.ui:
+                ownership["ui"] = node.ownership.ui
 
         # Get source type
         source_type = None
@@ -1513,6 +1515,8 @@ async def get_tree_root(
                 ownership["ads"] = node.ownership.ads
             if node.ownership.adal:
                 ownership["adal"] = node.ownership.adal
+            if node.ownership.ui:
+                ownership["ui"] = node.ownership.ui
 
         # Get source type
         source_type = None
@@ -1895,6 +1899,8 @@ _UI_HTML = """
         }
         .node-badge.source { background: rgba(0, 150, 57, 0.15); color: var(--c-green); }
         .node-badge.owner { background: rgba(98, 18, 68, 0.15); color: #621244; }
+        .node-badge.ui-link { background: rgba(0, 85, 135, 0.15); color: var(--c-peacock); cursor: pointer; text-decoration: none; }
+        .node-badge.ui-link:hover { background: rgba(0, 85, 135, 0.25); text-decoration: none; }
         .node.selected .node-badge { background: rgba(255,255,255,0.2); color: white; }
 
         .toggle {
@@ -2068,6 +2074,9 @@ _UI_HTML = """
                 const owner = node.ownership.accountable_owner.split('@')[0];
                 badges.push(`<span class="node-badge owner">${owner}</span>`);
             }
+            if (node.ownership?.ui) {
+                badges.push(`<a href="${node.ownership.ui}" target="_blank" class="node-badge ui-link" onclick="event.stopPropagation()">UI</a>`);
+            }
 
             return `
                 <li data-path="${node.path}" data-node='${JSON.stringify(node).replace(/'/g, "&#39;")}'>
@@ -2145,14 +2154,19 @@ _UI_HTML = """
 
                 <div class="detail-section">
                     <h3>Quick Links</h3>
-                    <div class="detail-row" style="border:none">
-                        <a href="/config/ui#${node.path}" target="_blank">📝 Edit in Config UI</a>
-                    </div>
+                    ${ownership.ui ? `
+                        <div class="detail-row" style="border:none">
+                            <a href="${ownership.ui}" target="_blank">🖥️ Open UI</a>
+                        </div>
+                    ` : ''}
                     ${ownership.adal ? `
                         <div class="detail-row" style="border:none">
                             <a href="${ownership.adal}" target="_blank">📋 ADAL Documentation</a>
                         </div>
                     ` : ''}
+                    <div class="detail-row" style="border:none">
+                        <a href="/config/ui#${node.path}" target="_blank">⚙️ Edit in Config</a>
+                    </div>
                 </div>
             `;
             document.getElementById('details').innerHTML = html;

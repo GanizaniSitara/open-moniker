@@ -1435,6 +1435,7 @@
                         ${renderOwnershipField('adop', 'ADOP', node.ownership, resolved)}
                         ${renderOwnershipField('ads', 'ADS', node.ownership, resolved)}
                         ${renderOwnershipField('adal', 'ADAL', node.ownership, resolved)}
+                        ${renderOwnershipField('ui', 'UI Link', node.ownership, resolved)}
                     </div>
                 </div>
 
@@ -1907,7 +1908,7 @@
 
             // Ownership
             const ownership = {};
-            ['accountable_owner', 'data_specialist', 'support_channel', 'adop', 'ads', 'adal'].forEach(field => {
+            ['accountable_owner', 'data_specialist', 'support_channel', 'adop', 'ads', 'adal', 'ui'].forEach(field => {
                 const val = document.getElementById(`own_${field}`)?.value;
                 if (val) ownership[field] = val;
             });
