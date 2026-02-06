@@ -1103,24 +1103,31 @@
                 }
             });
 
-            // Get domains in this category
-            const domainsInCategory = category === null
-                ? null  // Show all
-                : domainsData.filter(d => (d.data_category || 'Uncategorized') === category).map(d => d.name);
+            // Build set of allowed domains for this category
+            let allowedDomains = null;
+            if (category !== null) {
+                allowedDomains = new Set();
+                domainsData.forEach(d => {
+                    if ((d.data_category || 'Uncategorized') === category) {
+                        allowedDomains.add(d.name);
+                    }
+                });
+            }
 
-            // Filter tree nodes
+            // Filter top-level tree nodes
             document.querySelectorAll('#tree > ul > li').forEach(li => {
                 const nodeName = li.querySelector('.node-name')?.textContent;
                 if (!nodeName) return;
 
-                // Find the node data
+                // Find the node data - nodeName is the top-level path segment
                 const node = nodes.find(n => n.path === nodeName);
-                const nodeDomain = node?.domain;
+                // Domain is explicitly set on the node, or fallback to path
+                const nodeDomain = node?.domain || nodeName;
 
-                if (domainsInCategory === null) {
+                if (allowedDomains === null) {
                     // Show all
                     li.classList.remove('filtered-out');
-                } else if (nodeDomain && domainsInCategory.includes(nodeDomain)) {
+                } else if (allowedDomains.has(nodeDomain)) {
                     // Node's domain is in this category
                     li.classList.remove('filtered-out');
                 } else {
