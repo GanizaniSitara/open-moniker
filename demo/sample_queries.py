@@ -284,6 +284,22 @@ def handle_sample(moniker: str, note: str = ""):
     if note:
         print(f"{C.GRAY}{note}{C.RESET}\n")
 
+    # First resolve to check source type - some are client-execute only
+    resolve_result = fetch_api(f"/resolve/{moniker}")
+    if resolve_result:
+        source_type = resolve_result.get('source_type', '')
+        # Client-execute sources can't be sampled server-side
+        client_execute_types = {'oracle', 'snowflake', 'bloomberg', 'refinitiv'}
+        if source_type in client_execute_types:
+            print(f"  {C.YELLOW}[Client Execute]{C.RESET} {source_type} - sample not available server-side")
+            print(f"  {C.BOLD}Query:{C.RESET}")
+            query = resolve_result.get('query', 'N/A')
+            # Truncate long queries
+            if len(query) > 200:
+                query = query[:200] + "..."
+            print(f"    {C.CYAN}{query}{C.RESET}")
+            return
+
     result = fetch_api(f"/sample/{moniker}?limit=3")
     if result:
         print(f"  {C.BOLD}Columns:{C.RESET} {result.get('columns', [])}")
