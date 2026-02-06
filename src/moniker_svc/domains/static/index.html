@@ -675,8 +675,10 @@
                     </td>
                     <td>
                         <div class="color-cell">
-                            <input type="color" class="color-swatch" value="${d.color}" onchange="updateColor('${d.name}', this.value)">
-                            <span style="font-family: monospace; font-size: 11px">${d.color}</span>
+                            <input type="color" class="color-swatch" value="${d.color}" onchange="updateColorFromPicker('${d.name}', this)">
+                            <input type="text" class="color-input" value="${d.color}"
+                                   style="width: 75px; font-family: monospace; font-size: 11px; padding: 2px 4px; border: 1px solid var(--border); border-radius: 3px;"
+                                   onchange="updateColorFromText('${d.name}', this)">
                         </div>
                     </td>
                     <td class="editable" data-field="notes" contenteditable="true" style="min-width: 200px" title="${escapeHtml(d.notes)}">${escapeHtml(d.notes)}</td>
@@ -725,13 +727,33 @@
             }
         }
 
-        function updateColor(name, color) {
+        function updateColorFromPicker(name, picker) {
+            const color = picker.value;
             updateField(name, 'color', color);
-            // Update the dot
-            const row = document.querySelector(`tr[data-name="${name}"]`);
+            // Update the dot and text input
+            const row = picker.closest('tr');
             if (row) {
-                const dot = row.querySelector('.domain-color-dot');
-                if (dot) dot.style.background = color;
+                row.querySelector('.domain-color-dot').style.background = color;
+                row.querySelector('.color-input').value = color;
+            }
+        }
+
+        function updateColorFromText(name, input) {
+            let color = input.value.trim();
+            // Ensure # prefix
+            if (color && !color.startsWith('#')) color = '#' + color;
+            // Validate hex format
+            if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+                showToast('Invalid hex color (use #RRGGBB)', 'error');
+                return;
+            }
+            input.value = color;
+            updateField(name, 'color', color);
+            // Update the dot and picker
+            const row = input.closest('tr');
+            if (row) {
+                row.querySelector('.domain-color-dot').style.background = color;
+                row.querySelector('.color-swatch').value = color;
             }
         }
 
