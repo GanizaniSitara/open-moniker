@@ -751,10 +751,30 @@ async def moniker_parse_error_handler(request: Request, exc: MonikerParseError):
 
 @app.exception_handler(NotFoundError)
 async def not_found_error_handler(request: Request, exc: NotFoundError):
-    return JSONResponse(
-        status_code=404,
-        content={"error": "Not found", "detail": str(exc)},
-    )
+    content = {"error": "Not found", "detail": str(exc)}
+
+    # Try to extract domain documentation hint from path
+    try:
+        path = request.url.path
+        # Extract moniker path from URL (after /resolve/, /describe/, etc.)
+        for prefix in ["/resolve/", "/describe/", "/list/", "/lineage/", "/fetch/", "/sample/", "/metadata/", "/tree/"]:
+            if path.startswith(prefix):
+                moniker_path = path[len(prefix):]
+                # Get first segment (before / or .)
+                first_segment = moniker_path.split("/")[0].split(".")[0]
+                if _domain_registry and first_segment:
+                    domain = _domain_registry.get(first_segment)
+                    if domain:
+                        content["domain"] = first_segment
+                        if domain.wiki_link:
+                            content["documentation"] = domain.wiki_link
+                        if domain.help_channel:
+                            content["help_channel"] = domain.help_channel
+                break
+    except Exception:
+        pass  # Don't fail the 404 response if hint extraction fails
+
+    return JSONResponse(status_code=404, content=content)
 
 
 @app.exception_handler(AccessDeniedError)
