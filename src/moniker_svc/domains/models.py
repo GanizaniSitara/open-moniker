@@ -31,8 +31,9 @@ class DomainModel(BaseModel):
         }
     )
 
-    name: str = Field(..., description="Domain name")
+    name: str = Field(..., description="Domain name (matches catalog paths)")
     id: Optional[int] = Field(None, description="Numeric ID for ordering")
+    display_name: str = Field("", description="Human-readable name for UI display")
     short_code: str = Field("", description="Short code (e.g., IDX, CMD, REF)")
     data_category: str = Field("", description="Data category classification")
     color: str = Field("#6B7280", description="Hex color code for UI display")
@@ -65,6 +66,7 @@ class CreateDomainRequest(BaseModel):
 
     name: str = Field(..., description="Domain name (must be unique)")
     id: Optional[int] = Field(None, description="Numeric ID for ordering")
+    display_name: str = Field("", description="Human-readable display name")
     short_code: str = Field("", description="Short code")
     data_category: str = Field("", description="Data category")
     color: str = Field("#6B7280", description="Hex color code")
@@ -91,6 +93,7 @@ class UpdateDomainRequest(BaseModel):
     )
 
     id: Optional[int] = Field(None, description="Numeric ID for ordering")
+    display_name: Optional[str] = Field(None, description="Human-readable display name")
     short_code: Optional[str] = Field(None, description="Short code")
     data_category: Optional[str] = Field(None, description="Data category")
     color: Optional[str] = Field(None, description="Hex color code")

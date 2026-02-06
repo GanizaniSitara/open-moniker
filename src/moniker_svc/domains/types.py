@@ -25,6 +25,7 @@ class Domain:
     id: Optional[int] = None    # Numeric ID for ordering in lists/tables
 
     # Display and identification
+    display_name: str = ""      # Human-readable name for UI display
     short_code: str = ""        # Short code, e.g., "IDX", "CMD", "REF"
     data_category: str = ""          # e.g., "Market Data", "Reference Data"
     color: str = "#6B7280"      # Hex color for UI display (default: gray)
@@ -53,7 +54,7 @@ class Domain:
         Create a Domain from a dictionary.
 
         Args:
-            name: The domain identifier
+            name: The domain identifier (YAML key, matches catalog paths)
             data: Dictionary of domain attributes
 
         Returns:
@@ -66,6 +67,7 @@ class Domain:
 
         return cls(
             name=name,
+            display_name=data.get("display_name", ""),
             id=id_val,
             short_code=data.get("short_code", ""),
             data_category=data.get("data_category", ""),

@@ -65,6 +65,7 @@ def _domain_to_model(domain: Domain) -> DomainModel:
     return DomainModel(
         name=domain.name,
         id=domain.id,
+        display_name=domain.display_name,
         short_code=domain.short_code,
         data_category=domain.data_category,
         color=domain.color,
@@ -167,6 +168,7 @@ async def create_domain(request: CreateDomainRequest):
     domain = Domain(
         name=request.name,
         id=request.id,
+        display_name=request.display_name,
         short_code=request.short_code,
         data_category=request.data_category,
         color=request.color,
@@ -204,6 +206,7 @@ async def update_domain(name: str, request: UpdateDomainRequest):
     domain = Domain(
         name=name,
         id=request.id if request.id is not None else existing.id,
+        display_name=request.display_name if request.display_name is not None else existing.display_name,
         short_code=request.short_code if request.short_code is not None else existing.short_code,
         data_category=request.data_category if request.data_category is not None else existing.data_category,
         color=request.color if request.color is not None else existing.color,

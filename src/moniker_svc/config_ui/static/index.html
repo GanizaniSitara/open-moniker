@@ -1275,8 +1275,9 @@
                     optionsHtml += `<optgroup label="${escapeHtml(category)}">`;
                     currentCategory = category;
                 }
+                const displayLabel = d.display_name || d.name;
                 const isSelected = currentDomain === d.name ? 'selected' : '';
-                optionsHtml += `<option value="${escapeHtml(d.name)}" ${isSelected}>${escapeHtml(d.name)}</option>`;
+                optionsHtml += `<option value="${escapeHtml(d.name)}" ${isSelected}>${escapeHtml(displayLabel)}</option>`;
             }
             if (currentCategory !== null) {
                 optionsHtml += '</optgroup>';

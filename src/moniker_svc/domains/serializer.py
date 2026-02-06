@@ -42,6 +42,7 @@ def save_domains_to_yaml(
     for domain in domain_list:
         domain_data = {
             "id": domain.id,
+            "display_name": domain.display_name,
             "short_code": domain.short_code,
             "data_category": domain.data_category,
             "color": domain.color,
