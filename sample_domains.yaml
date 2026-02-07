@@ -1,200 +1,182 @@
 # Data Domains Configuration
 # Top-level organizational units for the moniker catalog
-#
-# Each domain represents a major data category with governance metadata.
-# Domain names map to the first segment of moniker paths.
 
-indices:
+portfolios:
   id: 1
-  display_name: Market Indices
-  short_code: IDX
-  category: Market Data
-  color: "#4A90D9"
-  owner: indices-governance@firm.com
-  tech_custodian: quant-tech@firm.com
-  business_steward: index-committee@firm.com
-  confidentiality: internal
-  pii: false
-  help_channel: "#indices-support"
-  wiki_link: https://confluence.firm.com/display/DATA/Indices
-  notes: Benchmark indices, aggregates, and composites
-
-commodities:
-  id: 2
-  display_name: Commodities
-  short_code: CMD
-  category: Market Data
-  color: "#E67E22"
-  owner: commodities-desk@firm.com
-  tech_custodian: commodities-tech@firm.com
-  business_steward: commodities-risk@firm.com
-  confidentiality: internal
-  pii: false
-  help_channel: "#commodities-data"
-  wiki_link: https://confluence.firm.com/display/DATA/Commodities
-  notes: Commodity futures, spot prices, and derivatives
-
-reference:
-  id: 3
-  display_name: Reference Data
-  short_code: REF
-  category: Reference Data
-  color: "#27AE60"
-  owner: ref-data-governance@firm.com
-  tech_custodian: ref-data-tech@firm.com
-  business_steward: ref-data-steward@firm.com
-  confidentiality: internal
-  pii: false
-  help_channel: "#reference-data"
-  wiki_link: https://confluence.firm.com/display/DATA/Reference
-  notes: Security master, calendars, and static reference data
-
-instruments:
-  id: 4
-  display_name: Instruments
-  short_code: INS
-  category: Reference Data
-  color: "#3498DB"
-  owner: instrument-governance@firm.com
-  tech_custodian: instrument-tech@firm.com
-  business_steward: product-control@firm.com
-  confidentiality: internal
-  pii: false
-  help_channel: "#instruments-support"
-  wiki_link: https://confluence.firm.com/display/DATA/Instruments
-  notes: Security and instrument definitions
-
-analytics:
-  id: 5
-  display_name: Analytics
-  short_code: ANL
-  category: Derived Data
-  color: "#9B59B6"
-  owner: analytics-governance@firm.com
-  tech_custodian: quant-platform@firm.com
-  business_steward: quant-research@firm.com
-  confidentiality: internal
-  pii: false
-  help_channel: "#analytics-support"
-  wiki_link: https://confluence.firm.com/display/DATA/Analytics
-  notes: Calculated metrics, signals, and derived analytics
-
-risk:
-  id: 6
-  display_name: Risk Management
-  short_code: RSK
-  category: Risk Data
-  color: "#E74C3C"
-  owner: risk-committee@firm.com
-  tech_custodian: risk-tech@firm.com
-  business_steward: cro-office@firm.com
-  confidentiality: confidential
-  pii: false
-  help_channel: "#risk-data"
-  wiki_link: https://confluence.firm.com/display/RISK/Data
-  notes: Risk metrics, VaR, stress testing, and risk factors
-
-holdings:
-  id: 7
-  display_name: Holdings
-  short_code: HLD
-  category: Position Data
-  color: "#1ABC9C"
+  display_name: Portfolios
+  short_code: PRT
+  data_category: Positions
+  color: '#2ECC71'
   owner: portfolio-ops@firm.com
   tech_custodian: portfolio-tech@firm.com
   business_steward: portfolio-management@firm.com
   confidentiality: confidential
   pii: false
-  help_channel: "#holdings-support"
-  wiki_link: https://confluence.firm.com/display/DATA/Holdings
-  notes: Portfolio positions and holdings data
+  help_channel: '#portfolios'
+  wiki_link: https://confluence.firm.com/display/PM/Portfolios
+  notes: Portfolio master, holdings, performance, and attribution
 
-reports:
-  id: 8
-  display_name: Reports
-  short_code: RPT
-  category: Reporting Data
-  color: "#34495E"
-  owner: reporting-team@firm.com
-  tech_custodian: reporting-tech@firm.com
-  business_steward: finance-ops@firm.com
+benchmarks:
+  id: 2
+  display_name: Benchmarks
+  short_code: BMK
+  data_category: Market
+  color: '#3498DB'
+  owner: indices-governance@firm.com
+  tech_custodian: quant-tech@firm.com
+  business_steward: quant-research@firm.com
   confidentiality: internal
   pii: false
-  help_channel: "#reports-support"
-  wiki_link: https://confluence.firm.com/display/DATA/Reports
-  notes: Generated reports and regulatory filings
+  help_channel: '#benchmarks'
+  wiki_link: https://confluence.firm.com/display/DATA/Benchmarks
+  notes: Benchmark indices, constituents, and returns
+
+securities:
+  id: 3
+  display_name: Securities
+  short_code: SEC
+  data_category: Reference
+  color: '#27AE60'
+  owner: ref-data-governance@firm.com
+  tech_custodian: ref-data-tech@firm.com
+  business_steward: security-ops@firm.com
+  confidentiality: internal
+  pii: false
+  help_channel: '#securities'
+  wiki_link: https://confluence.firm.com/display/DATA/Securities
+  notes: Security master lookup by any identifier
 
 prices:
-  id: 9
+  id: 4
   display_name: Prices
   short_code: PRC
-  category: Market Data
-  color: "#F39C12"
-  owner: pricing-governance@firm.com
-  tech_custodian: pricing-tech@firm.com
-  business_steward: valuation-committee@firm.com
+  data_category: Market
+  color: '#F39C12'
+  owner: market-data-governance@firm.com
+  tech_custodian: market-data-tech@firm.com
+  business_steward: market-data-ops@firm.com
   confidentiality: internal
   pii: false
-  help_channel: "#prices-support"
-  wiki_link: https://confluence.firm.com/display/DATA/Prices
-  notes: Security prices, valuations, and marks
-
-govies:
-  id: 10
-  display_name: Government Bonds
-  short_code: GOV
-  category: Market Data
-  color: "#2980B9"
-  owner: rates-desk@firm.com
-  tech_custodian: rates-tech@firm.com
-  business_steward: rates-trading@firm.com
-  confidentiality: internal
-  pii: false
-  help_channel: "#govies-support"
-  wiki_link: https://confluence.firm.com/display/DATA/Govies
-  notes: Government bond data and curves
-
-commods:
-  id: 11
-  display_name: Commodities Trading
-  short_code: CMT
-  category: Trading Data
-  color: "#D35400"
-  owner: commods-desk@firm.com
-  tech_custodian: commods-tech@firm.com
-  business_steward: commods-risk@firm.com
-  confidentiality: confidential
-  pii: false
-  help_channel: "#commods-trading"
-  wiki_link: https://confluence.firm.com/display/DATA/Commods
-  notes: Commodities trading positions and P&L
+  help_channel: '#market-data'
+  wiki_link: https://confluence.firm.com/display/MKTDATA/Prices
+  notes: Real-time and historical security prices
 
 rates:
-  id: 12
-  display_name: Rates
+  id: 5
+  display_name: Interest Rates
   short_code: RTS
-  category: Market Data
-  color: "#16A085"
+  data_category: Market
+  color: '#16A085'
   owner: rates-governance@firm.com
   tech_custodian: rates-tech@firm.com
-  business_steward: rates-desk@firm.com
+  business_steward: rates-quant@firm.com
   confidentiality: internal
   pii: false
-  help_channel: "#rates-data"
-  wiki_link: https://confluence.firm.com/display/DATA/Rates
-  notes: Interest rates, curves, and fixed income data
+  help_channel: '#rates-data'
+  wiki_link: https://confluence.firm.com/display/RATES/Rates
+  notes: Interest rate curves, swaps, and money market rates
 
-mortgages:
-  id: 13
-  display_name: Mortgages
-  short_code: MTG
-  category: Structured Products
-  color: "#8E44AD"
-  owner: mortgage-desk@firm.com
-  tech_custodian: mortgage-tech@firm.com
-  business_steward: mortgage-risk@firm.com
+fixed_income:
+  id: 6
+  display_name: Fixed Income
+  short_code: FI
+  data_category: Market
+  color: '#2980B9'
+  owner: fixed-income-governance@firm.com
+  tech_custodian: fi-tech@firm.com
+  business_steward: fi-desk@firm.com
+  confidentiality: internal
+  pii: false
+  help_channel: '#fixed-income'
+  wiki_link: https://confluence.firm.com/display/FI/FixedIncome
+  notes: Government bonds, corporates, and structured products
+
+commodities:
+  id: 7
+  display_name: Commodities
+  short_code: CMD
+  data_category: Market
+  color: '#E67E22'
+  owner: commodities-desk@firm.com
+  tech_custodian: commodities-tech@firm.com
+  business_steward: commodities-quant@firm.com
+  confidentiality: internal
+  pii: false
+  help_channel: '#commodities-data'
+  wiki_link: https://confluence.firm.com/display/DATA/Commodities
+  notes: Commodity futures, spot prices, and derivatives
+
+risk:
+  id: 8
+  display_name: Risk
+  short_code: RSK
+  data_category: Risk
+  color: '#E74C3C'
+  owner: risk-governance@firm.com
+  tech_custodian: risk-tech@firm.com
+  business_steward: risk-quant@firm.com
   confidentiality: confidential
-  pii: true
-  help_channel: "#mortgage-data"
-  wiki_link: https://confluence.firm.com/display/DATA/Mortgages
-  notes: MBS, CMBS, and mortgage loan data
+  pii: false
+  help_channel: '#risk-analytics'
+  wiki_link: https://confluence.firm.com/display/RISK/Risk
+  notes: VaR, CVaR, stress testing, and risk measures
+
+reference:
+  id: 9
+  display_name: Reference Data
+  short_code: REF
+  data_category: Reference
+  color: '#95A5A6'
+  owner: ref-data-governance@firm.com
+  tech_custodian: ref-data-tech@firm.com
+  business_steward: ref-data-ops@firm.com
+  confidentiality: internal
+  pii: false
+  help_channel: '#reference-data'
+  wiki_link: https://confluence.firm.com/display/DATA/Reference
+  notes: Calendars, classifications, and static reference
+
+reports:
+  id: 10
+  display_name: Reports
+  short_code: RPT
+  data_category: Reporting
+  color: '#34495E'
+  owner: reporting-ops@firm.com
+  tech_custodian: reporting-tech@firm.com
+  business_steward: report-dev@firm.com
+  confidentiality: internal
+  pii: false
+  help_channel: '#reporting'
+  wiki_link: https://confluence.firm.com/display/REPORT/Reports
+  notes: Generated reports and regulatory filings
+
+nav:
+  id: 11
+  display_name: NAV
+  short_code: NAV
+  data_category: Accounting
+  color: '#9B59B6'
+  owner: fund-accounting@firm.com
+  tech_custodian: accounting-tech@firm.com
+  business_steward: nav-ops@firm.com
+  confidentiality: confidential
+  pii: false
+  help_channel: '#nav-support'
+  wiki_link: https://confluence.firm.com/display/ACCT/NAV
+  notes: Net Asset Value and fund accounting
+
+flows:
+  id: 12
+  display_name: Fund Flows
+  short_code: FLW
+  data_category: Accounting
+  color: '#1ABC9C'
+  owner: transfer-agency@firm.com
+  tech_custodian: ta-tech@firm.com
+  business_steward: flows-ops@firm.com
+  confidentiality: confidential
+  pii: false
+  help_channel: '#fund-flows'
+  wiki_link: https://confluence.firm.com/display/TA/Flows
+  notes: Subscriptions, redemptions, and AUM

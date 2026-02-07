@@ -1,46 +1,158 @@
-# Moniker Catalog Definition
-#
-# Format: [namespace@]domain.subdomain/path/segments[@version][/vN]
-#
-# Each entry defines:
-#   - ownership: Accountable owner, data specialist, support channel
-#   - source_binding: How to fetch data (snowflake, oracle, rest, static, excel, opensearch, etc.)
-#
-# Ownership inherits down the hierarchy. Source bindings define leaf nodes.
-#
-# Query templates support placeholders:
-#   {path}         - Full sub-path after the binding
-#   {segments[N]}  - Specific path segment (0-indexed)
-#   {version}      - Version from @suffix (e.g., @20260115, @latest)
-#   {revision}     - Revision from /vN suffix
-#   {namespace}    - Namespace prefix if provided
+# =============================================================================
+# PORTFOLIOS - Core entity for asset managers
+# =============================================================================
+portfolios:
+  display_name: Portfolios
+  description: Portfolio master, holdings, performance, and attribution
+  ownership:
+    accountable_owner: portfolio-ops@firm.com
+    data_specialist: portfolio-management@firm.com
+    support_channel: '#portfolios'
+  documentation:
+    glossary: https://confluence.firm.com/display/PM/Portfolio+Glossary
+    runbook: https://confluence.firm.com/display/OPS/Portfolio+System+Runbook
+    onboarding: https://confluence.firm.com/display/PM/Portfolio+Data+Onboarding
+    data_dictionary: https://confluence.firm.com/display/PM/Portfolio+Data+Dictionary
+  classification: confidential
 
+portfolios.holdings:
+  display_name: Portfolio Holdings
+  description: End of day positions by portfolio and date
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: POSITIONS_WH
+      database: PORTFOLIOS
+      schema: HOLDINGS
+      query: |
+        SELECT portfolio_id, security_id, quantity, market_value,
+               cost_basis, unrealized_pnl, currency
+        FROM DAILY_POSITIONS
+        WHERE as_of_date = TO_DATE('{segments[1]}', 'YYYYMMDD')
+          AND portfolio_id = '{segments[0]}'
+
+portfolios.performance:
+  display_name: Portfolio Performance
+  description: Returns, TWR, attribution by portfolio
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: PORTFOLIOS
+      schema: PERFORMANCE
+      query: |
+        SELECT portfolio_id, as_of_date, twr_1d, twr_mtd, twr_ytd,
+               benchmark_id, excess_return, tracking_error
+        FROM PORTFOLIO_PERFORMANCE
+        WHERE portfolio_id = '{segments[0]}'
+          AND ('{segments[1]}' = 'ALL' OR as_of_date >= TO_DATE('{segments[1]}', 'YYYYMMDD'))
+
+portfolios.exposures:
+  display_name: Exposure Analysis
+  description: Portfolio exposure breakdown by dimension
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: PORTFOLIOS
+      schema: ANALYTICS
+      query: |
+        SELECT portfolio_id, dimension, bucket, exposure_pct, notional
+        FROM EXPOSURE_BREAKDOWN
+        WHERE as_of_date = TO_DATE('{segments[1]}', 'YYYYMMDD')
+          AND portfolio_id = '{segments[0]}'
+
+portfolios.attribution:
+  display_name: Performance Attribution
+  description: Return attribution by factor, sector, security
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: PORTFOLIOS
+      schema: ATTRIBUTION
+      query: |
+        SELECT portfolio_id, as_of_date, dimension, bucket,
+               allocation_effect, selection_effect, interaction_effect, total_effect
+        FROM RETURN_ATTRIBUTION
+        WHERE portfolio_id = '{segments[0]}'
+          AND as_of_date = TO_DATE('{segments[1]}', 'YYYYMMDD')
 
 # =============================================================================
-# INDICES - Benchmark indices and aggregates
+# BENCHMARKS - Index and benchmark data
 # =============================================================================
-
-indices:
-  display_name: Market Indices
-  description: Benchmark indices, aggregates, and composites
+benchmarks:
+  display_name: Benchmarks
+  description: Benchmark indices, constituents, and returns
   ownership:
     accountable_owner: indices-governance@firm.com
     data_specialist: quant-research@firm.com
-    support_channel: "#indices-support"
+    support_channel: '#benchmarks'
   documentation:
-    glossary: https://confluence.firm.com/display/DATA/Indices+Glossary
-    runbook: https://confluence.firm.com/display/OPS/Indices+Runbook
-    onboarding: https://confluence.firm.com/display/DATA/Indices+Onboarding+Guide
-    data_dictionary: https://confluence.firm.com/display/DATA/Indices+Data+Dictionary
-    architecture: https://confluence.firm.com/display/ARCH/Indices+Data+Architecture
+    glossary: https://confluence.firm.com/display/DATA/Benchmark+Glossary
+    runbook: https://confluence.firm.com/display/OPS/Benchmark+Runbook
+    data_dictionary: https://confluence.firm.com/display/DATA/Benchmark+Data+Dictionary
 
-indices.sovereign:
-  display_name: Sovereign Indices
+benchmarks.returns:
+  display_name: Benchmark Returns
+  description: Daily, MTD, YTD returns for benchmarks
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: BENCHMARKS
+      schema: RETURNS
+      query: |
+        SELECT benchmark_id, as_of_date, return_1d, return_mtd, return_ytd
+        FROM BENCHMARK_RETURNS
+        WHERE benchmark_id = '{segments[0]}'
+
+benchmarks.constituents:
+  display_name: Benchmark Constituents
+  description: Index membership and weights
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: BENCHMARKS
+      schema: CONSTITUENTS
+      query: |
+        SELECT benchmark_id, security_id, weight, sector, country
+        FROM BENCHMARK_CONSTITUENTS
+        WHERE benchmark_id = '{segments[0]}'
+          AND as_of_date = TO_DATE('{segments[1]}', 'YYYYMMDD')
+
+benchmarks.corporate:
+  display_name: Corporate Bond Indices
+  description: Investment grade and high yield corporate bond indices
+  ownership:
+    data_specialist: credit-research@firm.com
+
+benchmarks.corporate/ig:
+  display_name: Investment Grade Corporate
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: BENCHMARKS
+      schema: CORPORATE
+      query: |
+        SELECT index_id, sector, rating_bucket, spread, oas, duration
+        FROM IG_CORPORATE_INDICES
+        WHERE sector = '{segments[0]}'
+
+benchmarks.sovereign:
+  display_name: Sovereign Bond Indices
   description: Government bond indices by region and currency
 
-# Example: indices.sovereign/developed/EU.GovBondAgg/EUR/ALL
-# Using {filter[N]:col} for ALL support and {version_date} for date handling
-indices.sovereign/developed:
+benchmarks.sovereign/developed:
   display_name: Developed Markets Sovereign
   description: DM government bond benchmarks
   source_binding:
@@ -48,7 +160,7 @@ indices.sovereign/developed:
     config:
       account: firm-prod.us-east-1
       warehouse: ANALYTICS_WH
-      database: INDICES
+      database: BENCHMARKS
       schema: SOVEREIGN
       query: |
         SELECT index_id, index_name, currency, weight, yield, duration, mod_duration
@@ -57,122 +169,23 @@ indices.sovereign/developed:
           AND {filter[1]:currency}
           AND as_of_date = {version_date}
 
-indices.corporate:
-  display_name: Corporate Indices
-  description: Investment grade and high yield corporate bond indices
-  ownership:
-    data_specialist: credit-research@firm.com
-
-indices.corporate/ig:
-  display_name: Investment Grade Corporate
-  source_binding:
-    type: snowflake
-    config:
-      account: firm-prod.us-east-1
-      warehouse: ANALYTICS_WH
-      database: INDICES
-      schema: CORPORATE
-      query: |
-        SELECT index_id, sector, rating_bucket, spread, oas, duration
-        FROM IG_CORPORATE_INDICES
-        WHERE sector = '{segments[0]}'
-
-
 # =============================================================================
-# COMMODITIES - Futures, spot, and derivatives
+# SECURITIES - Unified security lookup (wraps reference data)
 # =============================================================================
-
-commodities:
-  display_name: Commodities
-  description: Commodity futures, spot prices, and derivatives
-  ownership:
-    accountable_owner: commodities-desk@firm.com
-    data_specialist: commodities-quant@firm.com
-    support_channel: "#commodities-data"
-  documentation:
-    glossary: https://confluence.firm.com/display/DATA/Commodities+Glossary
-    runbook: https://confluence.firm.com/display/OPS/Commodities+Runbook
-    onboarding: https://confluence.firm.com/display/DATA/Commodities+Onboarding+Guide
-    data_dictionary: https://confluence.firm.com/display/DATA/Commodities+Data+Dictionary
-    api_docs: https://confluence.firm.com/display/API/Commodities+API+Reference
-
-commodities.derivatives:
-  display_name: Commodity Derivatives
-  description: Futures and options on commodities
-
-# Example: commodities.derivatives/energy/ALL
-commodities.derivatives/energy:
-  display_name: Energy Derivatives
-  description: Crude, natural gas, power futures
-  source_binding:
-    type: rest
-    config:
-      base_url: https://market-data.internal.firm.com
-      path_template: /api/v2/commodities/energy/{path}
-      method: GET
-      auth_type: bearer
-      headers:
-        Accept: application/json
-      response_format: json
-
-commodities.derivatives/metals:
-  display_name: Precious Metals
-  source_binding:
-    type: rest
-    config:
-      base_url: https://market-data.internal.firm.com
-      path_template: /api/v2/commodities/metals/{path}
-      method: GET
-      auth_type: bearer
-
-# Example: commodities.derivatives/crypto/ETH@20260115/v2
-commodities.derivatives/crypto:
-  display_name: Digital Assets
-  description: Cryptocurrency spot and derivatives
-  ownership:
-    data_specialist: digital-assets@firm.com
-  source_binding:
-    type: rest
-    config:
-      base_url: https://crypto-data.internal.firm.com
-      path_template: /api/v3/assets/{segments[0]}
-      method: GET
-      auth_type: api_key
-      # Supports versioning: @20260115 becomes as_of query param
-      query_params:
-        as_of: "{version}"
-        schema_version: "{revision}"
-
-
-# =============================================================================
-# REFERENCE - Security master, calendars, static data
-# =============================================================================
-
-reference:
-  display_name: Reference Data
-  description: Security master, calendars, and static reference data
+securities:
+  display_name: Securities
+  description: Security master lookup by any identifier
   ownership:
     accountable_owner: ref-data-governance@firm.com
-    data_specialist: ref-data-ops@firm.com
-    support_channel: "#reference-data"
-  classification: internal
+    data_specialist: security-ops@firm.com
+    support_channel: '#securities'
   documentation:
-    glossary: https://confluence.firm.com/display/DATA/Reference+Data+Glossary
-    runbook: https://confluence.firm.com/display/OPS/Reference+Data+Runbook
-    onboarding: https://confluence.firm.com/display/DATA/Reference+Data+Onboarding
+    glossary: https://confluence.firm.com/display/DATA/Security+Glossary
     data_dictionary: https://confluence.firm.com/display/DATA/Security+Master+Dictionary
-    architecture: https://confluence.firm.com/display/ARCH/Reference+Data+Architecture
-    contact: https://confluence.firm.com/display/DATA/Reference+Data+Contacts
 
-reference.security:
-  display_name: Security Master
-  description: Canonical security identifiers and attributes
-
-# Example: verified@reference.security/ISIN/US0378331005@latest
-# The "verified" namespace indicates official/golden source
-reference.security/ISIN:
-  display_name: ISIN Lookup
-  description: International Securities Identification Numbers
+securities/lookup:
+  display_name: Security Lookup
+  description: Lookup security by ISIN, CUSIP, SEDOL, or ticker
   source_binding:
     type: oracle
     config:
@@ -182,76 +195,13 @@ reference.security/ISIN:
                country_code, currency, security_type, active_flag
         FROM SECURITY_MASTER
         WHERE isin = '{segments[0]}'
-          AND effective_date = NVL(TO_DATE('{version}', 'YYYYMMDD'), TRUNC(SYSDATE))
+           OR cusip = '{segments[0]}'
+           OR sedol = '{segments[0]}'
+           OR ticker = '{segments[0]}'
 
-reference.security/CUSIP:
-  display_name: CUSIP Lookup
-  source_binding:
-    type: oracle
-    config:
-      dsn: secmaster.firm.com:1521/SECMASTER
-      query: |
-        SELECT isin, cusip, sedol, ticker, issuer_name,
-               country_code, currency, security_type, active_flag
-        FROM SECURITY_MASTER
-        WHERE cusip = '{segments[0]}'
-
-reference.security/SEDOL:
-  display_name: SEDOL Lookup
-  source_binding:
-    type: oracle
-    config:
-      dsn: secmaster.firm.com:1521/SECMASTER
-      query: |
-        SELECT isin, cusip, sedol, ticker, issuer_name,
-               country_code, currency, security_type, active_flag
-        FROM SECURITY_MASTER
-        WHERE sedol = '{segments[0]}'
-
-reference.calendars:
-  display_name: Trading Calendars
-  description: Exchange and settlement calendars
-
-reference.calendars/exchange:
-  display_name: Exchange Calendars
-  source_binding:
-    type: static
-    config:
-      base_path: /data/reference/calendars/exchange
-      file_pattern: "{segments[0]}.json"
-      format: json
-
-reference.calendars/settlement:
-  display_name: Settlement Calendars
-  source_binding:
-    type: static
-    config:
-      base_path: /data/reference/calendars/settlement
-      file_pattern: "{segments[0]}.csv"
-      format: csv
-
-
-# =============================================================================
-# INSTRUMENTS - Detailed security attributes
-# =============================================================================
-
-instruments:
-  display_name: Instrument Details
+securities/terms:
+  display_name: Security Terms
   description: Detailed security attributes and terms
-  ownership:
-    accountable_owner: ref-data-governance@firm.com
-    data_specialist: security-ops@firm.com
-    support_channel: "#instruments"
-  documentation:
-    glossary: https://confluence.firm.com/display/DATA/Instruments+Glossary
-    runbook: https://confluence.firm.com/display/OPS/Instruments+Runbook
-    data_dictionary: https://confluence.firm.com/display/DATA/Instrument+Attributes+Dictionary
-    api_docs: https://confluence.firm.com/display/API/Instruments+Search+API
-
-# Example: instruments/US0378331005/metadata
-instruments/metadata:
-  display_name: Instrument Metadata
-  description: Security terms, attributes, and classifications
   source_binding:
     type: opensearch
     config:
@@ -269,422 +219,22 @@ instruments/metadata:
           }
         }
 
-
 # =============================================================================
-# ANALYTICS - Risk, attribution, and calculated metrics
+# PRICES - Market data
 # =============================================================================
-
-analytics:
-  display_name: Analytics
-  description: Risk metrics, attribution, and calculated analytics
-  ownership:
-    accountable_owner: risk-governance@firm.com
-    data_specialist: quant-analytics@firm.com
-    support_channel: "#analytics-support"
-  classification: confidential
-  documentation:
-    glossary: https://confluence.firm.com/display/QUANT/Analytics+Glossary
-    runbook: https://confluence.firm.com/display/OPS/Analytics+Platform+Runbook
-    onboarding: https://confluence.firm.com/display/QUANT/Analytics+User+Guide
-    data_dictionary: https://confluence.firm.com/display/QUANT/Risk+Metrics+Dictionary
-    api_docs: https://confluence.firm.com/display/API/Analytics+REST+API
-    architecture: https://confluence.firm.com/display/ARCH/Analytics+Platform+Architecture
-
-analytics.risk:
-  display_name: Risk Analytics
-  description: VaR, stress tests, sensitivities
-
-analytics.risk/var:
-  display_name: Value at Risk
-  source_binding:
-    type: rest
-    config:
-      base_url: https://risk-engine.internal.firm.com
-      path_template: /api/v2/var/{path}
-      method: GET
-      auth_type: bearer
-
-analytics.risk/stress:
-  display_name: Stress Testing
-  source_binding:
-    type: rest
-    config:
-      base_url: https://risk-engine.internal.firm.com
-      path_template: /api/v2/stress/{path}
-      method: GET
-      auth_type: bearer
-
-# Example: user@analytics.risk/views/my-watchlist@20260115/v3
-# User-scoped views require namespace prefix
-analytics.risk/views:
-  display_name: User Risk Views
-  description: Saved user views and filters (namespace required)
-  source_binding:
-    type: rest
-    config:
-      base_url: https://risk-engine.internal.firm.com
-      path_template: /api/v2/views/{namespace}/{segments[0]}
-      method: GET
-      auth_type: bearer
-      query_params:
-        as_of: "{version}"
-        version: "{revision}"
-
-
-# =============================================================================
-# RISK - CVaR and tail risk measures (Oracle)
-# =============================================================================
-
-risk:
-  display_name: Risk Measures
-  description: Tail risk, CVaR, and stress testing metrics from Proteus
-  ownership:
-    accountable_owner: risk-governance@firm.com
-    data_specialist: risk-quant@firm.com
-    support_channel: "#risk-analytics"
-  classification: confidential
-  documentation:
-    glossary: https://confluence.firm.com/display/RISK/Risk+Measures+Glossary
-    runbook: https://confluence.firm.com/display/OPS/Proteus+Risk+Engine+Runbook
-    onboarding: https://confluence.firm.com/display/RISK/Risk+Data+Onboarding
-    data_dictionary: https://confluence.firm.com/display/RISK/CVaR+and+Tail+Risk+Dictionary
-    architecture: https://confluence.firm.com/display/ARCH/Proteus+Risk+Architecture
-    additional:
-      regulatory_guide: https://confluence.firm.com/display/RISK/BCBS239+Compliance+Guide
-      methodology: https://confluence.firm.com/display/QUANT/CVaR+Methodology+Paper
-
-# Example monikers:
-#   risk.cvar/758-A/USD/ALL         - All securities for portfolio 758-A in USD
-#   risk.cvar/758-A/ALL/ALL         - All currencies, all securities for portfolio
-#   risk.cvar/ALL/USD/B0YHY8V7      - Specific security across all USD portfolios
-#   risk.cvar/ALL/ALL/ALL           - Everything (use with caution!)
-#
-# Path structure: risk.cvar/{portfolio}/{currency}/{security}
-#   - portfolio: PORT_NO-PORT_TYPE combined (e.g., "758-A")
-#   - currency: BASE_CURRENCY (e.g., "USD") or "ALL"
-#   - security: SSM_ID (e.g., "B0YHY8V7") or "ALL"
-#
-# Returns full timeseries history (ASOF_DATE is a result column, not a filter)
-
-risk.cvar:
-  display_name: Conditional Value at Risk
-  description: CVaR tail risk measures by portfolio, currency, and security
-  classification: confidential
-
-  ownership:
-    # Simplified ownership
-    accountable_owner: risk-governance@firm.com
-    data_specialist: risk-quant@firm.com
-    support_channel: "#risk-analytics"
-    # Formal data governance roles (BCBS 239 / DAMA)
-    adop: quant-research@firm.com        # Accountable Data Owner/Principal - business executive
-    ads: risk-data-steward@firm.com       # Accountable Data Steward - data quality & standards
-    adal: risk-access-control@firm.com    # Accountable Data Access Lead - access & permissions
-
-  # Data Quality information
-  data_quality:
-    dq_owner: dq-risk-team@firm.com
-    quality_score: 94.5
-    validation_rules:
-      - "CVAR values must be between -1 and 1"
-      - "No null SSM_ID values"
-      - "ASOF_DATE must be a valid business day"
-    known_issues:
-      - "Some legacy positions from 2019 have missing LT_ID mappings"
-    last_validated: "2026-01-28T06:00:00Z"
-
-  # SLA commitments
-  sla:
-    freshness: "T+1 by 06:00 ET"
-    availability: "99.5%"
-    support_hours: "Business hours ET (8am-6pm)"
-    escalation_contact: risk-oncall@firm.com
-
-  # Data freshness
-  freshness:
-    last_loaded: "2026-01-28T05:45:00Z"
-    refresh_schedule: "Daily at 05:30 ET"
-    source_system: "Proteus Risk Engine"
-    upstream_dependencies:
-      - "positions.eod"
-      - "market-data.eod"
-      - "reference.security"
-
-  # Machine-readable schema for AI agent discoverability
-  schema:
-    description: |
-      Conditional Value at Risk (CVaR) tail risk measures from the Proteus risk engine.
-      Contains daily risk metrics per portfolio, currency, and security combination.
-      CVaR represents the expected loss given that the loss exceeds the VaR threshold,
-      providing insight into tail risk exposure.
-
-    semantic_tags:
-      - risk
-      - cvar
-      - tail-risk
-      - timeseries
-      - financial
-      - portfolio-analytics
-      - stress-testing
-      - regulatory
-
-    granularity: "daily, per-portfolio, per-currency, per-security"
-    typical_row_count: "1M-100M"
-    update_frequency: "daily (T+1)"
-
-    primary_key:
-      - ASOF_DATE
-      - PORT_NO
-      - PORT_TYPE
-      - SSM_ID
-      - BASE_CURRENCY
-
-    columns:
-      - name: ASOF_DATE
-        type: date
-        description: "Business date for the risk calculation (T+1 from market close)"
-        semantic_type: timestamp
-        example: "2026-01-28"
-        nullable: false
-        primary_key: true
-
-      - name: PORT_NO
-        type: string
-        description: "Portfolio number identifier"
-        semantic_type: identifier
-        example: "758"
-        nullable: false
-        primary_key: true
-
-      - name: PORT_TYPE
-        type: string
-        description: "Portfolio type classification (A=Active, B=Benchmark)"
-        semantic_type: dimension
-        example: "A"
-        nullable: false
-        primary_key: true
-
-      - name: SSM_ID
-        type: string
-        description: "Security master identifier - unique security ID from SSM system"
-        semantic_type: identifier
-        example: "B0YHY8V7"
-        nullable: false
-        primary_key: true
-        foreign_key: "reference.security/SSM"
-
-      - name: BASE_CURRENCY
-        type: string
-        description: "Base currency for the CVaR calculation (ISO 4217)"
-        semantic_type: dimension
-        example: "USD"
-        nullable: false
-        primary_key: true
-
-      - name: ACCT_KEY
-        type: string
-        description: "Account key for position attribution"
-        semantic_type: identifier
-        example: "758-IDX-16220-[TPH200010]"
-        nullable: true
-
-      - name: LT_ID
-        type: integer
-        description: "Liquidity tier ID (0=liquid, 24=illiquid)"
-        semantic_type: dimension
-        example: "0"
-        nullable: true
-
-      - name: LT_ID_2
-        type: integer
-        description: "Secondary liquidity tier for override scenarios"
-        semantic_type: dimension
-        example: "null"
-        nullable: true
-
-      - name: CVAR_COEFF
-        type: float
-        description: "CVaR coefficient - sensitivity factor for the position"
-        semantic_type: measure
-        example: "-0.00005"
-        nullable: false
-
-      - name: CVAR
-        type: float
-        description: "Conditional Value at Risk - expected loss in tail scenarios (decimal)"
-        semantic_type: measure
-        example: "-0.0152"
-        nullable: false
-
-    use_cases:
-      - "Calculate portfolio-level tail risk exposure"
-      - "Monitor daily CVaR changes for risk limits"
-      - "Compare CVaR across currencies for hedging decisions"
-      - "Identify high-risk securities for portfolio optimization"
-      - "Regulatory reporting (BCBS 239, FRTB)"
-      - "Stress testing and scenario analysis"
-
-    examples:
-      - "risk.cvar/758-A/USD/ALL - All USD securities in portfolio 758-A"
-      - "risk.cvar/ALL/USD/B0YHY8V7 - Security B0YHY8V7 across all USD portfolios"
-      - "risk.cvar/ALL/ALL/ALL - Full dataset (caution: large)"
-
-    related_monikers:
-      - "positions.eod - End of day position data"
-      - "market-data.eod - Market prices used in calculation"
-      - "reference.security/SSM - Security master for SSM_ID lookups"
-      - "analytics.risk/var - Value at Risk (related metric)"
-
-  # Access policy - guardrails against expensive queries (9.5B rows!)
-  access_policy:
-    # Block the full wildcard query - would return 9.5 billion rows
-    blocked_patterns:
-      - "ALL/ALL/ALL"
-
-    # Require at least 1 specific filter (portfolio, currency, or security)
-    min_filters: 1
-
-    # Cardinality estimates: ~1000 portfolios, ~50 currencies, ~200K securities
-    # Base is ~1000 rows for a single portfolio/currency/security combo over time
-    cardinality_multipliers:
-      - 1000    # segment 0: portfolio (ALL = 1000 portfolios)
-      - 50      # segment 1: currency (ALL = 50 currencies)
-      - 200000  # segment 2: security (ALL = 200K securities)
-    base_row_count: 1000
-
-    # Warn above 10M rows, block above 100M rows
-    max_rows_warn: 10000000
-    max_rows_block: 100000000
-
-    # Custom message for blocked queries
-    denial_message: |
-      Query blocked: CVaR table contains 9.5 billion rows.
-      You must specify at least one filter (portfolio, currency, or security).
-      Example: risk.cvar/758-A/USD/ALL (specific portfolio and currency)
-
-  source_binding:
-    type: oracle
-    config:
-      dsn: proteus.firm.com:1521/RISKDB
-      query: |
-        SELECT asof_date, port_no, port_type, ssm_id, base_currency,
-               acct_key, lt_id, lt_id_2, cvar_coeff, cvar
-        FROM proteus_2_own.te_stress_tail_risk_pnl
-        WHERE ('{segments[0]}' = 'ALL' OR port_no || '-' || port_type = '{segments[0]}')
-          AND ('{segments[1]}' = 'ALL' OR base_currency = '{segments[1]}')
-          AND ('{segments[2]}' = 'ALL' OR ssm_id = '{segments[2]}')
-        ORDER BY asof_date DESC, port_no, ssm_id
-
-
-# =============================================================================
-# HOLDINGS - Portfolio positions and exposures
-# =============================================================================
-
-holdings:
-  display_name: Holdings & Positions
-  description: Portfolio positions, exposures, and allocations
-  ownership:
-    accountable_owner: portfolio-ops@firm.com
-    data_specialist: position-management@firm.com
-    support_channel: "#positions"
-  classification: confidential
-  documentation:
-    glossary: https://confluence.firm.com/display/OPS/Holdings+and+Positions+Glossary
-    runbook: https://confluence.firm.com/display/OPS/Positions+System+Runbook
-    onboarding: https://confluence.firm.com/display/OPS/Positions+Data+Onboarding
-    data_dictionary: https://confluence.firm.com/display/OPS/Position+Data+Dictionary
-    architecture: https://confluence.firm.com/display/ARCH/Positions+Data+Flow
-
-# Example: holdings/20260115/fund_alpha
-holdings/positions:
-  display_name: Position Data
-  description: End of day positions by date and portfolio
-  source_binding:
-    type: snowflake
-    config:
-      account: firm-prod.us-east-1
-      warehouse: POSITIONS_WH
-      database: HOLDINGS
-      schema: POSITIONS
-      query: |
-        SELECT portfolio_id, security_id, quantity, market_value,
-               cost_basis, unrealized_pnl, currency
-        FROM DAILY_POSITIONS
-        WHERE as_of_date = TO_DATE('{segments[0]}', 'YYYYMMDD')
-          AND portfolio_id = '{segments[1]}'
-
-holdings/exposures:
-  display_name: Exposure Analysis
-  source_binding:
-    type: snowflake
-    config:
-      account: firm-prod.us-east-1
-      warehouse: ANALYTICS_WH
-      database: HOLDINGS
-      schema: ANALYTICS
-      query: |
-        SELECT portfolio_id, dimension, bucket, exposure_pct, notional
-        FROM EXPOSURE_BREAKDOWN
-        WHERE as_of_date = TO_DATE('{segments[0]}', 'YYYYMMDD')
-          AND portfolio_id = '{segments[1]}'
-
-
-# =============================================================================
-# REPORTS - Generated reports and exports
-# =============================================================================
-
-reports:
-  display_name: Reports
-  description: Generated reports, exports, and documents
-  ownership:
-    accountable_owner: reporting-ops@firm.com
-    data_specialist: report-dev@firm.com
-    support_channel: "#reporting"
-  documentation:
-    glossary: https://confluence.firm.com/display/REPORT/Reporting+Glossary
-    runbook: https://confluence.firm.com/display/OPS/Report+Generation+Runbook
-    onboarding: https://confluence.firm.com/display/REPORT/Report+Access+Guide
-    data_dictionary: https://confluence.firm.com/display/REPORT/Report+Fields+Dictionary
-
-reports/daily:
-  display_name: Daily Reports
-  source_binding:
-    type: static
-    config:
-      base_path: /data/reports/daily
-      file_pattern: "{segments[0]}/{segments[1]}.pdf"
-      format: binary
-
-reports/regulatory:
-  display_name: Regulatory Reports
-  classification: restricted
-  source_binding:
-    type: excel
-    config:
-      base_path: /data/reports/regulatory
-      file_pattern: "{segments[0]}/{segments[1]}.xlsx"
-      sheet: Summary
-
-
-# =============================================================================
-# PRICES - Real-time and historical prices
-# =============================================================================
-
 prices:
-  display_name: Market Prices
+  display_name: Prices
   description: Real-time and historical security prices
   ownership:
     accountable_owner: market-data-governance@firm.com
     data_specialist: market-data-ops@firm.com
-    support_channel: "#market-data"
+    support_channel: '#market-data'
   documentation:
     glossary: https://confluence.firm.com/display/MKTDATA/Pricing+Glossary
     runbook: https://confluence.firm.com/display/OPS/Market+Data+Runbook
     onboarding: https://confluence.firm.com/display/MKTDATA/Market+Data+Onboarding
     data_dictionary: https://confluence.firm.com/display/MKTDATA/Price+Fields+Dictionary
-    api_docs: https://confluence.firm.com/display/API/Market+Data+API+Reference
 
-# Example: prices.equity/AAPL@20260115 or prices.equity/ALL@latest
 prices.equity:
   display_name: Equity Prices
   source_binding:
@@ -703,17 +253,7 @@ prices.equity:
             ELSE {version_date}
           END
 
-prices.fx:
-  display_name: FX Rates
-  source_binding:
-    type: rest
-    config:
-      base_url: https://fx-service.internal.firm.com
-      path_template: /api/v1/rates/{segments[0]}/{segments[1]}
-      method: GET
-      auth_type: bearer
-
-prices.fixed-income:
+prices.fixed_income:
   display_name: Fixed Income Prices
   source_binding:
     type: snowflake
@@ -727,662 +267,71 @@ prices.fixed-income:
         FROM BOND_PRICES
         WHERE security_id = '{segments[0]}'
 
-
-# =============================================================================
-# GOVIES - Government Bond Data (Snowflake)
-# =============================================================================
-
-govies:
-  display_name: Government Bonds
-  description: Sovereign debt securities, yields, and analytics
-  ownership:
-    accountable_owner: fixed-income-governance@firm.com
-    data_specialist: govies-desk@firm.com
-    support_channel: "#govies-data"
-    adop: fi-trading-head@firm.com
-    ads: govies-data-steward@firm.com
-    adal: fi-access-control@firm.com
-  classification: internal
-  documentation:
-    glossary: https://confluence.firm.com/display/FI/Government+Bonds+Glossary
-    runbook: https://confluence.firm.com/display/OPS/Govies+Data+Runbook
-    onboarding: https://confluence.firm.com/display/FI/Government+Bonds+Onboarding
-    data_dictionary: https://confluence.firm.com/display/FI/Treasury+Data+Dictionary
-    architecture: https://confluence.firm.com/display/ARCH/Fixed+Income+Data+Architecture
-    additional:
-      yield_curve_methodology: https://confluence.firm.com/display/QUANT/Yield+Curve+Construction
-      treasury_direct_integration: https://confluence.firm.com/display/INT/Treasury+Direct+Feed
-
-# Example monikers:
-#   govies.treasury/US/10Y/ALL      - All 10Y US Treasury data
-#   govies.treasury/ALL/ALL/ALL     - All treasury data
-#   govies.sovereign/DE/5Y/ALL      - German 5Y bunds
-govies.treasury:
-  display_name: US Treasury Securities
-  description: US Treasury bills, notes, and bonds with yields and pricing
-
-  data_quality:
-    dq_owner: fi-dq-team@firm.com
-    quality_score: 98.2
-    validation_rules:
-      - "Yield must be positive for non-TIPS securities"
-      - "Maturity date must be in the future"
-      - "CUSIP must be valid 9-character format"
-    last_validated: "2026-01-28T07:00:00Z"
-
-  sla:
-    freshness: "T+0 by 18:00 ET"
-    availability: "99.9%"
-    support_hours: "24/5 (Mon-Fri)"
-    escalation_contact: fi-oncall@firm.com
-
-  freshness:
-    last_loaded: "2026-01-28T17:45:00Z"
-    refresh_schedule: "Continuous during market hours"
-    source_system: "Treasury Direct / Bloomberg"
-    upstream_dependencies:
-      - "reference.security"
-      - "market-data.rates"
-
-  schema:
-    description: |
-      US Treasury securities including T-Bills, Notes, and Bonds.
-      Contains pricing, yield curve data, and duration analytics.
-      Primary source for risk-free rate benchmarking.
-
-    semantic_tags:
-      - government-bonds
-      - treasury
-      - fixed-income
-      - yield-curve
-      - risk-free-rate
-      - sovereign
-      - timeseries
-
-    granularity: "daily, per-security, per-tenor"
-    typical_row_count: "10K-100K"
-    update_frequency: "continuous (market hours)"
-
-    primary_key:
-      - ASOF_DATE
-      - CUSIP
-      - TENOR
-
-    columns:
-      - name: ASOF_DATE
-        type: date
-        description: "Pricing date"
-        semantic_type: timestamp
-        example: "2026-01-28"
-        nullable: false
-        primary_key: true
-
-      - name: CUSIP
-        type: string
-        description: "CUSIP identifier for the security"
-        semantic_type: identifier
-        example: "912828ZT5"
-        nullable: false
-        primary_key: true
-        foreign_key: "reference.security/CUSIP"
-
-      - name: COUNTRY
-        type: string
-        description: "Issuing country (ISO 3166-1 alpha-2)"
-        semantic_type: dimension
-        example: "US"
-        nullable: false
-
-      - name: TENOR
-        type: string
-        description: "Maturity tenor bucket (3M, 6M, 1Y, 2Y, 5Y, 10Y, 30Y)"
-        semantic_type: dimension
-        example: "10Y"
-        nullable: false
-        primary_key: true
-
-      - name: COUPON
-        type: float
-        description: "Annual coupon rate (decimal)"
-        semantic_type: measure
-        example: "0.0375"
-        nullable: false
-
-      - name: YIELD
-        type: float
-        description: "Yield to maturity (decimal)"
-        semantic_type: measure
-        example: "0.0425"
-        nullable: false
-
-      - name: PRICE
-        type: float
-        description: "Clean price (percentage of par)"
-        semantic_type: measure
-        example: "98.75"
-        nullable: false
-
-      - name: DURATION
-        type: float
-        description: "Modified duration (years)"
-        semantic_type: measure
-        example: "8.45"
-        nullable: false
-
-      - name: CONVEXITY
-        type: float
-        description: "Convexity measure"
-        semantic_type: measure
-        example: "0.85"
-        nullable: true
-
-    use_cases:
-      - "Build yield curve for discounting"
-      - "Calculate duration and convexity for portfolio"
-      - "Monitor Treasury market movements"
-      - "Benchmark against risk-free rate"
-      - "Regulatory capital calculations"
-
-    examples:
-      - "govies.treasury/US/10Y/ALL - All 10Y Treasury data"
-      - "govies.treasury/US/ALL/ALL - Full US Treasury curve"
-      - "govies.treasury/ALL/ALL/912828ZT5 - Specific CUSIP history"
-
-    related_monikers:
-      - "rates.swap - Interest rate swaps for spread analysis"
-      - "reference.security/CUSIP - Security master lookup"
-      - "risk.cvar - CVaR calculations using treasuries"
-
-  source_binding:
-    type: snowflake
-    config:
-      account: firm-prod.us-east-1
-      warehouse: MARKET_DATA_WH
-      database: FIXED_INCOME
-      schema: GOVIES
-      query: |
-        SELECT asof_date, cusip, country, tenor, coupon, yield, price, duration, convexity
-        FROM TREASURY_SECURITIES
-        WHERE ('{segments[0]}' = 'ALL' OR country = '{segments[0]}')
-          AND ('{segments[1]}' = 'ALL' OR tenor = '{segments[1]}')
-          AND ('{segments[2]}' = 'ALL' OR cusip = '{segments[2]}')
-        ORDER BY asof_date DESC, tenor
-
-govies.sovereign:
-  display_name: International Sovereign Bonds
-  description: Non-US government bonds (Bunds, Gilts, JGBs, etc.)
-
-  schema:
-    description: |
-      International sovereign debt from major developed markets.
-      Includes German Bunds, UK Gilts, Japanese JGBs, and other G10 sovereigns.
-
-    semantic_tags:
-      - government-bonds
-      - sovereign
-      - international
-      - fixed-income
-      - bunds
-      - gilts
-      - jgbs
-
-    granularity: "daily, per-country, per-tenor"
-    typical_row_count: "50K-500K"
-    update_frequency: "daily (T+1)"
-
-    columns:
-      - name: ASOF_DATE
-        type: date
-        description: "Pricing date"
-        semantic_type: timestamp
-        example: "2026-01-28"
-
-      - name: ISIN
-        type: string
-        description: "International Securities Identification Number"
-        semantic_type: identifier
-        example: "DE0001102481"
-        foreign_key: "reference.security/ISIN"
-
-      - name: COUNTRY
-        type: string
-        description: "Issuing country (ISO 3166-1 alpha-2)"
-        semantic_type: dimension
-        example: "DE"
-
-      - name: TENOR
-        type: string
-        description: "Maturity tenor"
-        semantic_type: dimension
-        example: "10Y"
-
-      - name: YIELD
-        type: float
-        description: "Yield to maturity (decimal)"
-        semantic_type: measure
-        example: "0.0215"
-
-      - name: SPREAD_VS_USD
-        type: float
-        description: "Spread versus comparable US Treasury (bps)"
-        semantic_type: measure
-        example: "-125.5"
-
-    use_cases:
-      - "Cross-market yield comparisons"
-      - "Currency-hedged return analysis"
-      - "Global duration management"
-
-    examples:
-      - "govies.sovereign/DE/10Y/ALL - German 10Y Bunds"
-      - "govies.sovereign/GB/ALL/ALL - All UK Gilts"
-
-  source_binding:
-    type: snowflake
-    config:
-      account: firm-prod.us-east-1
-      warehouse: MARKET_DATA_WH
-      database: FIXED_INCOME
-      schema: GOVIES
-      query: |
-        SELECT asof_date, isin, country, tenor, yield, spread_vs_usd, price, duration
-        FROM SOVEREIGN_BONDS
-        WHERE ('{segments[0]}' = 'ALL' OR country = '{segments[0]}')
-          AND ('{segments[1]}' = 'ALL' OR tenor = '{segments[1]}')
-          AND ('{segments[2]}' = 'ALL' OR isin = '{segments[2]}')
-        ORDER BY asof_date DESC, country, tenor
-
-
-# =============================================================================
-# COMMODS - Commodities Data (REST API - NEFA)
-# =============================================================================
-
-commods:
-  display_name: Commodities
-  description: Commodity futures, spot prices, and physical market data
-  ownership:
-    accountable_owner: commodities-governance@firm.com
-    data_specialist: commods-quant@firm.com
-    support_channel: "#commodities-data"
-    adop: commods-trading-head@firm.com
-    ads: commods-data-steward@firm.com
-    adal: commods-access-control@firm.com
-  classification: internal
-  documentation:
-    glossary: https://confluence.firm.com/display/COMMOD/Commodities+Glossary
-    runbook: https://confluence.firm.com/display/OPS/NEFA+API+Runbook
-    onboarding: https://confluence.firm.com/display/COMMOD/Commodities+Data+Onboarding
-    data_dictionary: https://confluence.firm.com/display/COMMOD/Commodities+Data+Dictionary
-    api_docs: https://confluence.firm.com/display/API/NEFA+Integration+Guide
-    additional:
-      contract_symbology: https://confluence.firm.com/display/COMMOD/Futures+Contract+Symbology
-      exchange_codes: https://confluence.firm.com/display/COMMOD/Exchange+Codes+Reference
-
-# Example monikers:
-#   commods.energy/CL/SPOT/ALL      - Crude oil spot prices
-#   commods.energy/NG/F1/ALL        - Natural gas front month
-#   commods.metals/GC/SPOT/ALL      - Gold spot prices
-commods.energy:
-  display_name: Energy Commodities
-  description: Crude oil, natural gas, and refined products from NEFA API
-
-  data_quality:
-    dq_owner: commods-dq@firm.com
-    quality_score: 96.8
-    validation_rules:
-      - "Price must be positive"
-      - "Volume must be non-negative"
-      - "Contract codes must match exchange symbology"
-    known_issues:
-      - "Some illiquid contracts may have stale prices on low-volume days"
-    last_validated: "2026-01-28T08:00:00Z"
-
-  sla:
-    freshness: "Real-time (15-min delay for non-pro)"
-    availability: "99.5%"
-    support_hours: "24/6 (Sun 6pm - Fri 5pm ET)"
-    escalation_contact: commods-oncall@firm.com
-
-  freshness:
-    last_loaded: "2026-01-28T14:30:00Z"
-    refresh_schedule: "Real-time via API"
-    source_system: "NEFA Energy Data API"
-    upstream_dependencies:
-      - "reference.contracts"
-
-  schema:
-    description: |
-      Energy commodity prices from the NEFA (National Energy & Futures API).
-      Includes crude oil (WTI, Brent), natural gas, heating oil, gasoline,
-      and other energy derivatives. Supports spot, futures, and spread data.
-
-    semantic_tags:
-      - commodities
-      - energy
-      - crude-oil
-      - natural-gas
-      - futures
-      - spot
-      - nefa
-      - real-time
-
-    granularity: "intraday, per-commodity, per-contract"
-    typical_row_count: "100K-1M"
-    update_frequency: "real-time"
-
-    primary_key:
-      - TIMESTAMP
-      - SYMBOL
-      - CONTRACT
-
-    columns:
-      - name: TIMESTAMP
-        type: datetime
-        description: "Price timestamp (UTC)"
-        semantic_type: timestamp
-        example: "2026-01-28T14:30:00Z"
-        nullable: false
-        primary_key: true
-
-      - name: SYMBOL
-        type: string
-        description: "Commodity symbol (CL=Crude, NG=NatGas, HO=Heating Oil)"
-        semantic_type: identifier
-        example: "CL"
-        nullable: false
-        primary_key: true
-
-      - name: CONTRACT
-        type: string
-        description: "Contract type (SPOT, F1=front month, F2=second month, etc.)"
-        semantic_type: dimension
-        example: "F1"
-        nullable: false
-        primary_key: true
-
-      - name: PRICE
-        type: float
-        description: "Price per unit (USD)"
-        semantic_type: measure
-        example: "78.45"
-        nullable: false
-
-      - name: CHANGE
-        type: float
-        description: "Price change from prior close"
-        semantic_type: measure
-        example: "-0.52"
-        nullable: true
-
-      - name: CHANGE_PCT
-        type: float
-        description: "Percentage change from prior close"
-        semantic_type: measure
-        example: "-0.66"
-        nullable: true
-
-      - name: VOLUME
-        type: integer
-        description: "Trading volume (contracts)"
-        semantic_type: measure
-        example: "125000"
-        nullable: true
-
-      - name: OPEN_INTEREST
-        type: integer
-        description: "Open interest (contracts)"
-        semantic_type: measure
-        example: "450000"
-        nullable: true
-
-    use_cases:
-      - "Real-time energy price monitoring"
-      - "Futures curve analysis"
-      - "Hedging strategy development"
-      - "Correlation analysis with equity markets"
-      - "Commodity-linked derivative pricing"
-
-    examples:
-      - "commods.energy/CL/SPOT/ALL - WTI Crude spot prices"
-      - "commods.energy/CL/F1/ALL - Crude front month futures"
-      - "commods.energy/NG/ALL/ALL - All natural gas contracts"
-
-    related_monikers:
-      - "commods.metals - Precious metals data"
-      - "prices.fx - Currency rates for conversion"
-      - "risk.cvar - Commodity portfolio risk"
-
+prices.fx:
+  display_name: FX Rates
   source_binding:
     type: rest
     config:
-      base_url: https://api.nefa.energy
-      path_template: /v2/commodities/energy/{segments[0]}/{segments[1]}
+      base_url: https://fx-service.internal.firm.com
+      path_template: /api/v1/rates/{segments[0]}/{segments[1]}
       method: GET
-      auth_type: api_key
-      headers:
-        Accept: application/json
-        X-API-Version: "2.0"
-      query_params:
-        format: json
-        include_history: "true"
-
-commods.metals:
-  display_name: Precious & Industrial Metals
-  description: Gold, silver, copper, and other metals from NEFA API
-
-  schema:
-    description: |
-      Precious and industrial metals prices from NEFA.
-      Includes gold (GC), silver (SI), copper (HG), platinum (PL), palladium (PA).
-
-    semantic_tags:
-      - commodities
-      - metals
-      - gold
-      - silver
-      - precious-metals
-      - industrial-metals
-      - futures
-
-    granularity: "intraday, per-metal, per-contract"
-    typical_row_count: "50K-200K"
-    update_frequency: "real-time"
-
-    columns:
-      - name: TIMESTAMP
-        type: datetime
-        description: "Price timestamp (UTC)"
-        semantic_type: timestamp
-        example: "2026-01-28T14:30:00Z"
-
-      - name: SYMBOL
-        type: string
-        description: "Metal symbol (GC=Gold, SI=Silver, HG=Copper)"
-        semantic_type: identifier
-        example: "GC"
-
-      - name: CONTRACT
-        type: string
-        description: "Contract type (SPOT, F1, F2, etc.)"
-        semantic_type: dimension
-        example: "SPOT"
-
-      - name: PRICE
-        type: float
-        description: "Price per troy oz (precious) or lb (industrial)"
-        semantic_type: measure
-        example: "2045.30"
-
-      - name: CURRENCY
-        type: string
-        description: "Price currency (usually USD)"
-        semantic_type: dimension
-        example: "USD"
-
-    use_cases:
-      - "Precious metals portfolio tracking"
-      - "Inflation hedge analysis"
-      - "Industrial demand forecasting"
-
-    examples:
-      - "commods.metals/GC/SPOT/ALL - Gold spot prices"
-      - "commods.metals/SI/F1/ALL - Silver front month"
-
-  source_binding:
-    type: rest
-    config:
-      base_url: https://api.nefa.energy
-      path_template: /v2/commodities/metals/{segments[0]}/{segments[1]}
-      method: GET
-      auth_type: api_key
-      headers:
-        Accept: application/json
-
+      auth_type: bearer
 
 # =============================================================================
-# RATES - Interest Rate Data (Snowflake)
+# RATES - Interest rate curves
 # =============================================================================
-
 rates:
   display_name: Interest Rates
   description: Interest rate curves, swaps, and money market rates
   ownership:
     accountable_owner: rates-governance@firm.com
     data_specialist: rates-quant@firm.com
-    support_channel: "#rates-data"
+    support_channel: '#rates-data'
     adop: rates-trading-head@firm.com
     ads: rates-data-steward@firm.com
     adal: rates-access-control@firm.com
-  classification: internal
   documentation:
     glossary: https://confluence.firm.com/display/RATES/Interest+Rates+Glossary
     runbook: https://confluence.firm.com/display/OPS/Rates+Data+Runbook
-    onboarding: https://confluence.firm.com/display/RATES/Rates+Data+Onboarding
     data_dictionary: https://confluence.firm.com/display/RATES/Swap+Rates+Dictionary
-    architecture: https://confluence.firm.com/display/ARCH/Rates+Data+Architecture
     additional:
       sofr_transition: https://confluence.firm.com/display/RATES/SOFR+Transition+Guide
       curve_construction: https://confluence.firm.com/display/QUANT/Yield+Curve+Methodology
 
-# Example monikers:
-#   rates.swap/USD/5Y/ALL           - 5Y USD swap rates
-#   rates.libor/USD/3M/ALL          - 3M USD LIBOR (legacy)
-#   rates.sofr/USD/ON/ALL           - Overnight SOFR
-rates.swap:
-  display_name: Interest Rate Swaps
-  description: Par swap rates across currencies and tenors
-
-  data_quality:
-    dq_owner: rates-dq@firm.com
-    quality_score: 99.1
-    validation_rules:
-      - "Rate must be within reasonable bounds for currency"
-      - "Curve must be monotonically increasing for normal conditions"
-      - "Spread to benchmark must be calculated correctly"
-    last_validated: "2026-01-28T06:30:00Z"
-
-  sla:
-    freshness: "T+0 by 17:00 local"
-    availability: "99.9%"
-    support_hours: "Business hours (regional)"
-    escalation_contact: rates-oncall@firm.com
-
-  freshness:
-    last_loaded: "2026-01-28T16:45:00Z"
-    refresh_schedule: "EOD snapshots + intraday updates"
-    source_system: "Bloomberg / Refinitiv"
-    upstream_dependencies:
-      - "rates.sofr"
-      - "reference.calendars"
-
+rates.sofr:
+  display_name: SOFR Rates
+  description: Secured Overnight Financing Rate and term SOFR
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: MARKET_DATA_WH
+      database: RATES
+      schema: BENCHMARKS
+      query: |
+        SELECT asof_date, 'USD' as currency, rate_type, rate
+        FROM SOFR_RATES
+        WHERE ('{segments[0]}' = 'ALL' OR rate_type = '{segments[0]}')
+        ORDER BY asof_date DESC
   schema:
-    description: |
-      Interest rate swap par rates for major currencies.
-      Used for discounting, yield curve construction, and derivative pricing.
-      Includes USD, EUR, GBP, JPY, and other G10 currencies.
-
-    semantic_tags:
-      - interest-rates
-      - swaps
-      - yield-curve
-      - derivatives
-      - discounting
-      - sofr
-      - euribor
-      - fixed-income
-
-    granularity: "daily, per-currency, per-tenor"
-    typical_row_count: "10K-50K"
-    update_frequency: "daily + intraday"
-
-    primary_key:
-      - ASOF_DATE
-      - CURRENCY
-      - TENOR
-
     columns:
       - name: ASOF_DATE
         type: date
-        description: "Rate observation date"
+        description: Rate date
         semantic_type: timestamp
-        example: "2026-01-28"
-        nullable: false
-        primary_key: true
-
-      - name: CURRENCY
+      - name: RATE_TYPE
         type: string
-        description: "Currency (ISO 4217)"
+        description: SOFR type (ON, 30D_AVG, 90D_AVG, TERM_1M, TERM_3M)
         semantic_type: dimension
-        example: "USD"
-        nullable: false
-        primary_key: true
-
-      - name: TENOR
-        type: string
-        description: "Swap tenor (1Y, 2Y, 3Y, 5Y, 7Y, 10Y, 15Y, 20Y, 30Y)"
-        semantic_type: dimension
-        example: "10Y"
-        nullable: false
-        primary_key: true
-
-      - name: PAR_RATE
+      - name: RATE
         type: float
-        description: "Par swap rate (decimal)"
+        description: Rate value (decimal)
         semantic_type: measure
-        example: "0.0385"
-        nullable: false
+    semantic_tags: [sofr, risk-free-rate, overnight, benchmark, interest-rates]
 
-      - name: SPREAD_VS_GOVT
-        type: float
-        description: "Spread versus government bond (bps)"
-        semantic_type: measure
-        example: "15.5"
-        nullable: true
-
-      - name: DV01
-        type: float
-        description: "Dollar value of 1bp move per $1M notional"
-        semantic_type: measure
-        example: "875.50"
-        nullable: true
-
-    use_cases:
-      - "Yield curve construction"
-      - "Derivative pricing and valuation"
-      - "Duration hedging"
-      - "Spread trading analysis"
-      - "Risk-free rate determination"
-
-    examples:
-      - "rates.swap/USD/10Y/ALL - 10Y USD swap rate history"
-      - "rates.swap/EUR/ALL/ALL - Full EUR swap curve"
-      - "rates.swap/ALL/5Y/ALL - 5Y rates across currencies"
-
-    related_monikers:
-      - "govies.treasury - Treasury yields for spread calc"
-      - "rates.sofr - SOFR rates for discounting"
-      - "risk.cvar - Interest rate risk"
-
+rates.swap:
+  display_name: Interest Rate Swaps
+  description: Par swap rates across currencies and tenors
   source_binding:
     type: snowflake
     config:
@@ -1397,553 +346,544 @@ rates.swap:
           AND ('{segments[1]}' = 'ALL' OR tenor = '{segments[1]}')
         ORDER BY asof_date DESC, currency, tenor
 
-rates.sofr:
-  display_name: SOFR Rates
-  description: Secured Overnight Financing Rate and term SOFR
-
-  schema:
-    description: |
-      SOFR (Secured Overnight Financing Rate) - the primary USD risk-free rate.
-      Includes overnight SOFR, term SOFR, and SOFR averages.
-
-    semantic_tags:
-      - sofr
-      - risk-free-rate
-      - overnight
-      - benchmark
-      - interest-rates
-
-    granularity: "daily"
-    typical_row_count: "1K-5K"
-    update_frequency: "daily (T+1)"
-
-    columns:
-      - name: ASOF_DATE
-        type: date
-        description: "Rate date"
-        semantic_type: timestamp
-        example: "2026-01-28"
-
-      - name: RATE_TYPE
-        type: string
-        description: "SOFR type (ON, 30D_AVG, 90D_AVG, TERM_1M, TERM_3M)"
-        semantic_type: dimension
-        example: "ON"
-
-      - name: RATE
-        type: float
-        description: "Rate value (decimal)"
-        semantic_type: measure
-        example: "0.0430"
-
-    use_cases:
-      - "Loan and derivative pricing"
-      - "Benchmark rate analysis"
-      - "LIBOR transition"
-
-    examples:
-      - "rates.sofr/USD/ON/ALL - Overnight SOFR history"
-
+rates.curves:
+  display_name: Yield Curves
+  description: Constructed yield curves by currency
   source_binding:
     type: snowflake
     config:
       account: firm-prod.us-east-1
       warehouse: MARKET_DATA_WH
       database: RATES
-      schema: BENCHMARKS
+      schema: CURVES
       query: |
-        SELECT asof_date, 'USD' as currency, rate_type, rate
-        FROM SOFR_RATES
-        WHERE ('{segments[1]}' = 'ALL' OR rate_type = '{segments[1]}')
-        ORDER BY asof_date DESC
-
+        SELECT asof_date, currency, tenor, zero_rate, discount_factor
+        FROM YIELD_CURVES
+        WHERE currency = '{segments[0]}'
+          AND asof_date = TO_DATE('{segments[1]}', 'YYYYMMDD')
 
 # =============================================================================
-# MORTGAGES - Mortgage Data (Excel)
+# FIXED INCOME - Bonds and structured products
 # =============================================================================
-
-mortgages:
-  display_name: Mortgage Analytics
-  description: Mortgage-backed securities, prepayment data, and pool analytics
+fixed_income:
+  display_name: Fixed Income
+  description: Government bonds, corporates, and structured products
   ownership:
-    accountable_owner: mbs-governance@firm.com
-    data_specialist: mbs-research@firm.com
-    support_channel: "#mortgage-data"
-    adop: securitized-head@firm.com
-    ads: mbs-data-steward@firm.com
-    adal: mbs-access-control@firm.com
-  classification: confidential
+    accountable_owner: fixed-income-governance@firm.com
+    data_specialist: fi-desk@firm.com
+    support_channel: '#fixed-income'
+    adop: fi-trading-head@firm.com
+    ads: fi-data-steward@firm.com
   documentation:
-    glossary: https://confluence.firm.com/display/MBS/Mortgage+Analytics+Glossary
-    runbook: https://confluence.firm.com/display/OPS/MBS+Excel+Models+Runbook
-    onboarding: https://confluence.firm.com/display/MBS/MBS+Data+Onboarding
-    data_dictionary: https://confluence.firm.com/display/MBS/Pool+Data+Dictionary
-    architecture: https://confluence.firm.com/display/ARCH/MBS+Analytics+Architecture
-    additional:
-      prepayment_methodology: https://confluence.firm.com/display/QUANT/Prepayment+Model+Documentation
-      agency_pool_guide: https://confluence.firm.com/display/MBS/Agency+Pool+ID+Guide
-      oas_calculation: https://confluence.firm.com/display/QUANT/OAS+Calculation+Methodology
+    glossary: https://confluence.firm.com/display/FI/Fixed+Income+Glossary
+    data_dictionary: https://confluence.firm.com/display/FI/Bond+Data+Dictionary
 
-# Example monikers:
-#   mortgages.pools/FNMA/30Y/ALL    - Fannie Mae 30Y pools
-#   mortgages.prepay/GNMA/15Y/ALL   - Ginnie Mae 15Y prepayment data
-mortgages.pools:
-  display_name: MBS Pool Data
-  description: Agency MBS pool characteristics and analytics from Excel models
+fixed_income.govies:
+  display_name: Government Bonds
+  description: Sovereign debt securities and yields
 
-  data_quality:
-    dq_owner: mbs-dq@firm.com
-    quality_score: 92.5
-    validation_rules:
-      - "WAC must be positive and reasonable"
-      - "WAM must be less than original term"
-      - "Pool factor must be between 0 and 1"
-    known_issues:
-      - "Some legacy pools have incomplete geographic data"
-      - "Prepayment projections updated monthly"
-    last_validated: "2026-01-27T12:00:00Z"
-
-  sla:
-    freshness: "Monthly (factor data), Daily (prices)"
-    availability: "99.0%"
-    support_hours: "Business hours ET"
-    escalation_contact: mbs-research@firm.com
-
-  freshness:
-    last_loaded: "2026-01-15T08:00:00Z"
-    refresh_schedule: "Monthly factor updates, daily price updates"
-    source_system: "Internal MBS Analytics (Excel)"
-    upstream_dependencies:
-      - "reference.security"
-      - "rates.swap"
-
+fixed_income.govies/treasury:
+  display_name: US Treasury Securities
+  description: US Treasury bills, notes, and bonds with yields and pricing
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: MARKET_DATA_WH
+      database: FIXED_INCOME
+      schema: GOVIES
+      query: |
+        SELECT asof_date, cusip, tenor, coupon, yield, price, duration, convexity
+        FROM TREASURY_SECURITIES
+        WHERE ('{segments[0]}' = 'ALL' OR tenor = '{segments[0]}')
+          AND ('{segments[1]}' = 'ALL' OR cusip = '{segments[1]}')
+        ORDER BY asof_date DESC, tenor
   schema:
-    description: |
-      Agency mortgage-backed securities pool data from internal Excel models.
-      Includes Fannie Mae (FNMA), Freddie Mac (FHLMC), and Ginnie Mae (GNMA) pools.
-      Contains pool characteristics, prepayment projections, and OAS analytics.
-
-    semantic_tags:
-      - mortgages
-      - mbs
-      - agency
-      - prepayment
-      - securitization
-      - fixed-income
-      - fannie-mae
-      - freddie-mac
-      - ginnie-mae
-
-    granularity: "monthly, per-agency, per-coupon"
-    typical_row_count: "50K-200K"
-    update_frequency: "monthly (factors), daily (prices)"
-
-    primary_key:
-      - ASOF_DATE
-      - POOL_ID
-      - AGENCY
-
     columns:
       - name: ASOF_DATE
         type: date
-        description: "Data as-of date"
+        description: Pricing date
         semantic_type: timestamp
-        example: "2026-01-15"
-        nullable: false
         primary_key: true
-
-      - name: POOL_ID
+      - name: CUSIP
         type: string
-        description: "Pool identifier (CUSIP or pool number)"
+        description: CUSIP identifier
         semantic_type: identifier
-        example: "31417EQ38"
-        nullable: false
         primary_key: true
-        foreign_key: "reference.security/CUSIP"
-
-      - name: AGENCY
+      - name: TENOR
         type: string
-        description: "Issuing agency (FNMA, FHLMC, GNMA)"
+        description: Maturity tenor (3M, 6M, 1Y, 2Y, 5Y, 10Y, 30Y)
         semantic_type: dimension
-        example: "FNMA"
-        nullable: false
-        primary_key: true
-
-      - name: COUPON
-        type: string
-        description: "Pool coupon (e.g., 30Y, 15Y)"
-        semantic_type: dimension
-        example: "30Y"
-        nullable: false
-
-      - name: WAC
+      - name: YIELD
         type: float
-        description: "Weighted average coupon (decimal)"
+        description: Yield to maturity (decimal)
         semantic_type: measure
-        example: "0.0425"
-        nullable: false
-
-      - name: WAM
-        type: integer
-        description: "Weighted average maturity (months)"
-        semantic_type: measure
-        example: "342"
-        nullable: false
-
-      - name: WALA
-        type: integer
-        description: "Weighted average loan age (months)"
-        semantic_type: measure
-        example: "18"
-        nullable: false
-
-      - name: POOL_FACTOR
+      - name: DURATION
         type: float
-        description: "Current pool factor (remaining principal)"
+        description: Modified duration (years)
         semantic_type: measure
-        example: "0.9234"
-        nullable: false
-
-      - name: CPR_1M
-        type: float
-        description: "1-month conditional prepayment rate"
-        semantic_type: measure
-        example: "8.5"
-        nullable: true
-
-      - name: CPR_3M
-        type: float
-        description: "3-month conditional prepayment rate"
-        semantic_type: measure
-        example: "9.2"
-        nullable: true
-
-      - name: OAS
-        type: float
-        description: "Option-adjusted spread (bps)"
-        semantic_type: measure
-        example: "45.5"
-        nullable: true
-
-      - name: PRICE
-        type: float
-        description: "Current price (percentage of par)"
-        semantic_type: measure
-        example: "101.25"
-        nullable: true
-
+    semantic_tags: [treasury, fixed-income, yield-curve, risk-free-rate]
     use_cases:
-      - "MBS portfolio analytics"
-      - "Prepayment modeling"
-      - "Relative value analysis"
-      - "Duration and convexity calculations"
-      - "Regulatory capital (GSE exposure)"
+      - Build yield curve for discounting
+      - Calculate duration and convexity
+      - Benchmark against risk-free rate
 
-    examples:
-      - "mortgages.pools/FNMA/30Y/ALL - All Fannie 30Y pools"
-      - "mortgages.pools/ALL/ALL/31417EQ38 - Specific pool history"
-      - "mortgages.pools/GNMA/15Y/ALL - Ginnie Mae 15Y pools"
+fixed_income.govies/sovereign:
+  display_name: International Sovereign Bonds
+  description: Non-US government bonds (Bunds, Gilts, JGBs, etc.)
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: MARKET_DATA_WH
+      database: FIXED_INCOME
+      schema: GOVIES
+      query: |
+        SELECT asof_date, isin, country, tenor, yield, spread_vs_usd, price, duration
+        FROM SOVEREIGN_BONDS
+        WHERE ('{segments[0]}' = 'ALL' OR country = '{segments[0]}')
+          AND ('{segments[1]}' = 'ALL' OR tenor = '{segments[1]}')
+        ORDER BY asof_date DESC, country, tenor
 
-    related_monikers:
-      - "rates.swap - Swap rates for OAS calculation"
-      - "govies.treasury - Treasury yields for spread"
-      - "mortgages.prepay - Prepayment model outputs"
+fixed_income.mbs:
+  display_name: Mortgage-Backed Securities
+  description: Agency MBS pool data and prepayment analytics
+  ownership:
+    data_specialist: mbs-research@firm.com
+    support_channel: '#mortgage-data'
+  classification: confidential
 
+fixed_income.mbs/pools:
+  display_name: MBS Pool Data
+  description: Agency MBS pool characteristics and analytics
   source_binding:
     type: excel
     config:
       base_path: /data/mbs/pools
-      file_pattern: "{segments[0]}_{segments[1]}_pools.xlsx"
+      file_pattern: '{segments[0]}_{segments[1]}_pools.xlsx'
       sheet: PoolData
       header_row: 2
-
-mortgages.prepay:
-  display_name: Prepayment Projections
-  description: MBS prepayment model outputs and CPR projections
-
   schema:
-    description: |
-      Prepayment projections from internal MBS models.
-      Includes CPR scenarios, S-curves, and turnover analysis.
-
-    semantic_tags:
-      - mortgages
-      - prepayment
-      - cpr
-      - modeling
-      - projections
-
-    granularity: "monthly, per-pool"
-    typical_row_count: "100K-500K"
-    update_frequency: "monthly"
-
     columns:
-      - name: ASOF_DATE
-        type: date
-        description: "Projection date"
-        semantic_type: timestamp
-        example: "2026-01-15"
-
       - name: POOL_ID
         type: string
-        description: "Pool identifier"
+        description: Pool identifier (CUSIP)
         semantic_type: identifier
-        example: "31417EQ38"
-
-      - name: SCENARIO
+      - name: AGENCY
         type: string
-        description: "Rate scenario (BASE, UP100, DN100)"
+        description: Issuing agency (FNMA, FHLMC, GNMA)
         semantic_type: dimension
-        example: "BASE"
-
-      - name: CPR_PROJ
+      - name: WAC
         type: float
-        description: "Projected CPR for next 12 months"
+        description: Weighted average coupon
         semantic_type: measure
-        example: "12.5"
-
-      - name: SMM
+      - name: WAM
+        type: integer
+        description: Weighted average maturity (months)
+        semantic_type: measure
+      - name: CPR_1M
         type: float
-        description: "Single monthly mortality rate"
+        description: 1-month conditional prepayment rate
         semantic_type: measure
-        example: "1.05"
+      - name: OAS
+        type: float
+        description: Option-adjusted spread (bps)
+        semantic_type: measure
+    semantic_tags: [mortgages, mbs, agency, prepayment, fixed-income]
 
-    use_cases:
-      - "Prepayment scenario analysis"
-      - "Cash flow projections"
-      - "Duration hedging"
-
-    examples:
-      - "mortgages.prepay/FNMA/30Y/ALL - Fannie 30Y prepay projections"
-
+fixed_income.mbs/prepay:
+  display_name: Prepayment Projections
+  description: MBS prepayment model outputs
   source_binding:
     type: excel
     config:
       base_path: /data/mbs/prepay
-      file_pattern: "{segments[0]}_{segments[1]}_prepay.xlsx"
+      file_pattern: '{segments[0]}_{segments[1]}_prepay.xlsx'
       sheet: Projections
       header_row: 1
 
-
 # =============================================================================
-# COMPLEX MONIKER PATTERNS - Examples of advanced features
+# COMMODITIES - Physical and derivatives
 # =============================================================================
-# This section demonstrates the enhanced moniker syntax:
-#   - Multi-segment hierarchies (4+ levels)
-#   - Version types: @date, @latest, @tenor (3M, 12Y), @all
-#   - Sub-resources after version: @version/details.corporate.actions
-#   - New template placeholders: {version_type}, {sub_resource}, {is_tenor}, etc.
-
-# -----------------------------------------------------------------------------
-# INDEX.GLOBAL - Bloomberg-style multi-segment indices
-# Pattern: index.global/{index_family}/{currency}/{benchmark}
-# Example: index.global/BBGGlobalAggTreasury/GBP/MWS_LIBOR
-# -----------------------------------------------------------------------------
-
-index:
-  display_name: Index Data
-  description: Multi-asset class index data and benchmarks
+commodities:
+  display_name: Commodities
+  description: Commodity futures, spot prices, and derivatives
   ownership:
-    accountable_owner: indices-governance@firm.com
-    data_specialist: quant-research@firm.com
-    support_channel: "#indices-support"
+    accountable_owner: commodities-desk@firm.com
+    data_specialist: commodities-quant@firm.com
+    support_channel: '#commodities-data'
+  documentation:
+    glossary: https://confluence.firm.com/display/DATA/Commodities+Glossary
+    data_dictionary: https://confluence.firm.com/display/DATA/Commodities+Data+Dictionary
 
-index.global:
-  display_name: Global Indices
-  description: Multi-currency benchmark indices
+commodities.energy:
+  display_name: Energy Commodities
+  description: Crude oil, natural gas, and refined products
+  source_binding:
+    type: rest
+    config:
+      base_url: https://api.nefa.energy
+      path_template: /v2/commodities/energy/{segments[0]}/{segments[1]}
+      method: GET
+      auth_type: api_key
+      headers:
+        Accept: application/json
+        X-API-Version: '2.0'
+  schema:
+    columns:
+      - name: SYMBOL
+        type: string
+        description: Commodity symbol (CL=Crude, NG=NatGas)
+        semantic_type: identifier
+      - name: CONTRACT
+        type: string
+        description: Contract type (SPOT, F1, F2)
+        semantic_type: dimension
+      - name: PRICE
+        type: float
+        description: Price per unit (USD)
+        semantic_type: measure
+      - name: VOLUME
+        type: integer
+        description: Trading volume (contracts)
+        semantic_type: measure
+    semantic_tags: [commodities, energy, crude-oil, natural-gas, futures]
 
-# 4-segment pattern: index family → currency → benchmark
-index.global/BBGGlobalAggTreasury:
-  display_name: Bloomberg Global Aggregate Treasury
-  description: Global treasury index by currency and benchmark
+commodities.metals:
+  display_name: Precious & Industrial Metals
+  description: Gold, silver, copper, and other metals
+  source_binding:
+    type: rest
+    config:
+      base_url: https://api.nefa.energy
+      path_template: /v2/commodities/metals/{segments[0]}/{segments[1]}
+      method: GET
+      auth_type: api_key
+
+commodities.crypto:
+  display_name: Digital Assets
+  description: Cryptocurrency spot and derivatives
+  ownership:
+    data_specialist: digital-assets@firm.com
+  source_binding:
+    type: rest
+    config:
+      base_url: https://crypto-data.internal.firm.com
+      path_template: /api/v3/assets/{segments[0]}
+      method: GET
+      auth_type: api_key
+
+# =============================================================================
+# RISK - Risk analytics and measures
+# =============================================================================
+risk:
+  display_name: Risk
+  description: VaR, CVaR, stress testing, and risk measures
+  ownership:
+    accountable_owner: risk-governance@firm.com
+    data_specialist: risk-quant@firm.com
+    support_channel: '#risk-analytics'
+  documentation:
+    glossary: https://confluence.firm.com/display/RISK/Risk+Measures+Glossary
+    runbook: https://confluence.firm.com/display/OPS/Proteus+Risk+Engine+Runbook
+    data_dictionary: https://confluence.firm.com/display/RISK/Risk+Data+Dictionary
+    additional:
+      regulatory_guide: https://confluence.firm.com/display/RISK/BCBS239+Compliance+Guide
+      methodology: https://confluence.firm.com/display/QUANT/Risk+Methodology
+  classification: confidential
+
+risk.var:
+  display_name: Value at Risk
+  description: Daily VaR by portfolio
+  source_binding:
+    type: rest
+    config:
+      base_url: https://risk-engine.internal.firm.com
+      path_template: /api/v2/var/{segments[0]}/{segments[1]}
+      method: GET
+      auth_type: bearer
+
+risk.cvar:
+  display_name: Conditional Value at Risk
+  description: CVaR tail risk measures by portfolio, currency, and security
+  ownership:
+    adop: quant-research@firm.com
+    ads: risk-data-steward@firm.com
+    adal: risk-access-control@firm.com
+  source_binding:
+    type: oracle
+    config:
+      dsn: proteus.firm.com:1521/RISKDB
+      query: |
+        SELECT asof_date, port_no, port_type, ssm_id, base_currency,
+               acct_key, lt_id, cvar_coeff, cvar
+        FROM proteus_2_own.te_stress_tail_risk_pnl
+        WHERE ('{segments[0]}' = 'ALL' OR port_no || '-' || port_type = '{segments[0]}')
+          AND ('{segments[1]}' = 'ALL' OR base_currency = '{segments[1]}')
+          AND ('{segments[2]}' = 'ALL' OR ssm_id = '{segments[2]}')
+        ORDER BY asof_date DESC, port_no, ssm_id
+  access_policy:
+    min_filters: 1
+    blocked_patterns:
+      - ALL/ALL/ALL
+    max_rows_warn: 10000000
+    denial_message: |
+      Query blocked: CVaR table is very large.
+      You must specify at least one filter (portfolio, currency, or security).
+      Example: risk.cvar/758-A/USD/ALL
+  schema:
+    columns:
+      - name: ASOF_DATE
+        type: date
+        description: Business date (T+1)
+        semantic_type: timestamp
+        primary_key: true
+      - name: PORT_NO
+        type: string
+        description: Portfolio number
+        semantic_type: identifier
+        primary_key: true
+      - name: SSM_ID
+        type: string
+        description: Security master ID
+        semantic_type: identifier
+        foreign_key: securities/lookup
+      - name: CVAR
+        type: float
+        description: Conditional Value at Risk
+        semantic_type: measure
+    semantic_tags: [risk, cvar, tail-risk, portfolio-analytics, regulatory]
+
+risk.stress:
+  display_name: Stress Testing
+  description: Scenario analysis and stress test results
+  source_binding:
+    type: rest
+    config:
+      base_url: https://risk-engine.internal.firm.com
+      path_template: /api/v2/stress/{segments[0]}/{segments[1]}
+      method: GET
+      auth_type: bearer
+
+risk.greeks:
+  display_name: Greeks
+  description: Delta, gamma, vega, theta by portfolio
   source_binding:
     type: snowflake
     config:
       account: firm-prod.us-east-1
-      warehouse: ANALYTICS_WH
-      database: INDICES
-      schema: GLOBAL
+      warehouse: RISK_WH
+      database: RISK
+      schema: GREEKS
       query: |
-        SELECT index_date, currency, benchmark_type, level, return_1d, return_mtd, yield
-        FROM GLOBAL_AGG_TREASURY
-        WHERE currency = '{segments[0]}'
-          AND benchmark_type = '{segments[1]}'
-          AND index_date = {version_date}
+        SELECT portfolio_id, security_id, delta, gamma, vega, theta, rho
+        FROM POSITION_GREEKS
+        WHERE portfolio_id = '{segments[0]}'
+          AND as_of_date = TO_DATE('{segments[1]}', 'YYYYMMDD')
 
-# -----------------------------------------------------------------------------
-# RATES.GOV - Government rates with opaque bond identifiers
-# Pattern: rates.gov/{currency}/{bond_id}/{risk_type}/{tenor}
-# Example: rates.gov/DKK/DK0.125Mar2026/KRD/KRD12Y
-# Note: bond_id like "DK0.125Mar2026" is treated as opaque string
-# -----------------------------------------------------------------------------
-
-rates:
-  display_name: Rates Data
-  description: Interest rates, government bonds, and swaps
-  ownership:
-    accountable_owner: rates-desk@firm.com
-    data_specialist: rates-quant@firm.com
-    support_channel: "#rates-data"
-
-rates.gov:
-  display_name: Government Rates
-  description: Sovereign bond rates with key rate duration analytics
-
-# Deep hierarchy: currency → bond_id → risk_type → tenor
-rates.gov/DKK:
-  display_name: Danish Government Rates
-  description: Danish sovereign bonds and KRD analytics
+risk.limits:
+  display_name: Risk Limits
+  description: Limit utilization and breaches
   source_binding:
-    type: rest
+    type: snowflake
     config:
-      base_url: https://rates-api.internal.firm.com
-      path_template: /v1/gov/DKK/{segments[0]}/{segments[1]}/{segments[2]}
-      method: GET
-      auth_type: bearer
-      # segments[0] = bond_id (opaque, e.g., DK0.125Mar2026)
-      # segments[1] = risk_type (KRD, DV01, etc.)
-      # segments[2] = tenor (KRD12Y, etc.)
+      account: firm-prod.us-east-1
+      warehouse: RISK_WH
+      database: RISK
+      schema: LIMITS
+      query: |
+        SELECT portfolio_id, limit_type, limit_value, current_value, utilization_pct
+        FROM LIMIT_UTILIZATION
+        WHERE portfolio_id = '{segments[0]}'
 
-# -----------------------------------------------------------------------------
-# SECURITIES - Versioned data with sub-resources
-# Pattern: securities/{id}@{version}/{sub_resource}
-# Examples:
-#   securities/012345678@20260101/details
-#   securities/012345678@20260101/details.corporate.actions
-#   securities/012345678@latest/history
-# -----------------------------------------------------------------------------
-
-securities:
-  display_name: Security Data
-  description: Security master with point-in-time versioning and sub-resources
+# =============================================================================
+# REFERENCE - Static reference data
+# =============================================================================
+reference:
+  display_name: Reference Data
+  description: Calendars, classifications, and static reference
   ownership:
     accountable_owner: ref-data-governance@firm.com
     data_specialist: ref-data-ops@firm.com
-    support_channel: "#securities-data"
+    support_channel: '#reference-data'
+  documentation:
+    glossary: https://confluence.firm.com/display/DATA/Reference+Data+Glossary
+    data_dictionary: https://confluence.firm.com/display/DATA/Reference+Data+Dictionary
 
-# Sub-resource: details
-securities/details:
-  display_name: Security Details
-  description: Full security attributes at a specific version date
+reference.calendars:
+  display_name: Trading Calendars
+  description: Exchange and settlement calendars
+
+reference.calendars/exchange:
+  display_name: Exchange Calendars
   source_binding:
-    type: rest
+    type: static
     config:
-      base_url: https://secmaster-api.internal.firm.com
-      path_template: /v2/securities/{segments[0]}/details
-      query_params:
-        as_of: "{version}"
-        # {version_type} can be used for conditional logic
+      base_path: /data/reference/calendars/exchange
+      file_pattern: '{segments[0]}.json'
+      format: json
 
-# Sub-resource: details.corporate.actions (multi-level)
-securities/details.corporate.actions:
-  display_name: Corporate Actions
-  description: Security corporate action history
+reference.calendars/settlement:
+  display_name: Settlement Calendars
   source_binding:
-    type: rest
+    type: static
     config:
-      base_url: https://secmaster-api.internal.firm.com
-      path_template: /v2/securities/{segments[0]}/corporate-actions
-      query_params:
-        as_of: "{version}"
+      base_path: /data/reference/calendars/settlement
+      file_pattern: '{segments[0]}.csv'
+      format: csv
 
-# Sub-resource: history with temporal version support
-securities/history:
-  display_name: Security Change History
-  description: Full audit trail of security changes
+reference.classifications:
+  display_name: Classifications
+  description: Industry, sector, and other classification schemes
+
+reference.classifications/gics:
+  display_name: GICS Codes
+  description: Global Industry Classification Standard
   source_binding:
     type: snowflake
     config:
       account: firm-prod.us-east-1
-      warehouse: ANALYTICS_WH
+      warehouse: REF_DATA_WH
       database: REFERENCE
-      schema: SECURITY_MASTER
+      schema: CLASSIFICATIONS
       query: |
-        SELECT security_id, change_type, old_value, new_value, effective_date, created_at
-        FROM SECURITY_HISTORY
-        WHERE security_id = '{segments[0]}'
-          AND CASE
-            WHEN '{is_all}' = 'true' THEN 1=1
-            WHEN '{is_latest}' = 'true' THEN effective_date = (
-              SELECT MAX(effective_date) FROM SECURITY_HISTORY WHERE security_id = '{segments[0]}'
-            )
-            ELSE effective_date = TO_DATE('{version}', 'YYYYMMDD')
-          END
-        ORDER BY effective_date DESC
+        SELECT gics_code, sector, industry_group, industry, sub_industry
+        FROM GICS_HIERARCHY
+        WHERE ('{segments[0]}' = 'ALL' OR gics_code LIKE '{segments[0]}%')
 
-# -----------------------------------------------------------------------------
-# COMMODS.FUTURES - Digital assets with inline versioning
-# Pattern: commods.futures/{asset_class}/{instrument}[/VN]
-# Example: commods.futures/digital/bitcoin/V2
-# Note: /V2 is case-insensitive, normalized to /v2
-# -----------------------------------------------------------------------------
-
-commods:
-  display_name: Commodities
-  description: Commodity futures and digital assets
+# =============================================================================
+# REPORTS - Generated outputs
+# =============================================================================
+reports:
+  display_name: Reports
+  description: Generated reports and regulatory filings
   ownership:
-    accountable_owner: commodities-desk@firm.com
+    accountable_owner: reporting-ops@firm.com
+    data_specialist: report-dev@firm.com
+    support_channel: '#reporting'
 
-commods.futures:
-  display_name: Commodity Futures
-  description: Futures and derivatives on commodities
-
-commods.futures/digital:
-  display_name: Digital Asset Futures
-  description: Cryptocurrency futures data
-
-commods.futures/digital/bitcoin:
-  display_name: Bitcoin Futures
-  description: BTC futures with schema versioning support
+reports.daily:
+  display_name: Daily Reports
   source_binding:
-    type: rest
+    type: static
     config:
-      base_url: https://crypto-futures.internal.firm.com
-      # {revision} comes from /v2 suffix (normalized from /V2)
-      path_template: /api/v{revision}/futures/bitcoin
-      method: GET
-      auth_type: api_key
-      query_params:
-        schema: "{revision}"
+      base_path: /data/reports/daily
+      file_pattern: '{segments[0]}/{segments[1]}.pdf'
+      format: binary
 
-# -----------------------------------------------------------------------------
-# TEMPORAL VERSION EXAMPLES
-# Demonstrates: @date, @latest, @tenor, @all version types
-# Template placeholders: {version_type}, {is_date}, {is_tenor}, {tenor_value}, {tenor_unit}
-# -----------------------------------------------------------------------------
+reports.regulatory:
+  display_name: Regulatory Reports
+  source_binding:
+    type: excel
+    config:
+      base_path: /data/reports/regulatory
+      file_pattern: '{segments[0]}/{segments[1]}.xlsx'
+      sheet: Summary
+  classification: restricted
 
-# Tenor-based lookback example
-rates.swap:
-  display_name: Swap Rates
-  description: Interest rate swap curves with tenor-based lookback
+reports.client:
+  display_name: Client Reports
+  description: Client-facing reports and statements
+  source_binding:
+    type: static
+    config:
+      base_path: /data/reports/client
+      file_pattern: '{segments[0]}/{segments[1]}.pdf'
+      format: binary
+  classification: confidential
 
-rates.swap/USD:
-  display_name: USD Swap Rates
-  description: US dollar swap curve
+# =============================================================================
+# NAV - Net Asset Value (critical for asset managers)
+# =============================================================================
+nav:
+  display_name: NAV
+  description: Net Asset Value and fund accounting
+  ownership:
+    accountable_owner: fund-accounting@firm.com
+    data_specialist: nav-ops@firm.com
+    support_channel: '#nav-support'
+  classification: confidential
+
+nav.official:
+  display_name: Official NAV
+  description: End of day official NAV per share
   source_binding:
     type: snowflake
     config:
       account: firm-prod.us-east-1
-      warehouse: ANALYTICS_WH
-      database: RATES
-      schema: SWAPS
+      warehouse: ACCOUNTING_WH
+      database: NAV
+      schema: OFFICIAL
       query: |
-        SELECT trade_date, tenor, rate, spread, dv01
-        FROM USD_SWAP_CURVE
-        WHERE tenor = '{segments[0]}'
-          AND CASE
-            WHEN '{version_type}' = 'date' THEN trade_date = TO_DATE('{version}', 'YYYYMMDD')
-            WHEN '{version_type}' = 'latest' THEN trade_date = (SELECT MAX(trade_date) FROM USD_SWAP_CURVE)
-            WHEN '{version_type}' = 'tenor' THEN trade_date >= DATEADD(
-              CASE '{tenor_unit}'
-                WHEN 'Y' THEN 'YEAR'
-                WHEN 'M' THEN 'MONTH'
-                WHEN 'W' THEN 'WEEK'
-                WHEN 'D' THEN 'DAY'
-              END,
-              -{tenor_value},
-              CURRENT_DATE()
-            )
-            WHEN '{version_type}' = 'all' THEN 1=1
-            ELSE trade_date = CURRENT_DATE()
-          END
-        ORDER BY trade_date DESC
+        SELECT fund_id, as_of_date, nav_per_share, total_nav, shares_outstanding
+        FROM OFFICIAL_NAV
+        WHERE fund_id = '{segments[0]}'
+          AND ('{segments[1]}' = 'ALL' OR as_of_date = TO_DATE('{segments[1]}', 'YYYYMMDD'))
+
+nav.estimated:
+  display_name: Estimated NAV
+  description: Intraday estimated NAV
+  source_binding:
+    type: rest
+    config:
+      base_url: https://nav-service.internal.firm.com
+      path_template: /api/v1/estimated/{segments[0]}
+      method: GET
+      auth_type: bearer
+
+# =============================================================================
+# FLOWS - Subscriptions and redemptions
+# =============================================================================
+flows:
+  display_name: Fund Flows
+  description: Subscriptions, redemptions, and AUM
+  ownership:
+    accountable_owner: transfer-agency@firm.com
+    data_specialist: flows-ops@firm.com
+    support_channel: '#fund-flows'
+  classification: confidential
+
+flows.subscriptions:
+  display_name: Subscriptions
+  description: New money into funds
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: TA_WH
+      database: FLOWS
+      schema: TRANSACTIONS
+      query: |
+        SELECT fund_id, trade_date, settle_date, amount, shares, investor_type
+        FROM SUBSCRIPTIONS
+        WHERE fund_id = '{segments[0]}'
+
+flows.redemptions:
+  display_name: Redemptions
+  description: Money out of funds
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: TA_WH
+      database: FLOWS
+      schema: TRANSACTIONS
+      query: |
+        SELECT fund_id, trade_date, settle_date, amount, shares, investor_type
+        FROM REDEMPTIONS
+        WHERE fund_id = '{segments[0]}'
+
+flows.aum:
+  display_name: Assets Under Management
+  description: Daily AUM by fund and strategy
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: TA_WH
+      database: FLOWS
+      schema: AUM
+      query: |
+        SELECT fund_id, as_of_date, aum, aum_change_1d, net_flows_mtd
+        FROM DAILY_AUM
+        WHERE ('{segments[0]}' = 'ALL' OR fund_id = '{segments[0]}')

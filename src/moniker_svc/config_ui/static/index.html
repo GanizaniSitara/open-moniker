@@ -97,11 +97,12 @@
             display: inline-flex;
             align-items: center;
             gap: var(--sp-2);
+            text-decoration: none;
         }
 
         .btn:hover { filter: brightness(0.9); }
         .btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-        .btn-secondary { background: rgba(255, 255, 255, 0.15); }
+        .btn-secondary { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--border); }
         .btn-success { background: var(--c-green); }
         .btn-danger { background: var(--c-red); }
         .btn-danger.btn-outlined {
@@ -891,6 +892,7 @@
             100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
         }
     </style>
+    <script src="/static/shared.js"></script>
 </head>
 <body>
     <div class="header">
@@ -1087,22 +1089,13 @@
                     return (a.name || '').localeCompare(b.name || '');
                 });
 
-                // Build category bar
-                const categories = new Map();
-                domainsData.forEach(d => {
-                    const cat = d.data_category || 'Uncategorized';
-                    if (!categories.has(cat)) categories.set(cat, []);
-                    categories.get(cat).push(d.name);
-                });
+                // Build category bar using shared utility
+                const categories = MonikerUtils.buildCategoryMap(domainsData);
 
                 // Render category chips if we have multiple categories
                 if (categories.size > 1) {
                     const bar = document.getElementById('category-bar');
-                    let html = '<span class="category-chip all active" onclick="filterByCategory(null)">All</span>';
-                    [...categories.keys()].sort().forEach(cat => {
-                        html += `<span class="category-chip" onclick="filterByCategory('${cat}')">${cat}</span>`;
-                    });
-                    bar.innerHTML = html;
+                    bar.innerHTML = MonikerUtils.renderCategoryChips(categories);
                     bar.style.display = 'flex';
                 }
             } catch (e) {
@@ -1114,45 +1107,26 @@
         function filterByCategory(category) {
             activeCategory = category;
 
-            // Update chip styles
-            document.querySelectorAll('.category-chip').forEach(chip => {
-                chip.classList.remove('active');
-                if (category === null && chip.classList.contains('all')) {
-                    chip.classList.add('active');
-                } else if (chip.textContent === category) {
-                    chip.classList.add('active');
-                }
-            });
+            // Update chip styles using shared utility
+            MonikerUtils.updateCategoryChipStyles(category);
 
-            // Build set of allowed domains for this category
-            let allowedDomains = null;
-            if (category !== null) {
-                allowedDomains = new Set();
-                domainsData.forEach(d => {
-                    if ((d.data_category || 'Uncategorized') === category) {
-                        allowedDomains.add(d.name);
-                    }
-                });
-            }
+            // Build set of allowed domains for this category using shared utility
+            const allowedDomains = category !== null
+                ? MonikerUtils.getDomainsInCategory(domainsData, category)
+                : null;
 
             // Filter top-level tree nodes
             document.querySelectorAll('#tree > ul > li').forEach(li => {
-                const nodeName = li.querySelector('.node-name')?.textContent;
-                if (!nodeName) return;
+                const path = li.dataset.path;
+                if (!path) return;
 
-                // Find the node data - nodeName is the top-level path segment
-                const node = nodes.find(n => n.path === nodeName);
-                // Domain is explicitly set on the node, or fallback to path
-                const nodeDomain = node?.domain || nodeName;
+                // Find the node data and get domain using shared utility
+                const node = nodes.find(n => n.path === path);
+                const nodeDomain = MonikerUtils.getDomain(node, path);
 
-                if (allowedDomains === null) {
-                    // Show all
-                    li.classList.remove('filtered-out');
-                } else if (allowedDomains.has(nodeDomain)) {
-                    // Node's domain is in this category
+                if (allowedDomains === null || allowedDomains.has(nodeDomain)) {
                     li.classList.remove('filtered-out');
                 } else {
-                    // Hide
                     li.classList.add('filtered-out');
                 }
             });

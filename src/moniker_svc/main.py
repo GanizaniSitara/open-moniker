@@ -21,6 +21,7 @@ if _EXTERNAL_DATA.exists() and str(_EXTERNAL_DATA) not in sys.path:
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Query
 from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .auth import create_composite_authenticator, get_caller_identity, set_authenticator
@@ -152,9 +153,6 @@ class MetadataResponse(BaseModel):
     # Relationship graph
     relationships: dict[str, Any] | None = None  # upstream, downstream, joins
 
-    # Sample data for understanding
-    sample_data: list[dict[str, Any]] | None = None
-
     # Schema and semantics
     schema: dict[str, Any] | None = None
     semantic_tags: list[str] = []
@@ -171,15 +169,6 @@ class MetadataResponse(BaseModel):
     # Natural language
     nl_description: str | None = None  # What questions can this data answer?
     use_cases: list[str] = []
-
-
-class SampleDataResponse(BaseModel):
-    """Response from /sample - returns sample rows."""
-    moniker: str
-    path: str
-    row_count: int
-    columns: list[str]
-    data: list[dict[str, Any]]
 
 
 class TreeNodeResponse(BaseModel):
@@ -745,6 +734,11 @@ Resolves monikers (semantic data paths) to source connection info.
     ],
 )
 
+# Mount shared static files
+_static_dir = Path(__file__).parent / "static"
+if _static_dir.exists():
+    app.mount("/static", StaticFiles(directory=_static_dir), name="static")
+
 # Mount routers
 app.include_router(sql_catalog_routes.router)
 app.include_router(config_ui_routes.router)
@@ -767,7 +761,7 @@ async def not_found_error_handler(request: Request, exc: NotFoundError):
     try:
         path = request.url.path
         # Extract moniker path from URL (after /resolve/, /describe/, etc.)
-        for prefix in ["/resolve/", "/describe/", "/list/", "/lineage/", "/fetch/", "/sample/", "/metadata/", "/tree/"]:
+        for prefix in ["/resolve/", "/describe/", "/list/", "/lineage/", "/fetch/", "/metadata/", "/tree/"]:
             if path.startswith(prefix):
                 moniker_path = path[len(prefix):]
                 # Get first segment (before / or .)
@@ -1188,8 +1182,6 @@ async def get_metadata(
     request: Request,
     path: str,
     caller: Annotated[CallerIdentity, Depends(get_caller_identity)],
-    include_sample: bool = Query(default=False, description="Include sample data"),
-    sample_size: int = Query(default=5, le=100, description="Number of sample rows"),
 ):
     """
     Get rich metadata for AI/agent discoverability.
@@ -1200,7 +1192,6 @@ async def get_metadata(
     - **Relationships**: Upstream/downstream dependencies
     - **Schema**: Column definitions with semantic annotations
     - **Query patterns**: Cost indicators and optimization hints
-    - **Sample data**: Optional preview rows
     - **Descriptions**: Natural language descriptions for AI understanding
 
     This endpoint is optimized for machine discovery and AI agents.
@@ -1340,17 +1331,6 @@ async def get_metadata(
     if node and node.documentation:
         documentation = node.documentation.to_dict()
 
-    # Get sample data if requested
-    sample_data = None
-    if include_sample and describe_result.has_source_binding:
-        try:
-            # Try to get sample - this might fail for blocked queries
-            fetch_result = await fetch_data(path, caller, limit=sample_size)
-            sample_data = fetch_result.data
-        except Exception:
-            # Sample not available (e.g., access denied)
-            sample_data = None
-
     return MetadataResponse(
         moniker=moniker_str,
         path=describe_result.path,
@@ -1359,7 +1339,6 @@ async def get_metadata(
         data_profile=data_profile,
         temporal_coverage=temporal_coverage,
         relationships=relationships,
-        sample_data=sample_data,
         schema=schema,
         semantic_tags=semantic_tags,
         data_quality=data_quality,
@@ -1369,35 +1348,6 @@ async def get_metadata(
         cost_indicators=cost_indicators,
         nl_description=nl_description,
         use_cases=use_cases,
-    )
-
-
-@app.get("/sample/{path:path}", response_model=SampleDataResponse, tags=["Data Fetch"])
-async def get_sample_data(
-    request: Request,
-    path: str,
-    caller: Annotated[CallerIdentity, Depends(get_caller_identity)],
-    limit: int = Query(default=10, le=100, description="Number of sample rows"),
-):
-    """
-    Get sample rows from a data source.
-
-    Convenience endpoint for quickly understanding data structure and content.
-    Returns a small sample of actual data with column information.
-    """
-    # Get full path from request URL (preserves unencoded slashes)
-    full_path = request.url.path
-    if full_path.startswith("/sample/"):
-        path = full_path[8:]  # Strip "/sample/"
-
-    result = await fetch_data(request, path, caller, limit=limit)
-
-    return SampleDataResponse(
-        moniker=result.moniker,
-        path=result.path,
-        row_count=result.row_count,
-        columns=result.columns,
-        data=result.data,
     )
 
 
@@ -2067,6 +2017,7 @@ _UI_HTML = """
             border-color: var(--c-navy);
         }
     </style>
+    <script src="/static/shared.js"></script>
 </head>
 <body>
     <div class="header" style="display: flex; align-items: center; gap: 12px;">
@@ -2396,23 +2347,18 @@ _UI_HTML = """
                 const data = await res.json();
                 if (!data.domains || data.domains.length === 0) return;
 
-                // Build domain lookup and extract categories
-                const categories = new Map();  // category -> [domain names]
+                // Build domain lookup
                 data.domains.forEach(d => {
                     domainData[d.name] = d;
-                    const cat = d.data_category || 'Uncategorized';
-                    if (!categories.has(cat)) categories.set(cat, []);
-                    categories.get(cat).push(d.name);
                 });
+
+                // Build category map using shared utility
+                const categories = MonikerUtils.buildCategoryMap(data.domains);
 
                 // Render category chips if we have multiple categories
                 if (categories.size > 1) {
                     const bar = document.getElementById('category-bar');
-                    let html = '<span class="category-chip all active" onclick="filterByCategory(null)">All</span>';
-                    [...categories.keys()].sort().forEach(cat => {
-                        html += `<span class="category-chip" onclick="filterByCategory('${cat}')">${cat}</span>`;
-                    });
-                    bar.innerHTML = html;
+                    bar.innerHTML = MonikerUtils.renderCategoryChips(categories);
                     bar.style.display = 'flex';
                 }
             } catch (e) {
@@ -2423,26 +2369,13 @@ _UI_HTML = """
         function filterByCategory(category) {
             activeCategory = category;
 
-            // Update chip styles
-            document.querySelectorAll('.category-chip').forEach(chip => {
-                chip.classList.remove('active');
-                if (category === null && chip.classList.contains('all')) {
-                    chip.classList.add('active');
-                } else if (chip.textContent === category) {
-                    chip.classList.add('active');
-                }
-            });
+            // Update chip styles using shared utility
+            MonikerUtils.updateCategoryChipStyles(category);
 
-            // Get domains in this category
-            let allowedDomains = null;
-            if (category) {
-                allowedDomains = new Set();
-                Object.entries(domainData).forEach(([name, d]) => {
-                    if ((d.data_category || 'Uncategorized') === category) {
-                        allowedDomains.add(name);
-                    }
-                });
-            }
+            // Get domains in this category using shared utility
+            const allowedDomains = category
+                ? MonikerUtils.getDomainsInCategory(Object.values(domainData), category)
+                : null;
 
             // Filter tree nodes
             const allNodes = document.querySelectorAll('.tree li');
@@ -2451,8 +2384,8 @@ _UI_HTML = """
                 li.classList.remove('category-hidden');
 
                 if (allowedDomains !== null) {
-                    // Check if this node or any ancestor/descendant matches
-                    const nodeDomain = node.domain || node.path.split('/')[0];
+                    // Get domain using shared utility
+                    const nodeDomain = MonikerUtils.getDomain(node, node.path);
                     if (!allowedDomains.has(nodeDomain)) {
                         li.classList.add('category-hidden');
                     }
