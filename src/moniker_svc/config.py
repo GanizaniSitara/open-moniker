@@ -41,6 +41,20 @@ class CacheConfig:
 
 
 @dataclass
+class RedisConfig:
+    """Redis configuration for query result caching."""
+    enabled: bool = False
+    host: str = "localhost"
+    port: int = 6379
+    db: int = 0
+    password: str | None = None
+    prefix: str = "moniker:cache:"
+    # Connection settings
+    socket_timeout: float = 5.0
+    socket_connect_timeout: float = 5.0
+
+
+@dataclass
 class CatalogConfig:
     """Catalog configuration."""
     # Path to catalog definition file (YAML or JSON)
@@ -67,15 +81,24 @@ class ConfigUIConfig:
 
 
 @dataclass
+class ModelsConfig:
+    """Business models configuration."""
+    enabled: bool = True
+    definition_file: str | None = None  # Path to models.yaml
+
+
+@dataclass
 class Config:
     """Main configuration container."""
     server: ServerConfig = field(default_factory=ServerConfig)
     telemetry: TelemetryConfig = field(default_factory=TelemetryConfig)
     cache: CacheConfig = field(default_factory=CacheConfig)
+    redis: RedisConfig = field(default_factory=RedisConfig)
     catalog: CatalogConfig = field(default_factory=CatalogConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
     sql_catalog: SqlCatalogConfig = field(default_factory=SqlCatalogConfig)
     config_ui: ConfigUIConfig = field(default_factory=ConfigUIConfig)
+    models: ModelsConfig = field(default_factory=ModelsConfig)
 
     @classmethod
     def from_dict(cls, data: dict) -> Config:
@@ -85,10 +108,12 @@ class Config:
             server=ServerConfig(**data.get("server", {})),
             telemetry=TelemetryConfig(**data.get("telemetry", {})),
             cache=CacheConfig(**data.get("cache", {})),
+            redis=RedisConfig(**data.get("redis", {})),
             catalog=CatalogConfig(**data.get("catalog", {})),
             auth=AuthConfig.from_dict(auth_data) if auth_data else AuthConfig(),
             sql_catalog=SqlCatalogConfig(**data.get("sql_catalog", {})),
             config_ui=ConfigUIConfig(**data.get("config_ui", {})),
+            models=ModelsConfig(**data.get("models", {})),
         )
 
     @classmethod
