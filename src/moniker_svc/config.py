@@ -65,14 +65,6 @@ class CatalogConfig:
 
 
 @dataclass
-class SqlCatalogConfig:
-    """SQL Catalog configuration."""
-    enabled: bool = False  # Disabled by default
-    db_path: str = "sql_catalog.db"
-    source_db_path: str | None = None
-
-
-@dataclass
 class ConfigUIConfig:
     """Config UI configuration."""
     enabled: bool = True
@@ -96,7 +88,6 @@ class Config:
     redis: RedisConfig = field(default_factory=RedisConfig)
     catalog: CatalogConfig = field(default_factory=CatalogConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
-    sql_catalog: SqlCatalogConfig = field(default_factory=SqlCatalogConfig)
     config_ui: ConfigUIConfig = field(default_factory=ConfigUIConfig)
     models: ModelsConfig = field(default_factory=ModelsConfig)
 
@@ -111,7 +102,6 @@ class Config:
             redis=RedisConfig(**data.get("redis", {})),
             catalog=CatalogConfig(**data.get("catalog", {})),
             auth=AuthConfig.from_dict(auth_data) if auth_data else AuthConfig(),
-            sql_catalog=SqlCatalogConfig(**data.get("sql_catalog", {})),
             config_ui=ConfigUIConfig(**data.get("config_ui", {})),
             models=ModelsConfig(**data.get("models", {})),
         )

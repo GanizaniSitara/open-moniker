@@ -44,7 +44,6 @@ from .telemetry.events import CallerIdentity, EventOutcome
 from .telemetry.sinks.console import ConsoleSink
 from .telemetry.sinks.file import RotatingFileSink
 from .telemetry.sinks.zmq import ZmqSink
-from .sql_catalog import routes as sql_catalog_routes
 from .config_ui import routes as config_ui_routes
 from .domains import routes as domain_routes
 from .domains import DomainRegistry, load_domains_from_yaml
@@ -669,14 +668,6 @@ async def lifespan(app: FastAPI):
         set_authenticator(None)
         logger.info("Authentication disabled")
 
-    # Initialize SQL Catalog if enabled
-    if config.sql_catalog.enabled:
-        sql_catalog_routes.configure(
-            db_path=config.sql_catalog.db_path,
-            source_db_path=config.sql_catalog.source_db_path,
-        )
-        logger.info(f"SQL Catalog enabled (db_path={config.sql_catalog.db_path})")
-
     # Initialize Config UI if enabled (will get domain_registry later)
     config_ui_enabled = config.config_ui.enabled
     if config_ui_enabled:
@@ -871,7 +862,6 @@ Resolves monikers (semantic data paths) to source connection info.
         {"name": "Catalog", "description": "Browse and explore the moniker catalog"},
         {"name": "Domains", "description": "Domain governance and configuration"},
         {"name": "Models", "description": "Business models/measures that appear across monikers"},
-        {"name": "SQL Catalog", "description": "SQL statement discovery and cataloging"},
         {"name": "Config", "description": "Catalog configuration management"},
         {"name": "Telemetry", "description": "Access tracking and reporting"},
         {"name": "Health", "description": "Service health and diagnostics"},
@@ -884,7 +874,6 @@ if _static_dir.exists():
     app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
 # Mount routers
-app.include_router(sql_catalog_routes.router)
 app.include_router(config_ui_routes.router)
 app.include_router(domain_routes.router)
 app.include_router(model_routes.router)
@@ -1958,11 +1947,6 @@ _LANDING_HTML = """
                 <h2>Catalog Browser</h2>
                 <p>Browse the moniker catalog hierarchy, view ownership and metadata for data assets.</p>
                 <a href="/ui">Open Catalog Browser</a>
-            </div>
-            <div class="card">
-                <h2>SQL Catalog</h2>
-                <p>Browse discovered SQL statements, schemas, and table relationships.</p>
-                <a href="/sql/ui">SQL Catalog Browser</a>
             </div>
             <div class="card">
                 <h2>Business Models</h2>
