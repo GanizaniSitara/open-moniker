@@ -11,6 +11,7 @@ class SourceType(str, Enum):
     """Supported data source types."""
     SNOWFLAKE = "snowflake"
     ORACLE = "oracle"
+    MSSQL = "mssql"  # Microsoft SQL Server
     REST = "rest"
     STATIC = "static"
     EXCEL = "excel"
@@ -85,6 +86,23 @@ class Ownership:
 
 
 @dataclass(frozen=True, slots=True)
+class QueryCacheConfig:
+    """
+    Cache configuration for expensive queries.
+
+    When enabled, query results are cached in Redis and refreshed
+    in the background on a schedule.
+    """
+    enabled: bool = False
+    # How long to serve cached results before considering them stale
+    ttl_seconds: int = 3600
+    # How often to refresh in background (independent of TTL)
+    refresh_interval_seconds: int = 600
+    # Pre-warm cache on service startup
+    refresh_on_startup: bool = True
+
+
+@dataclass(frozen=True, slots=True)
 class SourceBinding:
     """
     Binding to an actual data source.
@@ -103,6 +121,9 @@ class SourceBinding:
 
     # Is this source read-only?
     read_only: bool = True
+
+    # Optional: cache configuration for expensive queries
+    cache: QueryCacheConfig | None = None
 
 
 @dataclass(frozen=True, slots=True)
