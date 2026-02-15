@@ -880,8 +880,8 @@ credit:
     support_channel: "#credit-risk-data"
 
 credit.exposures:
-  display_name: Credit Exposures
-  description: Daily counterparty credit exposure snapshots including notional, MTM, PFE, CVA, and expected loss by exposure type
+  display_name: Counterparty Credit Exposures
+  description: Daily counterparty credit exposure snapshots for financial institutions (derivatives, loans, guarantees, trade finance) including notional, MTM, PFE, CVA, and expected loss metrics
   source_binding:
     type: mssql
     config:
@@ -988,7 +988,7 @@ credit.exposures:
     quality_score: 92
     known_issues:
       - "Weekend gaps in timeseries -- no weekend data points"
-      - "Petrobras (CP006) rating may lag by 1 business day"
+      - "UBS Group (CP006) rating may lag by 1 business day"
     validation_rules:
       - "NOTIONAL > 0"
       - "LGD BETWEEN 0 AND 1"
