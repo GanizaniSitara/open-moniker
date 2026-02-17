@@ -1,0 +1,13 @@
+[project]
+name = "mcp-server-openmoniker"
+version = "0.1.0"
+description = "MCP server exposing the Open Moniker data catalog over the network"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+    "pyyaml>=6.0",
+    "uvicorn>=0.20",
+]
+
+[project.scripts]
+mcp-openmoniker = "server:mcp.run"
