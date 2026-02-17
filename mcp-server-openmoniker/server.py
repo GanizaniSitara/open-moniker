@@ -16,7 +16,6 @@ import logging
 import os
 import secrets
 import sys
-from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -94,37 +93,16 @@ class AppState:
     approve_token: str
 
 
-_state: AppState | None = None
-
-
-def _require_state() -> AppState:
-    if _state is None:
-        raise RuntimeError("Server not yet initialised")
-    return _state
-
-
-def _check_submit_token(token: str) -> bool:
-    """Constant-time check for submission privilege."""
-    s = _require_state()
-    return secrets.compare_digest(token, s.submit_token)
-
-
-def _check_approve_token(token: str) -> bool:
-    """Constant-time check for approval privilege."""
-    s = _require_state()
-    return secrets.compare_digest(token, s.approve_token)
-
-
 # ---------------------------------------------------------------------------
-# Lifespan — load catalog, domains, models once on startup
+# Eager init — runs at import time, before uvicorn starts.
+# The MCP SDK's streamable-http transport does NOT invoke the FastMCP
+# lifespan on app startup (only per-session), so all init must happen here.
 # ---------------------------------------------------------------------------
 
-@asynccontextmanager
-async def lifespan(server: FastMCP):
-    global _state, SUBMIT_TOKEN, APPROVE_TOKEN, WRITE_TOKEN
+def _init() -> AppState:
+    global SUBMIT_TOKEN, APPROVE_TOKEN, WRITE_TOKEN
 
-    # Resolve tokens: explicit split tokens take priority, then legacy
-    # fallback, then auto-generate.
+    # Resolve tokens
     if not SUBMIT_TOKEN:
         SUBMIT_TOKEN = WRITE_TOKEN or secrets.token_urlsafe(32)
     if not APPROVE_TOKEN:
@@ -142,8 +120,7 @@ async def lifespan(server: FastMCP):
     _missing = {k: v for k, v in _required.items() if not Path(v).exists()}
     if _missing:
         for env_var, path in _missing.items():
-            sample = path.replace(".yaml", "").rsplit("/", 1)
-            sample_path = path.replace(".yaml", "").rsplit("/", 1)[0] + "/sample_" + Path(path).name
+            sample_path = str(Path(path).parent / f"sample_{Path(path).name}")
             logger.error(f"Required config not found: {path}")
             logger.error(f"  Copy from sample:  cp {sample_path} {path}")
             logger.error(f"  Or set env var:    {env_var}=/path/to/your/file.yaml")
@@ -161,7 +138,7 @@ async def lifespan(server: FastMCP):
 
     # Load domains
     domain_registry = DomainRegistry()
-    domains_list = load_domains_from_yaml(DOMAINS_YAML, domain_registry)
+    load_domains_from_yaml(DOMAINS_YAML, domain_registry)
     logger.info(f"Loaded domains: {domain_registry.count()} from {DOMAINS_YAML}")
 
     # Load models
@@ -185,7 +162,7 @@ async def lifespan(server: FastMCP):
         domain_registry=domain_registry,
     )
 
-    _state = AppState(
+    state = AppState(
         catalog=catalog,
         domain_registry=domain_registry,
         model_registry=model_registry,
@@ -197,8 +174,24 @@ async def lifespan(server: FastMCP):
     )
 
     logger.info(f"MCP Open Moniker server ready on {MCP_HOST}:{MCP_PORT}")
-    yield
-    logger.info("MCP Open Moniker server shutting down")
+    return state
+
+
+_state: AppState = _init()
+
+
+def _require_state() -> AppState:
+    return _state
+
+
+def _check_submit_token(token: str) -> bool:
+    """Constant-time check for submission privilege."""
+    return secrets.compare_digest(token, _state.submit_token)
+
+
+def _check_approve_token(token: str) -> bool:
+    """Constant-time check for approval privilege."""
+    return secrets.compare_digest(token, _state.approve_token)
 
 
 # ---------------------------------------------------------------------------
@@ -218,7 +211,6 @@ mcp = FastMCP(
     ),
     host=MCP_HOST,
     port=MCP_PORT,
-    lifespan=lifespan,
 )
 
 
