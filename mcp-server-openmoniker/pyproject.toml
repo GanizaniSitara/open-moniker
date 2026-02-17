@@ -5,6 +5,9 @@ description = "MCP server exposing the Open Moniker data catalog over the networ
 requires-python = ">=3.10"
 dependencies = [
     "mcp>=1.0.0",
+    "fastapi>=0.109.0",
+    "pydantic>=2.5.0",
+    "httpx>=0.26.0",
     "pyyaml>=6.0",
     "uvicorn>=0.20",
 ]
