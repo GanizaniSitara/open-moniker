@@ -111,8 +111,8 @@ def _init() -> AppState:
     if SUBMIT_TOKEN == APPROVE_TOKEN:
         logger.warning("Submit and approve tokens are the same — set MCP_SUBMIT_TOKEN "
                         "and MCP_APPROVE_TOKEN separately for separation of duties")
-    logger.info("Submit token (MCP_SUBMIT_TOKEN):   %s…", SUBMIT_TOKEN[:8])
-    logger.info("Approve token (MCP_APPROVE_TOKEN): %s…", APPROVE_TOKEN[:8])
+    logger.info("Submit token  (MCP_SUBMIT_TOKEN):   %s", SUBMIT_TOKEN)
+    logger.info("Approve token (MCP_APPROVE_TOKEN): %s", APPROVE_TOKEN)
 
     # Validate required config files exist
     _required = {"CATALOG_YAML": CATALOG_YAML, "DOMAINS_YAML": DOMAINS_YAML,
@@ -1028,6 +1028,26 @@ New monikers go through a request → review → approve lifecycle:
 1. `submit_request` to propose a new moniker (requires submit token)
 2. `list_requests` to see pending proposals
 3. `approve_request` or `reject_request` to govern (requires approve token)
+
+## REST API (Alternative to MCP)
+The same governance workflow is also available as a REST API.
+An LLM or automated system can interact with it directly:
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/requests` | POST | Submit a new moniker request |
+| `/requests` | GET | List all requests (filter by `?status=pending_review`) |
+| `/requests/{id}` | GET | Get a single request |
+| `/requests/{id}/approve` | POST | Approve a request |
+| `/requests/{id}/reject` | POST | Reject a request |
+| `/requests/{id}/comment` | POST | Add a review comment |
+
+**Machine-readable API docs** (for LLM consumption):
+- OpenAPI JSON spec: `{base_url}/openapi.json`
+- Swagger UI: `{base_url}/docs`
+
+An LLM can fetch `/openapi.json` to understand the full request/response schemas
+and then submit moniker requests programmatically via POST `/requests`.
 """
 
 
