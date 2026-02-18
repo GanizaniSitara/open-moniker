@@ -201,13 +201,44 @@ def _check_approve_token(token: str) -> bool:
 mcp = FastMCP(
     name="open-moniker",
     instructions=(
-        "Open Moniker MCP Server — a unified data catalog and governance layer. "
-        "Use the tools below to resolve monikers to source connection info, "
-        "browse the catalog hierarchy, search for data assets, inspect ownership "
-        "lineage, and manage moniker creation requests. "
-        "Read operations are anonymous. Submissions require a submit token "
-        "(MCP_SUBMIT_TOKEN). Approvals, rejections, and status changes require "
-        "a separate approve token (MCP_APPROVE_TOKEN)."
+        "Open Moniker MCP Server — a unified data catalog and governance layer for firm-wide data access.\n\n"
+
+        "## What is a Moniker?\n"
+        "A moniker is a human-readable, hierarchical path that identifies a data asset. "
+        "It resolves to a source system (Snowflake, Oracle, MS-SQL, REST, Excel, etc.) "
+        "without the caller needing to know connection strings, credentials, or query syntax.\n\n"
+
+        "## Path Structure\n"
+        "Monikers follow the pattern:  domain[.subdomain]/[segments]\n\n"
+        "  Dots (.)  separate logical groupings within a domain namespace:\n"
+        "            risk.cvar, credit.exposures, rates.swap\n\n"
+        "  Slashes (/) separate navigable path segments used for filtering:\n"
+        "            fixed_income/govies/treasury\n"
+        "            fixed_income/govies/sovereign/DE        ← filter to Germany\n"
+        "            fixed_income/govies/sovereign/DE/10Y    ← filter to German 10Y\n\n"
+        "  Segments after the leaf moniker act as query filters. "
+        "Omitting a segment returns all values for that dimension. "
+        "Never use 'ALL' — just omit the segment.\n\n"
+
+        "## Naming Conventions\n"
+        "  - Top-level: short domain name (risk, credit, rates, fixed_income, reports)\n"
+        "  - Use dots for logical sub-namespacing: risk.cvar, risk.greeks\n"
+        "  - Use slashes for navigable hierarchy: fixed_income/govies/treasury\n"
+        "  - Leaf segments are the actual data asset: credit.exposures, rates.swap\n"
+        "  - Filter segments follow the leaf: rates.swap/USD or rates.swap/USD/5Y\n\n"
+
+        "## Browsing the Catalog\n"
+        "  - Call `get_catalog_tree()` for the full hierarchy\n"
+        "  - Call `list_children('risk')` to see what's under a domain\n"
+        "  - Call `search_catalog('treasury')` to find assets by keyword\n"
+        "  - Call `describe_moniker('credit.exposures')` for schema and ownership\n"
+        "  - Read resource `moniker://about` for full conventions and examples\n"
+        "  - Read resource `moniker://naming-guide` for patterns from the live catalog\n\n"
+
+        "## Auth\n"
+        "Read operations are anonymous. "
+        "Submissions require MCP_SUBMIT_TOKEN. "
+        "Approvals/rejections require MCP_APPROVE_TOKEN."
     ),
     host=MCP_HOST,
     port=MCP_PORT,
@@ -906,6 +937,199 @@ async def domains_list() -> str:
 
 
 @mcp.resource(
+    "moniker://about",
+    name="about",
+    description=(
+        "Full self-description of Open Moniker: what it is, how monikers are structured, "
+        "path conventions, segment filtering, and how to design a moniker hierarchy for your firm."
+    ),
+    mime_type="text/markdown",
+)
+async def about() -> str:
+    s = _require_state()
+    stats = s.catalog.count()
+    source_types: dict[str, int] = {}
+    for node in s.catalog.all_nodes():
+        if node.source_binding:
+            st = node.source_binding.source_type.value
+            source_types[st] = source_types.get(st, 0) + 1
+
+    top_level_paths = sorted(s.catalog.children_paths(""))
+    domain_names = ", ".join(f"`{p}`" for p in top_level_paths[:12])
+    source_summary = ", ".join(f"{v} {k}" for k, v in sorted(source_types.items(), key=lambda x: -x[1]))
+
+    return f"""# Open Moniker — Self-Description
+
+## What Is Open Moniker?
+Open Moniker is a unified data catalog and governance layer. It lets you access
+any data asset across the firm using a single, human-readable path (a "moniker")
+without knowing connection strings, credentials, SQL dialects, or API shapes.
+
+## This Catalog
+- **Total monikers**: {sum(stats.values())}
+- **Source systems**: {source_summary}
+- **Top-level domains**: {domain_names}
+
+## Moniker Path Structure
+
+```
+domain[.subdomain]/[filter_segment_1]/[filter_segment_2]
+```
+
+| Pattern | Example | Meaning |
+|---------|---------|---------|
+| `domain.leaf` | `credit.exposures` | Counterparty credit exposure data |
+| `domain.leaf/seg` | `rates.swap/USD` | USD swap rates only |
+| `domain.leaf/seg1/seg2` | `rates.swap/USD/5Y` | USD 5-year swap rate |
+| `domain/sub/leaf` | `fixed_income/govies/treasury` | All US Treasury data |
+| `domain/sub/leaf/filter` | `fixed_income/govies/sovereign/DE` | German Bunds only |
+| `domain/sub/leaf/f1/f2` | `fixed_income/govies/sovereign/DE/10Y` | German 10Y Bund |
+
+## Conventions
+
+### Dots vs Slashes
+- **Dots** (`.`) group logical sub-namespaces within a domain:
+  `risk.cvar`, `risk.greeks`, `credit.exposures`, `credit.limits`
+- **Slashes** (`/`) create a navigable hierarchy used for path browsing AND filtering:
+  `fixed_income/govies/treasury`
+
+### Segment Filtering
+After the leaf moniker, path segments act as progressive filters.
+The segment names and their meaning are defined in the catalog's `segment_names` field.
+
+```
+rates.swap                    # all currencies, all tenors
+rates.swap/USD                # USD only, all tenors
+rates.swap/USD/5Y             # USD 5-year only
+fixed_income/govies/sovereign # all countries, all tenors
+fixed_income/govies/sovereign/DE      # Germany only
+fixed_income/govies/sovereign/DE/10Y  # German 10-year only
+```
+
+**Never use `ALL`** — just omit the segment. A missing segment returns all values.
+
+### Naming Best Practices
+1. Top-level names should be short, memorable domain names: `risk`, `credit`, `rates`
+2. Use dots for logical sub-grouping that shares ownership: `risk.cvar`, `risk.limits`
+3. Use slashes for hierarchy that users will browse: `fixed_income/govies/treasury`
+4. Filter dimensions should be natural identifiers: ISO country codes, currency codes, tenor labels
+5. Avoid encoding dates in the base path — use versioning (`@20260115`) for point-in-time
+
+## How to Design a Moniker Hierarchy for Your Firm
+1. Start with your business domains (risk, credit, market data, reference, reporting)
+2. Within each domain, identify logical sub-groups that share an accountable owner
+3. Decide: does this group have navigable sub-assets (use `/`) or just variants (use `.`)?
+4. Identify the filter dimensions users will want (currency, country, tenor, entity)
+5. Call `design_moniker_hierarchy` prompt with your use case for guided assistance
+6. Browse `moniker://naming-guide` to see patterns from this live catalog
+
+## Governance Workflow
+New monikers go through a request → review → approve lifecycle:
+1. `submit_request` to propose a new moniker (requires submit token)
+2. `list_requests` to see pending proposals
+3. `approve_request` or `reject_request` to govern (requires approve token)
+"""
+
+
+@mcp.resource(
+    "moniker://naming-guide",
+    name="naming_guide",
+    description=(
+        "Live naming-guide generated from the actual catalog — shows real moniker patterns, "
+        "segment conventions, and examples to help LLMs design moniker hierarchies."
+    ),
+    mime_type="text/markdown",
+)
+async def naming_guide() -> str:
+    s = _require_state()
+
+    # Gather leaf nodes with source bindings — these are the real patterns
+    leaves: list[dict] = []
+    for node in s.catalog.all_nodes():
+        if node.is_leaf and node.source_binding:
+            entry: dict = {
+                "path": node.path,
+                "source_type": node.source_binding.source_type.value,
+                "display_name": node.display_name or "",
+                "description": node.description or "",
+            }
+            if node.source_binding.segment_names:
+                entry["filter_segments"] = node.source_binding.segment_names
+            leaves.append(entry)
+
+    leaves.sort(key=lambda x: x["path"])
+
+    # Build markdown table
+    lines = [
+        "# Open Moniker — Live Naming Guide",
+        "",
+        "This guide is generated from the live catalog and shows real moniker patterns.",
+        "",
+        "## Leaf Monikers (Data Assets)",
+        "",
+        "| Moniker Path | Source | Filter Segments | Description |",
+        "|---|---|---|---|",
+    ]
+    for leaf in leaves:
+        segs = ", ".join(f"`{s}`" for s in leaf.get("filter_segments", [])) or "—"
+        desc = leaf["description"][:60] + "…" if len(leaf.get("description", "")) > 60 else leaf.get("description", "")
+        lines.append(f"| `{leaf['path']}` | {leaf['source_type']} | {segs} | {desc} |")
+
+    # Show concrete fetch examples
+    lines += [
+        "",
+        "## Fetch Examples",
+        "",
+        "```python",
+        "# All data — omit segments",
+    ]
+    for leaf in leaves[:3]:
+        lines.append(f'client.fetch("{leaf["path"]}")')
+
+    lines += ["", "# Filtered — add segments progressively"]
+    for leaf in leaves:
+        segs = leaf.get("filter_segments", [])
+        if segs:
+            example_val = {"country": "DE", "currency": "USD", "tenor": "10Y",
+                           "cusip": "<cusip>", "date": "20260115"}.get(segs[0], f"<{segs[0]}>")
+            lines.append(f'client.fetch("{leaf["path"]}/{example_val}")  # filter by {segs[0]}')
+            if len(segs) > 1:
+                example_val2 = {"country": "DE", "currency": "USD", "tenor": "10Y",
+                                "cusip": "<cusip>", "date": "20260115"}.get(segs[1], f"<{segs[1]}>")
+                lines.append(f'client.fetch("{leaf["path"]}/{example_val}/{example_val2}")  # filter by {segs[0]} + {segs[1]}')
+            break
+
+    lines += [
+        "```",
+        "",
+        "## Domain Structure",
+        "",
+    ]
+
+    # Top-level domains
+    top_paths = sorted(s.catalog.children_paths(""))
+    for tp in top_paths:
+        node = s.catalog.get(tp)
+        desc = node.description or node.display_name or "" if node else ""
+        children = s.catalog.children_paths(tp)
+        lines.append(f"### `{tp}` ({len(children)} children)")
+        if desc:
+            lines.append(f"{desc}")
+        lines.append("")
+        for cp in sorted(children)[:6]:
+            cnode = s.catalog.get(cp)
+            cdesc = cnode.display_name or "" if cnode else ""
+            is_leaf = cnode.is_leaf if cnode else False
+            source = f" [{cnode.source_binding.source_type.value}]" if cnode and cnode.source_binding else ""
+            lines.append(f"  - `{cp}`{source} — {cdesc}{'  *(leaf)*' if is_leaf else ''}")
+        if len(children) > 6:
+            lines.append(f"  - *(+ {len(children) - 6} more)*")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+@mcp.resource(
     "moniker://models",
     name="models_list",
     description="All registered business models/measures",
@@ -962,6 +1186,34 @@ async def find_data_prompt(keyword: str) -> str:
         f"3. If the data has related business models, call `get_models` filtered by relevant tags.\n\n"
         f"Please summarise what you find: the moniker paths, what data they contain, "
         f"who owns them, and how to access them."
+    )
+
+
+@mcp.prompt(
+    name="design_moniker_hierarchy",
+    description=(
+        "Guide an LLM or user through designing a moniker hierarchy for their firm or team. "
+        "Explains the conventions, shows real examples from the live catalog, and helps "
+        "determine what structure (dots vs slashes, segment filters) fits their use case."
+    ),
+)
+async def design_moniker_hierarchy_prompt(use_case: str) -> str:
+    return (
+        f"I need to design a moniker hierarchy for: **{use_case}**\n\n"
+        f"Please help me by:\n\n"
+        f"1. First read `moniker://about` to understand the full moniker path conventions "
+        f"(dots vs slashes, segment filtering, naming best practices).\n\n"
+        f"2. Then read `moniker://naming-guide` to see real patterns from the live catalog — "
+        f"pay attention to how domains are structured and what filter segments are used.\n\n"
+        f"3. Based on the conventions and live examples, propose a moniker hierarchy for: **{use_case}**\n"
+        f"   - Suggest top-level domain name(s)\n"
+        f"   - Show the full path structure including any sub-paths\n"
+        f"   - Identify which dimensions should be filter segments\n"
+        f"   - Explain why you chose dots vs slashes at each level\n"
+        f"   - Give 3-5 concrete example moniker paths (leaf + example filter values)\n\n"
+        f"4. Check if any similar patterns already exist in the catalog using "
+        f"`search_catalog` to avoid duplicates or find a parent domain to nest under.\n\n"
+        f"Present the proposed hierarchy as a table and then as example `client.fetch()` calls."
     )
 
 
