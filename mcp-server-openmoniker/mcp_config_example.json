@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "open-moniker": {
+      "url": "http://localhost:8051/mcp",
+      "note": "For write operations, pass the MCP_WRITE_TOKEN printed at startup as the 'token' parameter."
+    }
+  }
+}
