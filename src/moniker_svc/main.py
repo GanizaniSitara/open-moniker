@@ -19,7 +19,7 @@ _EXTERNAL_DATA = _REPO_ROOT / "external" / "moniker-data" / "src"
 if _EXTERNAL_DATA.exists() and str(_EXTERNAL_DATA) not in sys.path:
     sys.path.insert(0, str(_EXTERNAL_DATA))
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Query
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Query
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -54,6 +54,7 @@ from .models import routes as model_routes
 from .models import ModelRegistry, load_models_from_yaml
 from .requests import routes as request_routes
 from .requests import RequestRegistry, load_requests_from_yaml
+from .dashboard import routes as dashboard_routes
 
 
 logger = logging.getLogger(__name__)
@@ -302,6 +303,47 @@ _catalog_dir: Path | None = None
 # Enterprise governance singletons
 _rate_limiter = None
 _circuit_breaker = None
+
+# ---------------------------------------------------------------------------
+# Router for resolver / data-plane routes.
+# Declared here so that resolver_app.py can import and include it without
+# importing the full monolith app object.
+# ---------------------------------------------------------------------------
+resolver_router = APIRouter()
+
+
+def _set_resolver_globals(
+    service,
+    rate_limiter,
+    circuit_breaker,
+    adapter_registry,
+    cache_manager,
+    redis_cache,
+    cache_refresh_task,
+    telemetry_task,
+    batcher_task,
+    catalog_dir,
+) -> None:
+    """Set module-level globals consumed by resolver route handlers.
+
+    Called by ``resolver_app.py`` during its lifespan startup so that the
+    handler functions defined here (which close over this module's globals)
+    see the correct instances.
+    """
+    global _service, _rate_limiter, _circuit_breaker, _adapter_registry
+    global _cache_manager, _redis_cache, _cache_refresh_task
+    global _telemetry_task, _batcher_task, _catalog_dir
+
+    _service = service
+    _rate_limiter = rate_limiter
+    _circuit_breaker = circuit_breaker
+    _adapter_registry = adapter_registry
+    _cache_manager = cache_manager
+    _redis_cache = redis_cache
+    _cache_refresh_task = cache_refresh_task
+    _telemetry_task = telemetry_task
+    _batcher_task = batcher_task
+    _catalog_dir = catalog_dir
 
 
 def create_demo_catalog() -> CatalogRegistry:
@@ -849,102 +891,41 @@ async def create_telemetry(config: Config) -> tuple[TelemetryEmitter, TelemetryB
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown."""
-    import os
-    from pathlib import Path
+    from . import _bootstrap as bs
 
     global _service, _telemetry_task, _batcher_task, _adapter_registry, _catalog_dir
+    global _rate_limiter, _circuit_breaker
+    global _domain_registry, _model_registry, _request_registry
+    global _redis_cache, _cache_manager, _cache_refresh_task
 
     logger.info("Starting moniker resolution service...")
 
-    # Load config from file or use defaults
-    config_path = os.environ.get("MONIKER_CONFIG", "config.yaml")
-    if Path(config_path).exists():
-        config = Config.from_yaml(config_path)
-        logger.info(f"Loaded config from {config_path}")
-    else:
-        config = Config()
-        logger.info("Using default config")
+    config, config_path = bs.load_config()
 
-    # Load catalog from file or use demo
-    # Resolve catalog path relative to config file location
-    catalog_definition_path = None
-    if config.catalog.definition_file:
-        config_dir = Path(config_path).parent.resolve()
-        catalog_definition_path = (config_dir / config.catalog.definition_file).resolve()
-        _catalog_dir = catalog_definition_path.parent
-        logger.info(f"Loading catalog from: {catalog_definition_path}")
-        catalog = load_catalog(str(catalog_definition_path))
-    else:
-        logger.info("Using demo catalog (no definition_file configured)")
-        catalog = create_demo_catalog()
-        _catalog_dir = Path.cwd()
+    catalog, catalog_dir, catalog_definition_path = bs.build_catalog_registry(config, config_path)
+    _catalog_dir = catalog_dir
 
-    logger.info(f"Catalog loaded with {len(catalog.all_paths())} paths")
+    _adapter_registry = bs.build_adapter_registry(catalog_dir)
 
-    # Initialize adapter registry with real adapters
-    _adapter_registry = AdapterRegistry()
-    _adapter_registry.register(SnowflakeAdapter(catalog_dir=_catalog_dir))
-    _adapter_registry.register(OracleAdapter(catalog_dir=_catalog_dir))
-    _adapter_registry.register(MssqlAdapter(catalog_dir=_catalog_dir))
-    _adapter_registry.register(InMemoryAdapter())
-    logger.info(f"Registered adapters: {[t.value for t in _adapter_registry.all_types()]}")
+    cache = bs.build_cache(config)
 
-    cache = InMemoryCache(
-        max_size=config.cache.max_size,
-        default_ttl_seconds=config.cache.default_ttl_seconds,
-    )
-
-    # Create telemetry
-    emitter, batcher = await create_telemetry(config)
+    emitter, batcher = await bs.build_telemetry(config)
     await emitter.start()
-
-    # Start background tasks
     _telemetry_task = asyncio.create_task(emitter.process_loop())
     _batcher_task = asyncio.create_task(batcher.timer_loop())
 
-    # Create service (no adapters needed - we're resolution only)
-    _service = MonikerService(
-        catalog=catalog,
-        cache=cache,
-        telemetry=emitter,
-        config=config,
-    )
+    _service = bs.build_service(catalog, cache, emitter, config)
 
-    # Initialize enterprise governance features
-    global _rate_limiter, _circuit_breaker
-    try:
-        from .governance.rate_limiter import RateLimiter, RateLimiterConfig
-        from .governance.circuit_breaker import CircuitBreaker, CircuitBreakerConfig
-        _rate_limiter = RateLimiter(config=RateLimiterConfig())
-        _circuit_breaker = CircuitBreaker(config=CircuitBreakerConfig())
+    _rate_limiter = bs.build_rate_limiter(config)
+    _circuit_breaker = bs.build_circuit_breaker(config)
+    if _rate_limiter is not None or _circuit_breaker is not None:
         logger.info("Enterprise governance features initialized (rate limiter, circuit breaker)")
-    except ImportError:
+    else:
         logger.info("Governance module not available, running without rate limiting")
 
-    # Initialize authentication if enabled
-    if config.auth.enabled:
-        authenticator = create_composite_authenticator(config.auth)
-        set_authenticator(authenticator)
-        logger.info(f"Authentication enabled (enforce={config.auth.enforce})")
-    else:
-        set_authenticator(None)
-        logger.info("Authentication disabled")
+    bs.configure_auth(config)
 
-    # Initialize Config UI if enabled (will get domain_registry later)
-    config_ui_enabled = config.config_ui.enabled
-    if config_ui_enabled:
-        logger.info(f"Config UI enabled (catalog_file={catalog_definition_path})")
-
-    # Initialize Domain Configuration
-    global _domain_registry
-    _domain_registry = DomainRegistry()
-    domains_yaml_path = os.environ.get("DOMAINS_CONFIG", "domains.yaml")
-    if Path(domains_yaml_path).exists():
-        domains = load_domains_from_yaml(domains_yaml_path, _domain_registry)
-        logger.info(f"Loaded {len(domains)} domains from {domains_yaml_path}")
-    else:
-        logger.info(f"No domains config found at {domains_yaml_path}, starting with empty registry")
-
+    _domain_registry, domains_yaml_path = bs.build_domain_registry()
     domain_routes.configure(
         domain_registry=_domain_registry,
         catalog_registry=catalog,
@@ -952,11 +933,10 @@ async def lifespan(app: FastAPI):
     )
     logger.info("Domain configuration enabled")
 
-    # Set domain_registry on service for ownership inheritance
     _service.domain_registry = _domain_registry
 
-    # Now configure Config UI with domain registry for ownership inheritance
-    if config_ui_enabled:
+    if config.config_ui.enabled:
+        logger.info(f"Config UI enabled (catalog_file={catalog_definition_path})")
         config_ui_routes.configure(
             catalog=catalog,
             yaml_output_path=config.config_ui.yaml_output_path,
@@ -966,37 +946,17 @@ async def lifespan(app: FastAPI):
             domain_registry=_domain_registry,
         )
 
-    # Initialize Business Models Configuration
-    global _model_registry
-    _model_registry = ModelRegistry()
+    _model_registry, models_yaml_path = bs.build_model_registry(config)
     if config.models.enabled:
-        models_yaml_path = config.models.definition_file or os.environ.get("MODELS_CONFIG", "models.yaml")
-        if Path(models_yaml_path).exists():
-            models = load_models_from_yaml(models_yaml_path, _model_registry)
-            logger.info(f"Loaded {len(models)} business models from {models_yaml_path}")
-        else:
-            logger.info(f"No models config found at {models_yaml_path}, starting with empty registry")
-
         model_routes.configure(
             model_registry=_model_registry,
             catalog_registry=catalog,
             models_yaml_path=models_yaml_path,
         )
         logger.info("Business models configuration enabled")
-    else:
-        logger.info("Business models disabled")
 
-    # Initialize Request & Approval Workflow
-    global _request_registry
-    _request_registry = RequestRegistry()
+    _request_registry, requests_yaml_path = bs.build_request_registry(config)
     if config.requests.enabled:
-        requests_yaml_path = config.requests.definition_file or os.environ.get("REQUESTS_CONFIG", "requests.yaml")
-        if Path(requests_yaml_path).exists():
-            loaded_reqs = load_requests_from_yaml(requests_yaml_path, _request_registry)
-            logger.info(f"Loaded {len(loaded_reqs)} requests from {requests_yaml_path}")
-        else:
-            logger.info(f"No requests config found at {requests_yaml_path}, starting with empty registry")
-
         request_routes.configure(
             request_registry=_request_registry,
             catalog_registry=catalog,
@@ -1004,72 +964,16 @@ async def lifespan(app: FastAPI):
             yaml_path=requests_yaml_path,
         )
         logger.info("Request & approval workflow enabled")
-    else:
-        logger.info("Request & approval workflow disabled")
 
-    # Initialize Redis cache and query refresh manager
-    global _redis_cache, _cache_manager, _cache_refresh_task
+    dashboard_routes.configure(
+        catalog_registry=catalog,
+        request_registry=_request_registry,
+    )
+    logger.info("Dashboard enabled")
 
-    _redis_cache = RedisCache(config.redis)
-    redis_connected = await _redis_cache.connect()
-
-    if redis_connected:
-        _cache_manager = CachedQueryManager(redis_cache=_redis_cache)
-
-        # Register cached queries from catalog
-        cached_count = 0
-        for node in catalog.all_nodes():
-            if (node.source_binding and
-                node.source_binding.cache and
-                node.source_binding.cache.enabled):
-
-                # Create fetch function for this node
-                async def make_fetch_fn(path: str, binding: SourceBinding):
-                    async def fetch_fn():
-                        data = []
-                        columns = []
-
-                        try:
-                            # Use real adapter from registry
-                            if _adapter_registry and _adapter_registry.has(binding.source_type):
-                                adapter = _adapter_registry.get(binding.source_type)
-                                moniker = parse_moniker(f"moniker://{path}")
-                                result = await adapter.fetch(moniker, binding)
-                                data = result.data if isinstance(result.data, list) else [result.data]
-                                columns = result.metadata.get("columns", [])
-                                if not columns and data:
-                                    columns = list(data[0].keys()) if isinstance(data[0], dict) else []
-                            else:
-                                logger.warning(f"No adapter for source type: {binding.source_type}")
-                        except ImportError as e:
-                            logger.warning(f"Driver not available for {path}: {e}")
-                        except Exception as e:
-                            logger.error(f"Error fetching {path}: {e}")
-                            raise
-
-                        return data, columns
-                    return fetch_fn
-
-                fetch_fn = await make_fetch_fn(node.path, node.source_binding)
-                _cache_manager.register(
-                    path=node.path,
-                    cache_config=node.source_binding.cache,
-                    fetch_fn=fetch_fn,
-                )
-                cached_count += 1
-
-        if cached_count > 0:
-            logger.info(f"Registered {cached_count} cached queries")
-
-            # Refresh queries marked for startup
-            startup_results = await _cache_manager.refresh_all_startup()
-            success_count = sum(1 for v in startup_results.values() if v)
-            logger.info(f"Startup refresh: {success_count}/{len(startup_results)} queries refreshed")
-
-            # Start background refresh loop
-            _cache_refresh_task = asyncio.create_task(_cache_manager.refresh_loop())
-    else:
-        logger.info("Redis not available, cached queries disabled")
+    _redis_cache, _cache_manager, _cache_refresh_task = await bs.setup_redis_and_cache_manager(
+        config, catalog, _adapter_registry,
+    )
 
     logger.info("Moniker resolution service started")
 
@@ -1078,7 +982,6 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down moniker resolution service...")
 
-    # Stop cache refresh loop
     if _cache_refresh_task:
         _cache_refresh_task.cancel()
         try:
@@ -1157,11 +1060,14 @@ _static_dir = Path(__file__).parent / "static"
 if _static_dir.exists():
     app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
-# Mount routers
+# Mount management sub-routers (fully populated at import time from their own modules)
 app.include_router(config_ui_routes.router)
 app.include_router(domain_routes.router)
 app.include_router(model_routes.router)
 app.include_router(request_routes.router)
+app.include_router(dashboard_routes.router)
+# resolver_router is mounted AFTER all @resolver_router.xxx() decorators are processed
+# (see the app.include_router(resolver_router) call after the ui() handler below)
 
 
 @app.exception_handler(MonikerParseError)
@@ -1221,7 +1127,7 @@ async def resolution_error_handler(request: Request, exc: ResolutionError):
     )
 
 
-@app.get("/health", response_model=HealthResponse, tags=["Health"])
+@resolver_router.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health():
     """Health check endpoint with telemetry, cache, rate limiter, and circuit breaker statistics."""
     return HealthResponse(
@@ -1234,7 +1140,7 @@ async def health():
     )
 
 
-@app.get("/resolve/{path:path}", response_model=ResolveResponse, tags=["Resolution"])
+@resolver_router.get("/resolve/{path:path}", response_model=ResolveResponse, tags=["Resolution"])
 async def resolve_moniker(
     request: Request,
     path: str,
@@ -1353,7 +1259,7 @@ async def resolve_moniker(
     return response
 
 
-@app.get("/list/{path:path}", response_model=ListResponse, tags=["Catalog"])
+@resolver_router.get("/list/{path:path}", response_model=ListResponse, tags=["Catalog"])
 async def list_children(
     request: Request,
     path: str = "",
@@ -1378,7 +1284,7 @@ async def list_children(
     )
 
 
-@app.get("/describe/{path:path}", response_model=DescribeResponse, tags=["Resolution"])
+@resolver_router.get("/describe/{path:path}", response_model=DescribeResponse, tags=["Resolution"])
 async def describe_moniker(
     request: Request,
     path: str,
@@ -1520,7 +1426,7 @@ async def describe_moniker(
     )
 
 
-@app.get("/lineage/{path:path}", response_model=LineageResponse, tags=["Resolution"])
+@resolver_router.get("/lineage/{path:path}", response_model=LineageResponse, tags=["Resolution"])
 async def get_lineage(
     request: Request,
     path: str,
@@ -1541,7 +1447,7 @@ async def get_lineage(
     return LineageResponse(**result)
 
 
-@app.post("/telemetry/access", tags=["Telemetry"])
+@resolver_router.post("/telemetry/access", tags=["Telemetry"])
 async def report_access(
     report: AccessReport,
     caller: Annotated[CallerIdentity, Depends(get_caller_identity)],
@@ -1575,7 +1481,7 @@ async def report_access(
     return {"status": "recorded"}
 
 
-@app.get("/catalog", tags=["Catalog"])
+@resolver_router.get("/catalog", tags=["Catalog"])
 async def list_catalog(
     cursor: str | None = Query(default=None, description="Cursor for pagination (last path from previous page)"),
     limit: int = Query(default=100, le=1000, description="Maximum paths to return"),
@@ -1622,7 +1528,7 @@ async def list_catalog(
     )
 
 
-@app.get("/catalog/search", response_model=CatalogSearchResponse, tags=["Catalog"])
+@resolver_router.get("/catalog/search", response_model=CatalogSearchResponse, tags=["Catalog"])
 async def search_catalog(
     q: str = Query(description="Search query (matches path, name, description, tags)"),
     status: str | None = Query(default=None, description="Filter by lifecycle status"),
@@ -1664,7 +1570,7 @@ async def search_catalog(
     )
 
 
-@app.get("/catalog/stats", response_model=CatalogStatsResponse, tags=["Catalog"])
+@resolver_router.get("/catalog/stats", response_model=CatalogStatsResponse, tags=["Catalog"])
 async def catalog_stats():
     """Get catalog statistics - moniker counts by status, source type, and classification."""
     if not _service:
@@ -1714,7 +1620,7 @@ async def catalog_stats():
 # BATCH RESOLUTION - Enterprise-scale multi-moniker resolution
 # =============================================================================
 
-@app.post("/resolve/batch", response_model=BatchResolveResponse, tags=["Resolution"])
+@resolver_router.post("/resolve/batch", response_model=BatchResolveResponse, tags=["Resolution"])
 async def batch_resolve(
     request_body: BatchResolveRequest,
     caller: Annotated[CallerIdentity, Depends(get_caller_identity)],
@@ -1783,7 +1689,7 @@ async def batch_resolve(
 # GOVERNANCE ENDPOINTS - Lifecycle management and audit trail
 # =============================================================================
 
-@app.put("/catalog/{path:path}/status", tags=["Catalog"])
+@resolver_router.put("/catalog/{path:path}/status", tags=["Catalog"])
 async def update_catalog_status(
     request: Request,
     path: str,
@@ -1833,7 +1739,7 @@ async def update_catalog_status(
     }
 
 
-@app.get("/catalog/{path:path}/audit", response_model=AuditLogResponse, tags=["Catalog"])
+@resolver_router.get("/catalog/{path:path}/audit", response_model=AuditLogResponse, tags=["Catalog"])
 async def get_audit_log(
     request: Request,
     path: str,
@@ -1876,7 +1782,7 @@ async def get_audit_log(
 # DATA FETCH ENDPOINTS - Server-side query execution
 # =============================================================================
 
-@app.get("/fetch/{path:path}", response_model=FetchResponse, tags=["Data Fetch"])
+@resolver_router.get("/fetch/{path:path}", response_model=FetchResponse, tags=["Data Fetch"])
 async def fetch_data(
     request: Request,
     path: str,
@@ -2044,7 +1950,7 @@ async def fetch_data(
 # CACHE STATUS ENDPOINTS
 # =============================================================================
 
-@app.get("/cache/status", tags=["Data Fetch"])
+@resolver_router.get("/cache/status", tags=["Data Fetch"])
 async def cache_status():
     """
     Get status of all cached queries.
@@ -2065,7 +1971,7 @@ async def cache_status():
     return await _cache_manager.get_detailed_status()
 
 
-@app.post("/cache/refresh/{path:path}", tags=["Data Fetch"])
+@resolver_router.post("/cache/refresh/{path:path}", tags=["Data Fetch"])
 async def trigger_cache_refresh(path: str):
     """
     Manually trigger a cache refresh for a specific path.
@@ -2093,7 +1999,7 @@ async def trigger_cache_refresh(path: str):
         return {"status": "refresh_in_progress", "path": path}
 
 
-@app.get("/metadata/{path:path}", response_model=MetadataResponse, tags=["Data Fetch"])
+@resolver_router.get("/metadata/{path:path}", response_model=MetadataResponse, tags=["Data Fetch"])
 async def get_metadata(
     request: Request,
     path: str,
@@ -2267,7 +2173,7 @@ async def get_metadata(
     )
 
 
-@app.get("/tree/{path:path}", response_model=TreeNodeResponse, tags=["Catalog"])
+@resolver_router.get("/tree/{path:path}", response_model=TreeNodeResponse, tags=["Catalog"])
 async def get_tree(
     request: Request,
     path: str,
@@ -2352,7 +2258,7 @@ async def get_tree(
     return tree
 
 
-@app.get("/tree", response_model=list[TreeNodeResponse], tags=["Catalog"])
+@resolver_router.get("/tree", response_model=list[TreeNodeResponse], tags=["Catalog"])
 async def get_tree_root(
     depth: int | None = Query(default=None, description="Maximum depth to traverse"),
 ):
@@ -3435,10 +3341,15 @@ _UI_HTML = """
 """
 
 
-@app.get("/ui", response_class=HTMLResponse, tags=["Catalog"])
+@resolver_router.get("/ui", response_class=HTMLResponse, tags=["Catalog"])
 async def ui():
     """Simple web UI for browsing the moniker catalog."""
     return _UI_HTML
+
+
+# Mount resolver_router now that all @resolver_router.xxx() decorators have run.
+# Must appear after the last route definition so include_router captures all routes.
+app.include_router(resolver_router)
 
 
 def run():

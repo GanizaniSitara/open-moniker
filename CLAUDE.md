@@ -12,7 +12,29 @@
 ## Environment
 - Use `python3` (system Python 3.13)
 - PYTHONPATH=src for running the service
-- Start server: `PYTHONPATH=src python3 -m uvicorn moniker_svc.main:app --host 0.0.0.0 --port 8050`
+
+## Start Commands
+
+```bash
+# Resolver — data plane, run on all scaled instances (port 8051)
+PYTHONPATH=src uvicorn moniker_svc.resolver_app:app --host 0.0.0.0 --port 8051
+
+# Management — control plane, run once per region (port 8052)
+PYTHONPATH=src uvicorn moniker_svc.management_app:app --host 0.0.0.0 --port 8052
+
+# Legacy monolith — local dev / backwards compat (port 8050, unchanged)
+PYTHONPATH=src uvicorn moniker_svc.main:app --host 0.0.0.0 --port 8050
+```
+
+> **Resolver** serves: `/resolve/*`, `/fetch/*`, `/describe/*`, `/lineage/*`,
+> `/list/*`, `/catalog*`, `/tree*`, `/cache/*`, `/metadata/*`,
+> `/telemetry/access`, `/health`, `/ui`.
+>
+> **Management** serves: `/config/*`, `/domains/*`, `/models/*`,
+> `/requests/*`, `/dashboard/*`, `GET /` (landing page).
+>
+> Shared state: YAML files on disk.  Management writes → Resolver hot-reloads
+> via `reload_interval_seconds` in config.yaml (or `POST /config/reload`).
 
 ## Full Environment Bring-Up
 To boot the full simulated environment (adapters + server + smoke tests) and open Jupyter for interactive testing:
