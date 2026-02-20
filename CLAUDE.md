@@ -16,7 +16,7 @@
 ## Start Commands
 
 ```bash
-# Resolver — data plane, run on all scaled instances (port 8051)
+# Python Resolver — data plane, run on all scaled instances (port 8051)
 PYTHONPATH=src uvicorn moniker_svc.resolver_app:app --host 0.0.0.0 --port 8051
 
 # Management — control plane, run once per region (port 8052)
@@ -24,6 +24,11 @@ PYTHONPATH=src uvicorn moniker_svc.management_app:app --host 0.0.0.0 --port 8052
 
 # Legacy monolith — local dev / backwards compat (port 8050, unchanged)
 PYTHONPATH=src uvicorn moniker_svc.main:app --host 0.0.0.0 --port 8050
+
+# Go Resolver (NEW) — high-performance resolver (port 8053)
+cd resolver-go && ./bin/resolver --port 8053
+# Or build and run:
+cd resolver-go && make run
 ```
 
 > **Resolver** serves: `/resolve/*`, `/fetch/*`, `/describe/*`, `/lineage/*`,
