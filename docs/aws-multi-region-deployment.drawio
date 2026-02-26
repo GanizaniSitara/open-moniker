@@ -1,0 +1,349 @@
+<mxfile host="app.diagrams.net" modified="2026-02-26T00:00:00.000Z" agent="draw.io" version="24.0.0" type="device">
+  <diagram id="multi-region-deployment" name="Multi-Region Deployment">
+    <mxGraphModel dx="1800" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="Open Moniker — AWS Multi-Region Deployment (6 Go Services)" style="text;html=1;fontSize=20;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="400" y="10" width="800" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- CLIENTS -->
+        <!-- ============================================================ -->
+        <mxCell id="clients" value="Clients / Consumers" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3E;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=1;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.users;" vertex="1" parent="1">
+          <mxGeometry x="755" y="60" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- ROUTE 53 -->
+        <!-- ============================================================ -->
+        <mxCell id="route53" value="Amazon Route 53&lt;br&gt;moniker.example.com&lt;br&gt;&lt;i&gt;Latency-based routing&lt;/i&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.route_53;" vertex="1" parent="1">
+          <mxGeometry x="755" y="170" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Client → Route 53 -->
+        <mxCell id="edge_client_r53" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#232F3E;" edge="1" parent="1" source="clients" target="route53">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label_client_r53" value="DNS query" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=10;" vertex="1" connectable="0" parent="edge_client_r53">
+          <mxGeometry x="-0.1" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- US-EAST-1 REGION -->
+        <!-- ============================================================ -->
+        <mxCell id="region_east" value="" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_region;strokeColor=#00A4A6;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="290" width="720" height="870" as="geometry" />
+        </mxCell>
+        <mxCell id="region_east_label" value="US-EAST-1 (Primary)" style="text;html=1;fontSize=14;fontStyle=1;align=left;fillColor=#00A4A6;fontColor=#FFFFFF;rounded=1;spacingLeft=8;spacingRight=8;" vertex="1" parent="region_east">
+          <mxGeometry x="10" y="10" width="180" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- ALB East -->
+        <mxCell id="alb_east" value="Application&lt;br&gt;Load Balancer" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elasticloadbalancing;" vertex="1" parent="region_east">
+          <mxGeometry x="320" y="50" width="50" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- WAF East -->
+        <mxCell id="waf_east" value="AWS WAF" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#DD344C;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.waf;" vertex="1" parent="region_east">
+          <mxGeometry x="220" y="50" width="45" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- WAF → ALB -->
+        <mxCell id="edge_waf_alb_east" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1;strokeColor=#DD344C;" edge="1" parent="region_east" source="waf_east" target="alb_east">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ======== AZ-1a ======== -->
+        <mxCell id="az_east_1a" value="" style="fillColor=none;strokeColor=#147EBA;dashed=1;verticalAlign=top;fontStyle=0;fontColor=#147EBA;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="region_east">
+          <mxGeometry x="20" y="140" width="330" height="710" as="geometry" />
+        </mxCell>
+        <mxCell id="az_east_1a_label" value="Availability Zone us-east-1a" style="text;html=1;fontSize=12;fontStyle=1;align=left;fillColor=#147EBA;fontColor=#FFFFFF;rounded=1;spacingLeft=6;spacingRight=6;" vertex="1" parent="az_east_1a">
+          <mxGeometry x="10" y="8" width="220" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- Private Subnet 1a -->
+        <mxCell id="subnet_east_1a" value="Private Subnet" style="fillColor=none;strokeColor=#248814;dashed=0;verticalAlign=top;fontStyle=0;fontColor=#248814;whiteSpace=wrap;html=1;fontSize=10;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="az_east_1a">
+          <mxGeometry x="15" y="40" width="300" height="660" as="geometry" />
+        </mxCell>
+
+        <!-- Gateway (East 1a) -->
+        <mxCell id="gateway_east_1a" value="gateway&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_east_1a">
+          <mxGeometry x="120" y="20" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Resolver (East 1a) -->
+        <mxCell id="resolver_east_1a" value="resolver&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_east_1a">
+          <mxGeometry x="120" y="120" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Policy Engine (East 1a) -->
+        <mxCell id="policy_east_1a" value="policy-engine&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_east_1a">
+          <mxGeometry x="120" y="220" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Telemetry Collector (East 1a) -->
+        <mxCell id="telemetry_east_1a" value="telemetry-collector&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_east_1a">
+          <mxGeometry x="120" y="320" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Cache Manager (East 1a) -->
+        <mxCell id="cache_east_1a" value="cache-manager&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_east_1a">
+          <mxGeometry x="120" y="420" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Health Monitor (East 1a) -->
+        <mxCell id="health_east_1a" value="health-monitor&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_east_1a">
+          <mxGeometry x="120" y="520" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- ECS Service Connect label -->
+        <mxCell id="svc_connect_east_1a" value="ECS Service Connect&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;moniker.local namespace&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E6D0DE;strokeColor=#AE4132;fontColor=#232F3E;fontSize=10;fontStyle=1;dashed=1;" vertex="1" parent="subnet_east_1a">
+          <mxGeometry x="30" y="610" width="230" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ======== AZ-1b ======== -->
+        <mxCell id="az_east_1b" value="" style="fillColor=none;strokeColor=#147EBA;dashed=1;verticalAlign=top;fontStyle=0;fontColor=#147EBA;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="region_east">
+          <mxGeometry x="370" y="140" width="330" height="710" as="geometry" />
+        </mxCell>
+        <mxCell id="az_east_1b_label" value="Availability Zone us-east-1b" style="text;html=1;fontSize=12;fontStyle=1;align=left;fillColor=#147EBA;fontColor=#FFFFFF;rounded=1;spacingLeft=6;spacingRight=6;" vertex="1" parent="az_east_1b">
+          <mxGeometry x="10" y="8" width="220" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- Private Subnet 1b -->
+        <mxCell id="subnet_east_1b" value="Private Subnet" style="fillColor=none;strokeColor=#248814;dashed=0;verticalAlign=top;fontStyle=0;fontColor=#248814;whiteSpace=wrap;html=1;fontSize=10;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="az_east_1b">
+          <mxGeometry x="15" y="40" width="300" height="660" as="geometry" />
+        </mxCell>
+
+        <!-- Gateway (East 1b) -->
+        <mxCell id="gateway_east_1b" value="gateway&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_east_1b">
+          <mxGeometry x="120" y="20" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Resolver (East 1b) -->
+        <mxCell id="resolver_east_1b" value="resolver&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_east_1b">
+          <mxGeometry x="120" y="120" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Policy Engine (East 1b) -->
+        <mxCell id="policy_east_1b" value="policy-engine&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_east_1b">
+          <mxGeometry x="120" y="220" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Telemetry Collector (East 1b) -->
+        <mxCell id="telemetry_east_1b" value="telemetry-collector&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_east_1b">
+          <mxGeometry x="120" y="320" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Cache Manager (East 1b) -->
+        <mxCell id="cache_east_1b" value="cache-manager&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_east_1b">
+          <mxGeometry x="120" y="420" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Health Monitor (East 1b) -->
+        <mxCell id="health_east_1b" value="health-monitor&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_east_1b">
+          <mxGeometry x="120" y="520" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- ECS Service Connect label -->
+        <mxCell id="svc_connect_east_1b" value="ECS Service Connect&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;moniker.local namespace&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E6D0DE;strokeColor=#AE4132;fontColor=#232F3E;fontSize=10;fontStyle=1;dashed=1;" vertex="1" parent="subnet_east_1b">
+          <mxGeometry x="30" y="610" width="230" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ElastiCache East -->
+        <mxCell id="redis_east" value="ElastiCache&lt;br&gt;Redis" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#C925D1;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elasticache;" vertex="1" parent="az_east_1b">
+          <mxGeometry x="250" y="460" width="40" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- US-WEST-2 REGION -->
+        <!-- ============================================================ -->
+        <mxCell id="region_west" value="" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_region;strokeColor=#00A4A6;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="830" y="290" width="720" height="870" as="geometry" />
+        </mxCell>
+        <mxCell id="region_west_label" value="US-WEST-2 (DR / Active-Active)" style="text;html=1;fontSize=14;fontStyle=1;align=left;fillColor=#00A4A6;fontColor=#FFFFFF;rounded=1;spacingLeft=8;spacingRight=8;" vertex="1" parent="region_west">
+          <mxGeometry x="10" y="10" width="240" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- ALB West -->
+        <mxCell id="alb_west" value="Application&lt;br&gt;Load Balancer" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elasticloadbalancing;" vertex="1" parent="region_west">
+          <mxGeometry x="320" y="50" width="50" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- WAF West -->
+        <mxCell id="waf_west" value="AWS WAF" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#DD344C;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.waf;" vertex="1" parent="region_west">
+          <mxGeometry x="220" y="50" width="45" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- WAF → ALB West -->
+        <mxCell id="edge_waf_alb_west" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1;strokeColor=#DD344C;" edge="1" parent="region_west" source="waf_west" target="alb_west">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ======== AZ-2a ======== -->
+        <mxCell id="az_west_2a" value="" style="fillColor=none;strokeColor=#147EBA;dashed=1;verticalAlign=top;fontStyle=0;fontColor=#147EBA;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="region_west">
+          <mxGeometry x="20" y="140" width="330" height="710" as="geometry" />
+        </mxCell>
+        <mxCell id="az_west_2a_label" value="Availability Zone us-west-2a" style="text;html=1;fontSize=12;fontStyle=1;align=left;fillColor=#147EBA;fontColor=#FFFFFF;rounded=1;spacingLeft=6;spacingRight=6;" vertex="1" parent="az_west_2a">
+          <mxGeometry x="10" y="8" width="220" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- Private Subnet 2a -->
+        <mxCell id="subnet_west_2a" value="Private Subnet" style="fillColor=none;strokeColor=#248814;dashed=0;verticalAlign=top;fontStyle=0;fontColor=#248814;whiteSpace=wrap;html=1;fontSize=10;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="az_west_2a">
+          <mxGeometry x="15" y="40" width="300" height="660" as="geometry" />
+        </mxCell>
+
+        <!-- Gateway (West 2a) -->
+        <mxCell id="gateway_west_2a" value="gateway&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_west_2a">
+          <mxGeometry x="120" y="20" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Resolver (West 2a) -->
+        <mxCell id="resolver_west_2a" value="resolver&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_west_2a">
+          <mxGeometry x="120" y="120" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Policy Engine (West 2a) -->
+        <mxCell id="policy_west_2a" value="policy-engine&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_west_2a">
+          <mxGeometry x="120" y="220" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Telemetry Collector (West 2a) -->
+        <mxCell id="telemetry_west_2a" value="telemetry-collector&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_west_2a">
+          <mxGeometry x="120" y="320" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Cache Manager (West 2a) -->
+        <mxCell id="cache_west_2a" value="cache-manager&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_west_2a">
+          <mxGeometry x="120" y="420" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Health Monitor (West 2a) -->
+        <mxCell id="health_west_2a" value="health-monitor&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_west_2a">
+          <mxGeometry x="120" y="520" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- ECS Service Connect label -->
+        <mxCell id="svc_connect_west_2a" value="ECS Service Connect&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;moniker.local namespace&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E6D0DE;strokeColor=#AE4132;fontColor=#232F3E;fontSize=10;fontStyle=1;dashed=1;" vertex="1" parent="subnet_west_2a">
+          <mxGeometry x="30" y="610" width="230" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ======== AZ-2b ======== -->
+        <mxCell id="az_west_2b" value="" style="fillColor=none;strokeColor=#147EBA;dashed=1;verticalAlign=top;fontStyle=0;fontColor=#147EBA;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="region_west">
+          <mxGeometry x="370" y="140" width="330" height="710" as="geometry" />
+        </mxCell>
+        <mxCell id="az_west_2b_label" value="Availability Zone us-west-2b" style="text;html=1;fontSize=12;fontStyle=1;align=left;fillColor=#147EBA;fontColor=#FFFFFF;rounded=1;spacingLeft=6;spacingRight=6;" vertex="1" parent="az_west_2b">
+          <mxGeometry x="10" y="8" width="220" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- Private Subnet 2b -->
+        <mxCell id="subnet_west_2b" value="Private Subnet" style="fillColor=none;strokeColor=#248814;dashed=0;verticalAlign=top;fontStyle=0;fontColor=#248814;whiteSpace=wrap;html=1;fontSize=10;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="az_west_2b">
+          <mxGeometry x="15" y="40" width="300" height="660" as="geometry" />
+        </mxCell>
+
+        <!-- Gateway (West 2b) -->
+        <mxCell id="gateway_west_2b" value="gateway&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_west_2b">
+          <mxGeometry x="120" y="20" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Resolver (West 2b) -->
+        <mxCell id="resolver_west_2b" value="resolver&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_west_2b">
+          <mxGeometry x="120" y="120" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Policy Engine (West 2b) -->
+        <mxCell id="policy_west_2b" value="policy-engine&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_west_2b">
+          <mxGeometry x="120" y="220" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Telemetry Collector (West 2b) -->
+        <mxCell id="telemetry_west_2b" value="telemetry-collector&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_west_2b">
+          <mxGeometry x="120" y="320" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Cache Manager (West 2b) -->
+        <mxCell id="cache_west_2b" value="cache-manager&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_west_2b">
+          <mxGeometry x="120" y="420" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Health Monitor (West 2b) -->
+        <mxCell id="health_west_2b" value="health-monitor&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;+ Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="subnet_west_2b">
+          <mxGeometry x="120" y="520" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- ECS Service Connect label -->
+        <mxCell id="svc_connect_west_2b" value="ECS Service Connect&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;moniker.local namespace&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E6D0DE;strokeColor=#AE4132;fontColor=#232F3E;fontSize=10;fontStyle=1;dashed=1;" vertex="1" parent="subnet_west_2b">
+          <mxGeometry x="30" y="610" width="230" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ElastiCache West -->
+        <mxCell id="redis_west" value="ElastiCache&lt;br&gt;Redis" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#C925D1;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elasticache;" vertex="1" parent="az_west_2b">
+          <mxGeometry x="250" y="460" width="40" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- Route 53 → ALBs -->
+        <!-- ============================================================ -->
+        <mxCell id="edge_r53_alb_east" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;html=1;strokeWidth=2;strokeColor=#00A4A6;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="route53" target="alb_east">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="260" />
+              <mxPoint x="385" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label_r53_east" value="Latency routing&lt;br&gt;(nearest region)" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#00A4A6;" vertex="1" connectable="0" parent="edge_r53_alb_east">
+          <mxGeometry x="-0.3" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="edge_r53_alb_west" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;html=1;strokeWidth=2;strokeColor=#00A4A6;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="route53" target="alb_west">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="870" y="260" />
+              <mxPoint x="1175" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label_r53_west" value="Latency routing&lt;br&gt;(failover)" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#00A4A6;" vertex="1" connectable="0" parent="edge_r53_alb_west">
+          <mxGeometry x="-0.3" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- Cross-region replication arrow -->
+        <!-- ============================================================ -->
+        <mxCell id="cross_region_sync" value="Cross-region replication&lt;br&gt;(catalog sync + Redis Global Datastore)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;strokeColor=#FF8800;dashed=1;fontColor=#FF8800;fontSize=9;labelBackgroundColor=#FFFFFF;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="730" as="sourcePoint" />
+            <mxPoint x="830" y="730" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- CloudWatch -->
+        <!-- ============================================================ -->
+        <mxCell id="cloudwatch" value="Amazon CloudWatch&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Metrics + Logs + Alarms&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#E7157B;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;" vertex="1" parent="1">
+          <mxGeometry x="600" y="1190" width="50" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- X-Ray -->
+        <mxCell id="xray" value="AWS X-Ray&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Distributed Tracing&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#E7157B;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.xray;" vertex="1" parent="1">
+          <mxGeometry x="920" y="1190" width="50" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Cloud Map -->
+        <mxCell id="cloudmap" value="AWS Cloud Map&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Service Discovery&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloud_map;" vertex="1" parent="1">
+          <mxGeometry x="760" y="1190" width="50" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend" value="&lt;b&gt;Legend&lt;/b&gt;&lt;br&gt;Orange boxes = ECS Fargate Tasks (Go services + Envoy)&lt;br&gt;Blue dashed = Availability Zones&lt;br&gt;Green solid = Private Subnets&lt;br&gt;Teal border = AWS Region&lt;br&gt;Orange dashed = Cross-region sync" style="text;html=1;fontSize=10;align=left;verticalAlign=top;fillColor=#FFF2CC;strokeColor=#D6B656;rounded=1;spacingLeft=8;spacingRight=8;spacingTop=4;spacingBottom=4;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1190" width="380" height="90" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,296 @@
+<mxfile host="app.diagrams.net" modified="2026-02-26T00:00:00.000Z" agent="draw.io" version="24.0.0" type="device">
+  <diagram id="dns-resolution-flow" name="DNS Resolution Flow">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ============================================================ -->
+        <!-- TITLE -->
+        <!-- ============================================================ -->
+        <mxCell id="title" value="Open Moniker — DNS Resolution &amp; Request Flow" style="text;html=1;fontSize=20;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="250" y="10" width="900" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- STEP NUMBERS (left column) -->
+        <!-- ============================================================ -->
+
+        <!-- ============================================================ -->
+        <!-- 1. CLIENT -->
+        <!-- ============================================================ -->
+        <mxCell id="step1_label" value="&lt;b&gt;STEP 1&lt;/b&gt;&lt;br&gt;Client initiates&lt;br&gt;DNS lookup" style="text;html=1;fontSize=11;align=center;verticalAlign=middle;fillColor=#D5E8D4;strokeColor=#82B366;rounded=1;spacingLeft=6;spacingRight=6;" vertex="1" parent="1">
+          <mxGeometry x="30" y="80" width="120" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="client" value="Client Application&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;moniker SDK / HTTP client&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3E;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.users;" vertex="1" parent="1">
+          <mxGeometry x="200" y="70" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dns_query_box" value="&lt;font style=&quot;font-size:10px&quot;&gt;&lt;b&gt;DNS Query&lt;/b&gt;&lt;br&gt;&lt;code&gt;moniker-api.example.com&lt;/code&gt;&lt;br&gt;Client resolves the moniker API hostname.&lt;br&gt;No region awareness needed — Route 53 handles it.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;spacingRight=10;" vertex="1" parent="1">
+          <mxGeometry x="380" y="65" width="350" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_client_dns" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;strokeColor=#232F3E;" edge="1" parent="1" source="client" target="dns_query_box">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- 2. ROUTE 53 -->
+        <!-- ============================================================ -->
+        <mxCell id="step2_label" value="&lt;b&gt;STEP 2&lt;/b&gt;&lt;br&gt;Route 53 latency&lt;br&gt;routing decision" style="text;html=1;fontSize=11;align=center;verticalAlign=middle;fillColor=#D5E8D4;strokeColor=#82B366;rounded=1;spacingLeft=6;spacingRight=6;" vertex="1" parent="1">
+          <mxGeometry x="30" y="210" width="120" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="route53" value="Amazon Route 53" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=1;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.route_53;" vertex="1" parent="1">
+          <mxGeometry x="200" y="200" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="r53_detail" value="&lt;font style=&quot;font-size:10px&quot;&gt;&lt;b&gt;Latency-Based Routing Policy&lt;/b&gt;&lt;br&gt;&lt;br&gt;Route 53 measures latency from the client's DNS resolver&lt;br&gt;to each region and returns the ALB IP of the &lt;b&gt;nearest&lt;/b&gt; region:&lt;br&gt;&lt;br&gt;• East Coast client → &lt;code&gt;ALB us-east-1&lt;/code&gt; IP&lt;br&gt;• West Coast client → &lt;code&gt;ALB us-west-2&lt;/code&gt; IP&lt;br&gt;&lt;br&gt;&lt;b&gt;Health checks&lt;/b&gt;: If us-east-1 ALB is unhealthy,&lt;br&gt;Route 53 automatically fails over to us-west-2.&lt;br&gt;&lt;br&gt;&lt;i&gt;TTL: 60s  |  Routing: latency  |  Failover: automatic&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;spacingRight=10;" vertex="1" parent="1">
+          <mxGeometry x="380" y="175" width="400" height="190" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_dns_r53" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;strokeColor=#8C4FFF;" edge="1" parent="1" source="dns_query_box" target="route53">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="340" y="100" />
+              <mxPoint x="340" y="230" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="edge_r53_detail" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1;strokeColor=#8C4FFF;dashed=1;" edge="1" parent="1" source="route53" target="r53_detail">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Route 53 health check icons -->
+        <mxCell id="r53_hc_east" value="Health Check&lt;br&gt;us-east-1" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=9;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.route_53_health_check;" vertex="1" parent="1">
+          <mxGeometry x="850" y="185" width="35" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="r53_hc_west" value="Health Check&lt;br&gt;us-west-2" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=9;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.route_53_health_check;" vertex="1" parent="1">
+          <mxGeometry x="850" y="290" width="35" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- 3. ALB -->
+        <!-- ============================================================ -->
+        <mxCell id="step3_label" value="&lt;b&gt;STEP 3&lt;/b&gt;&lt;br&gt;ALB receives&lt;br&gt;HTTPS request" style="text;html=1;fontSize=11;align=center;verticalAlign=middle;fillColor=#D5E8D4;strokeColor=#82B366;rounded=1;spacingLeft=6;spacingRight=6;" vertex="1" parent="1">
+          <mxGeometry x="30" y="430" width="120" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="alb" value="Application&lt;br&gt;Load Balancer" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elasticloadbalancing;" vertex="1" parent="1">
+          <mxGeometry x="200" y="425" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="waf" value="AWS WAF" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#DD344C;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.waf;" vertex="1" parent="1">
+          <mxGeometry x="310" y="430" width="45" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_waf_alb" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1;strokeColor=#DD344C;" edge="1" parent="1" source="waf" target="alb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="alb_detail" value="&lt;font style=&quot;font-size:10px&quot;&gt;&lt;b&gt;ALB Routing Rules&lt;/b&gt;&lt;br&gt;&lt;br&gt;HTTPS :443 terminates TLS (ACM certificate)&lt;br&gt;&lt;br&gt;Path-based routing to ECS target groups:&lt;br&gt;• &lt;code&gt;/resolve/*&lt;/code&gt;  → &lt;b&gt;gateway&lt;/b&gt; target group&lt;br&gt;• &lt;code&gt;/telemetry/*&lt;/code&gt; → &lt;b&gt;telemetry-collector&lt;/b&gt; TG&lt;br&gt;• &lt;code&gt;/health/*&lt;/code&gt;    → &lt;b&gt;health-monitor&lt;/b&gt; TG&lt;br&gt;• &lt;code&gt;/*&lt;/code&gt; (default)  → &lt;b&gt;gateway&lt;/b&gt; target group&lt;br&gt;&lt;br&gt;ALB distributes across both AZs automatically.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;spacingRight=10;" vertex="1" parent="1">
+          <mxGeometry x="430" y="405" width="380" height="170" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_r53_alb" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;strokeColor=#8C4FFF;" edge="1" parent="1" source="route53" target="alb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label_r53_alb" value="Resolved IP" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#8C4FFF;" vertex="1" connectable="0" parent="edge_r53_alb">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- 4. GATEWAY -->
+        <!-- ============================================================ -->
+        <mxCell id="step4_label" value="&lt;b&gt;STEP 4&lt;/b&gt;&lt;br&gt;Gateway receives&lt;br&gt;request" style="text;html=1;fontSize=11;align=center;verticalAlign=middle;fillColor=#D5E8D4;strokeColor=#82B366;rounded=1;spacingLeft=6;spacingRight=6;" vertex="1" parent="1">
+          <mxGeometry x="30" y="640" width="120" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="gateway" value="gateway&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Go + Envoy sidecar&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=1;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="1">
+          <mxGeometry x="200" y="635" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="gw_detail" value="&lt;font style=&quot;font-size:10px&quot;&gt;&lt;b&gt;Gateway Service (Go)&lt;/b&gt;&lt;br&gt;&lt;br&gt;1. Extracts moniker from request: &lt;code&gt;risk.cvar/DESK_A/20240115/USD&lt;/code&gt;&lt;br&gt;2. Calls &lt;b&gt;policy-engine&lt;/b&gt; via Envoy → checks caller is authorized&lt;br&gt;3. Calls &lt;b&gt;resolver&lt;/b&gt; via Envoy → gets source binding&lt;br&gt;4. Fires telemetry event to &lt;b&gt;telemetry-collector&lt;/b&gt; (async)&lt;br&gt;5. Returns resolved source info to client&lt;br&gt;&lt;br&gt;&lt;i&gt;All inter-service calls go through Envoy sidecar (mTLS).&lt;br&gt;Service discovery via Cloud Map: resolver.moniker.local&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;spacingRight=10;" vertex="1" parent="1">
+          <mxGeometry x="380" y="610" width="430" height="165" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_alb_gw" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;strokeColor=#ED7100;" edge="1" parent="1" source="alb" target="gateway">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label_alb_gw" value="HTTP/2" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#ED7100;" vertex="1" connectable="0" parent="edge_alb_gw">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- 5. INTERNAL SERVICE MESH -->
+        <!-- ============================================================ -->
+        <mxCell id="step5_label" value="&lt;b&gt;STEP 5&lt;/b&gt;&lt;br&gt;Internal service&lt;br&gt;mesh calls" style="text;html=1;fontSize=11;align=center;verticalAlign=middle;fillColor=#D5E8D4;strokeColor=#82B366;rounded=1;spacingLeft=6;spacingRight=6;" vertex="1" parent="1">
+          <mxGeometry x="30" y="850" width="120" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Service mesh box -->
+        <mxCell id="mesh_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#ED7100;dashed=1;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="170" y="830" width="700" height="310" as="geometry" />
+        </mxCell>
+        <mxCell id="mesh_label" value="ECS Service Connect — moniker.local namespace (mTLS mesh)" style="text;html=1;fontSize=12;fontStyle=1;align=center;fillColor=#ED7100;fontColor=#FFFFFF;rounded=1;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="270" y="835" width="460" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- Policy Engine -->
+        <mxCell id="policy_engine" value="policy-engine&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;policy.moniker.local&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="1">
+          <mxGeometry x="200" y="880" width="50" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Resolver -->
+        <mxCell id="resolver" value="resolver&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;resolver.moniker.local&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="1">
+          <mxGeometry x="390" y="880" width="50" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Telemetry Collector -->
+        <mxCell id="telemetry" value="telemetry-collector&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;telemetry.moniker.local&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="1">
+          <mxGeometry x="580" y="880" width="50" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Cache Manager -->
+        <mxCell id="cache_mgr" value="cache-manager&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;cache.moniker.local&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="1">
+          <mxGeometry x="290" y="1010" width="50" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Health Monitor -->
+        <mxCell id="health_mon" value="health-monitor&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;health.moniker.local&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs_task;" vertex="1" parent="1">
+          <mxGeometry x="500" y="1010" width="50" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Cloud Map inside mesh -->
+        <mxCell id="cloudmap_mesh" value="Cloud Map" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=9;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloud_map;" vertex="1" parent="1">
+          <mxGeometry x="770" y="960" width="40" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Gateway → Policy Engine -->
+        <mxCell id="edge_gw_policy" value="5a. AuthZ check" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;strokeColor=#DD344C;fontSize=9;fontColor=#DD344C;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="gateway" target="policy_engine">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="230" y="810" />
+              <mxPoint x="225" y="810" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Gateway → Resolver -->
+        <mxCell id="edge_gw_resolver" value="5b. Resolve moniker" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;strokeColor=#0078D4;fontSize=9;fontColor=#0078D4;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="gateway" target="resolver">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="340" y="810" />
+              <mxPoint x="340" y="860" />
+              <mxPoint x="415" y="860" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Gateway → Telemetry -->
+        <mxCell id="edge_gw_telemetry" value="5c. Log access (async)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;strokeColor=#248814;fontSize=9;fontColor=#248814;dashed=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="gateway" target="telemetry">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="460" y="790" />
+              <mxPoint x="605" y="790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Resolver → Cache Manager -->
+        <mxCell id="edge_resolver_cache" value="cache lookup" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1;strokeColor=#C925D1;fontSize=9;fontColor=#C925D1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="resolver" target="cache_mgr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Health Monitor → all services -->
+        <mxCell id="edge_health_all" value="probes all services" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1;strokeColor=#999999;fontSize=9;fontColor=#999999;dashed=1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="health_mon" target="resolver">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- 6. RESOLVER DETAIL -->
+        <!-- ============================================================ -->
+        <mxCell id="step6_label" value="&lt;b&gt;STEP 6&lt;/b&gt;&lt;br&gt;Resolver returns&lt;br&gt;source binding" style="text;html=1;fontSize=11;align=center;verticalAlign=middle;fillColor=#D5E8D4;strokeColor=#82B366;rounded=1;spacingLeft=6;spacingRight=6;" vertex="1" parent="1">
+          <mxGeometry x="30" y="1180" width="120" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="resolver_detail" value="&lt;font style=&quot;font-size:10px&quot;&gt;&lt;b&gt;Resolver Response (example)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;code&gt;{&lt;br&gt;  &quot;moniker&quot;: &quot;risk.cvar/DESK_A/20240115/USD&quot;,&lt;br&gt;  &quot;source_type&quot;: &quot;oracle&quot;,&lt;br&gt;  &quot;connection&quot;: {&lt;br&gt;    &quot;host&quot;: &quot;risk-db.internal&quot;,&lt;br&gt;    &quot;port&quot;: 1521,&lt;br&gt;    &quot;service&quot;: &quot;RISKPROD&quot;&lt;br&gt;  },&lt;br&gt;  &quot;query&quot;: &quot;SELECT * FROM cvar WHERE desk=:desk AND date=:dt&quot;,&lt;br&gt;  &quot;owner&quot;: &quot;risk-analytics-team&quot;,&lt;br&gt;  &quot;deprecated&quot;: false&lt;br&gt;}&lt;/code&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673a6;align=left;spacingLeft=10;spacingRight=10;" vertex="1" parent="1">
+          <mxGeometry x="180" y="1170" width="400" height="220" as="geometry" />
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- 7. RESPONSE BACK TO CLIENT -->
+        <!-- ============================================================ -->
+        <mxCell id="step7_label" value="&lt;b&gt;STEP 7&lt;/b&gt;&lt;br&gt;Client connects&lt;br&gt;directly to source" style="text;html=1;fontSize=11;align=center;verticalAlign=middle;fillColor=#D5E8D4;strokeColor=#82B366;rounded=1;spacingLeft=6;spacingRight=6;" vertex="1" parent="1">
+          <mxGeometry x="30" y="1430" width="120" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="data_sources" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#C925D1;dashed=0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="180" y="1420" width="700" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ds_label" value="Data Sources (client connects directly using resolved binding)" style="text;html=1;fontSize=11;fontStyle=1;align=center;fillColor=#C925D1;fontColor=#FFFFFF;rounded=1;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="280" y="1425" width="420" height="22" as="geometry" />
+        </mxCell>
+
+        <mxCell id="oracle" value="Oracle" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#C925D1;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=9;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;" vertex="1" parent="1">
+          <mxGeometry x="215" y="1455" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="snowflake" value="Snowflake" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#C925D1;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=9;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.redshift;" vertex="1" parent="1">
+          <mxGeometry x="335" y="1455" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="mssql" value="MSSQL" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#C925D1;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=9;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;" vertex="1" parent="1">
+          <mxGeometry x="455" y="1455" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="rest_api" value="REST APIs" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#C925D1;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=9;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;" vertex="1" parent="1">
+          <mxGeometry x="575" y="1455" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="bloomberg" value="Bloomberg" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#C925D1;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=9;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.marketplace;" vertex="1" parent="1">
+          <mxGeometry x="695" y="1455" width="40" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Redis -->
+        <mxCell id="redis" value="ElastiCache Redis&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Cached resolutions&lt;/font&gt;" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#C925D1;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elasticache;" vertex="1" parent="1">
+          <mxGeometry x="760" y="880" width="45" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- Cache Manager → Redis -->
+        <mxCell id="edge_cache_redis" value="get/set" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1;strokeColor=#C925D1;fontSize=9;fontColor=#C925D1;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="cache_mgr" target="redis">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="315" y="1080" />
+              <mxPoint x="783" y="1080" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Observability -->
+        <mxCell id="cw" value="CloudWatch" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#E7157B;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=9;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="850" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="xr" value="X-Ray" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#E7157B;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=9;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.xray;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="940" width="40" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Telemetry → CloudWatch -->
+        <mxCell id="edge_tel_cw" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1;strokeColor=#E7157B;dashed=1;" edge="1" parent="1" source="telemetry" target="cw">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="920" y="905" />
+              <mxPoint x="920" y="870" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- LEGEND -->
+        <!-- ============================================================ -->
+        <mxCell id="legend" value="&lt;b&gt;Flow Summary&lt;/b&gt;&lt;br&gt;&lt;br&gt;1. Client does DNS lookup for &lt;code&gt;moniker-api.example.com&lt;/code&gt;&lt;br&gt;2. Route 53 returns nearest region's ALB IP (latency-based)&lt;br&gt;3. ALB terminates TLS, WAF filters, routes to gateway target group&lt;br&gt;4. Gateway task receives request, parses moniker&lt;br&gt;5. Gateway calls policy-engine (authz) → resolver (lookup) → telemetry (audit)&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;All via Envoy sidecars + Cloud Map DNS (*.moniker.local)&lt;br&gt;6. Resolver returns source binding (DB host, query, credentials ref)&lt;br&gt;7. Client connects directly to the data source using the resolved binding&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#DD344C&quot;&gt;━━ Red = AuthZ path&lt;/font&gt; &amp;nbsp; &lt;font color=&quot;#0078D4&quot;&gt;━━ Blue = Resolution path&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#248814&quot;&gt;╌╌ Green = Async telemetry&lt;/font&gt; &amp;nbsp; &lt;font color=&quot;#C925D1&quot;&gt;━━ Purple = Data/Cache&lt;/font&gt;" style="text;html=1;fontSize=10;align=left;verticalAlign=top;fillColor=#F5F5F5;strokeColor=#CCCCCC;rounded=1;spacingLeft=12;spacingRight=12;spacingTop=8;spacingBottom=8;" vertex="1" parent="1">
+          <mxGeometry x="180" y="1560" width="520" height="210" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
