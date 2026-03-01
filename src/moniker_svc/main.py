@@ -112,6 +112,8 @@ class DescribeResponse(BaseModel):
     path: str
     display_name: str | None = None
     description: str | None = None
+    asset_class: str | None = None
+    update_frequency: str | None = None
     ownership: dict[str, Any]
     has_source_binding: bool = False
     source_type: str | None = None
@@ -1491,6 +1493,8 @@ async def describe_moniker(
         path=result.path,
         display_name=result.node.display_name if result.node else None,
         description=result.node.description if result.node else None,
+        asset_class=result.node.asset_class if result.node else None,
+        update_frequency=result.node.update_frequency if result.node else None,
         ownership={
             "accountable_owner": result.ownership.accountable_owner,
             "accountable_owner_source": result.ownership.accountable_owner_source,

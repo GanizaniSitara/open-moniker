@@ -28,6 +28,12 @@ class CatalogSerializer:
         if node.description:
             result["description"] = node.description
 
+        if node.asset_class:
+            result["asset_class"] = node.asset_class
+
+        if node.update_frequency:
+            result["update_frequency"] = node.update_frequency
+
         if node.domain:
             result["domain"] = node.domain
 

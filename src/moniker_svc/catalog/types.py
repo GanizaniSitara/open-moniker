@@ -20,6 +20,8 @@ class SourceType(str, Enum):
     BLOOMBERG = "bloomberg"
     REFINITIV = "refinitiv"
     OPENSEARCH = "opensearch"  # OpenSearch/Elasticsearch
+    FRED = "fred"            # FRED (Federal Reserve Economic Data) API
+    YFINANCE = "yfinance"    # yfinance Python library
     # Synthetic/computed sources
     COMPOSITE = "composite"  # Combines multiple sources
     DERIVED = "derived"      # Computed from other monikers
@@ -294,6 +296,12 @@ class CatalogNode:
     path: str  # Full path string (e.g., "market-data/prices/equity")
     display_name: str = ""
     description: str = ""
+
+    # Asset class (rates, credit, mortgages, macro, risk, fx, equities, commodities, em, fixed_income)
+    asset_class: str = ""
+
+    # Update frequency (daily, weekly, monthly, quarterly)
+    update_frequency: str = ""
 
     # Domain mapping (for top-level nodes - maps to domain registry)
     domain: str | None = None
