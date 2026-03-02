@@ -24,7 +24,7 @@ from fastapi.responses import JSONResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .adapters import AdapterRegistry, SnowflakeAdapter, OracleAdapter, MssqlAdapter
+from .adapters import AdapterRegistry, SnowflakeAdapter, OracleAdapter, MssqlAdapter, RestApiAdapter
 from .adapters.base import InMemoryAdapter
 from .auth import create_composite_authenticator, get_caller_identity, set_authenticator
 from .cache.memory import InMemoryCache
@@ -888,6 +888,7 @@ async def lifespan(app: FastAPI):
     _adapter_registry.register(SnowflakeAdapter(catalog_dir=_catalog_dir))
     _adapter_registry.register(OracleAdapter(catalog_dir=_catalog_dir))
     _adapter_registry.register(MssqlAdapter(catalog_dir=_catalog_dir))
+    _adapter_registry.register(RestApiAdapter())
     _adapter_registry.register(InMemoryAdapter())
     logger.info(f"Registered adapters: {[t.value for t in _adapter_registry.all_types()]}")
 
@@ -1996,8 +1997,13 @@ async def fetch_data(
         binding = binding_node.source_binding
 
         # Check if we have an adapter for this source type
-        if _adapter_registry and _adapter_registry.has(binding.source_type):
-            adapter = _adapter_registry.get(binding.source_type)
+        # FRED and YFINANCE use the REST adapter under the hood
+        adapter_type = binding.source_type
+        if adapter_type in (SourceType.FRED, SourceType.YFINANCE) and not _adapter_registry.has(adapter_type):
+            adapter_type = SourceType.REST
+
+        if _adapter_registry and _adapter_registry.has(adapter_type):
+            adapter = _adapter_registry.get(adapter_type)
             moniker = parse_moniker(moniker_str)
             adapter_result = await adapter.fetch(moniker, binding, result.sub_path)
             data = adapter_result.data if isinstance(adapter_result.data, list) else [adapter_result.data]
@@ -2829,13 +2835,17 @@ _UI_HTML = """
         .detail-row span:last-child { color: var(--c-navy); font-weight: 700; }
         .path-display {
             font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 12px;
+            font-size: 16px;
             background: var(--c-navy);
             color: white;
-            padding: 10px 12px;
+            padding: 14px 16px;
             border-radius: 4px;
             word-break: break-all;
             margin-bottom: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
         .empty { color: var(--c-gray); font-style: italic; }
 
@@ -2897,6 +2907,61 @@ _UI_HTML = """
         .model-link a:hover {
             text-decoration: underline;
         }
+
+        /* Debug panel */
+        .debug-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            z-index: 1000;
+            transition: height 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+        .debug-panel.collapsed { height: 32px; }
+        .debug-panel:not(.collapsed) { height: 220px; }
+        .debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 12px;
+            background: #2d2d2d;
+            border-top: 2px solid var(--c-peacock);
+            cursor: pointer;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .debug-header span { font-weight: 700; color: #569cd6; }
+        .debug-header .debug-stats { color: #6a9955; font-weight: 400; }
+        .debug-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+        .debug-entry {
+            padding: 3px 12px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            gap: 12px;
+            align-items: baseline;
+        }
+        .debug-entry:hover { background: #2a2a2a; }
+        .debug-method { color: #dcdcaa; font-weight: 700; min-width: 36px; }
+        .debug-url { color: #ce9178; flex: 1; }
+        .debug-status { min-width: 40px; text-align: right; }
+        .debug-status.ok { color: #6a9955; }
+        .debug-status.err { color: #f44747; }
+        .debug-status.pending { color: #d7ba7d; }
+        .debug-time { color: #b5cea8; min-width: 55px; text-align: right; }
+        .debug-ts { color: #666; min-width: 65px; }
+        .debug-clear { background: none; border: 1px solid #555; color: #d4d4d4; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; }
+        .debug-clear:hover { background: #444; }
+        .debug-badge { background: #f44747; color: white; padding: 0 5px; border-radius: 8px; font-size: 10px; margin-left: 6px; }
 
         /* Search */
         .search-box {
@@ -3051,13 +3116,103 @@ _UI_HTML = """
         </div>
     </div>
 
+    <!-- Debug Panel -->
+    <div class="debug-panel collapsed" id="debug-panel">
+        <div class="debug-header" onclick="toggleDebug()">
+            <span>Network Traffic <span id="debug-count" class="debug-stats"></span></span>
+            <div style="display:flex;gap:8px;align-items:center">
+                <button class="debug-clear" onclick="event.stopPropagation();clearDebug()">Clear</button>
+                <span id="debug-toggle-icon" style="color:#888">&#9650;</span>
+            </div>
+        </div>
+        <div class="debug-body" id="debug-body"></div>
+    </div>
+
     <script>
+        // ===== Debug Panel: intercept all fetch() calls =====
+        const _origFetch = window.fetch;
+        const _debugLog = [];
+        let _debugReqId = 0;
+
+        window.fetch = async function(...args) {
+            const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+            const method = args[1]?.method || 'GET';
+            const id = ++_debugReqId;
+            const start = performance.now();
+            const ts = new Date().toLocaleTimeString();
+
+            addDebugEntry(id, { method, url, ts, status: '...', time: '-' });
+
+            try {
+                const res = await _origFetch.apply(this, args);
+                const elapsed = Math.round(performance.now() - start);
+                updateDebugEntry(id, { status: res.status, time: elapsed + 'ms', ok: res.ok });
+                return res;
+            } catch (err) {
+                const elapsed = Math.round(performance.now() - start);
+                updateDebugEntry(id, { status: 'ERR', time: elapsed + 'ms', ok: false, error: err.message });
+                throw err;
+            }
+        };
+
+        function addDebugEntry(id, info) {
+            _debugLog.push({ id, ...info });
+            const body = document.getElementById('debug-body');
+            const el = document.createElement('div');
+            el.className = 'debug-entry';
+            el.id = 'debug-' + id;
+            el.innerHTML = `
+                <span class="debug-ts">${info.ts}</span>
+                <span class="debug-method">${info.method}</span>
+                <span class="debug-url">${info.url}</span>
+                <span class="debug-status pending" id="debug-status-${id}">${info.status}</span>
+                <span class="debug-time" id="debug-time-${id}">${info.time}</span>
+            `;
+            body.appendChild(el);
+            body.scrollTop = body.scrollHeight;
+            updateDebugCount();
+        }
+
+        function updateDebugEntry(id, info) {
+            const statusEl = document.getElementById('debug-status-' + id);
+            const timeEl = document.getElementById('debug-time-' + id);
+            if (statusEl) {
+                statusEl.textContent = info.status;
+                statusEl.className = 'debug-status ' + (info.ok ? 'ok' : 'err');
+            }
+            if (timeEl) timeEl.textContent = info.time;
+            updateDebugCount();
+        }
+
+        function updateDebugCount() {
+            const total = _debugLog.length;
+            const errors = document.querySelectorAll('.debug-status.err').length;
+            let text = total + ' request' + (total !== 1 ? 's' : '');
+            if (errors > 0) text += ', ' + errors + ' failed';
+            document.getElementById('debug-count').textContent = '(' + text + ')';
+        }
+
+        function toggleDebug() {
+            const panel = document.getElementById('debug-panel');
+            panel.classList.toggle('collapsed');
+            document.getElementById('debug-toggle-icon').innerHTML = panel.classList.contains('collapsed') ? '&#9650;' : '&#9660;';
+            // Adjust main content padding when debug is open
+            document.querySelector('.main').style.paddingBottom = panel.classList.contains('collapsed') ? '24px' : '220px';
+        }
+
+        function clearDebug() {
+            _debugLog.length = 0;
+            document.getElementById('debug-body').innerHTML = '';
+            updateDebugCount();
+        }
+
         let selectedNode = null;
 
         async function loadTree() {
             const res = await fetch('/tree');
             const data = await res.json();
             document.getElementById('tree').innerHTML = '<ul>' + data.map(renderNode).join('') + '</ul>';
+            return data;
         }
 
         function renderNode(node) {
@@ -3436,7 +3591,12 @@ _UI_HTML = """
             });
         }
 
-        loadTree();
+        loadTree().then(() => {
+            // Auto-expand first level so tree content is visible by default
+            document.querySelectorAll('.tree > ul > li').forEach(li => {
+                li.classList.remove('collapsed');
+            });
+        });
         loadCategories();
     </script>
 </body>
