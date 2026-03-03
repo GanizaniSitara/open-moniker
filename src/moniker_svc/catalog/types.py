@@ -297,7 +297,7 @@ class CatalogNode:
     display_name: str = ""
     description: str = ""
 
-    # Asset class (rates, credit, mortgages, macro, risk, fx, equities, commodities, em, fixed_income)
+    # Asset class (rates, credit, mortgages, macro, risk, fx, equities, commodities, em, fixed.income)
     asset_class: str = ""
 
     # Update frequency (daily, weekly, monthly, quarterly)

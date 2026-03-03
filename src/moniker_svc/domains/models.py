@@ -140,7 +140,7 @@ class DomainWithMonikersResponse(BaseModel):
                     "short_code": "IDX",
                     "color": "#4A90D9",
                 },
-                "moniker_paths": ["indices/equity", "indices/fixed_income"],
+                "moniker_paths": ["indices/equity", "indices/fixed.income"],
                 "moniker_count": 2,
             }
         }

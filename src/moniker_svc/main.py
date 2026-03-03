@@ -1192,7 +1192,7 @@ async def not_found_error_handler(request: Request, exc: NotFoundError):
             if path.startswith(prefix):
                 moniker_path = path[len(prefix):]
                 # Get first segment (before / or .)
-                first_segment = moniker_path.split("/")[0].split(".")[0]
+                first_segment = moniker_path.split("/")[0]
                 if _domain_registry and first_segment:
                     domain = _domain_registry.get(first_segment)
                     if domain:

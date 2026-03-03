@@ -136,5 +136,5 @@ Once connected, ask your AI assistant things like:
 - *"Search the catalog for treasury data"*
 - *"Who owns risk.cvar?"*
 - *"Resolve the moniker for prices.equity/AAPL"*
-- *"Show me the schema for fixed_income/govies/treasury"*
+- *"Show me the schema for fixed.income/govies/treasury"*
 - *"Submit a request for a new moniker under prices"*

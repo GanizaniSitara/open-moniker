@@ -485,7 +485,7 @@ prices.equity:
         \ vwap\nFROM EQUITY_EOD\nWHERE {filter[0]:symbol}\n  AND trade_date = CASE\n\
         \    WHEN {is_latest} = 'true' THEN (SELECT MAX(trade_date) FROM EQUITY_EOD)\n\
         \    ELSE {version_date}\n  END\n"
-prices.fixed_income:
+prices.fixed.income:
   display_name: Fixed Income Prices
   source_binding:
     type: snowflake
@@ -1407,7 +1407,7 @@ em.bonds:
 bonds.etf.proxies:
   display_name: "Bond ETF Proxies"
   description: "Liquid ETFs used as proxies for fixed income sectors"
-  asset_class: fixed_income
+  asset_class: fixed.income
   source_binding:
     type: yfinance
     config:
