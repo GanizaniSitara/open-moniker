@@ -633,6 +633,21 @@ class MonikerService:
             if config.get("query"):
                 query = fmt(config["query"])
 
+        elif source_type == "fred":
+            connection = {
+                "base_url": config.get("base_url", "https://api.stlouisfed.org/fred/series/observations"),
+                "auth": config.get("auth", "api_key"),
+                "docs": config.get("docs", "https://fred.stlouisfed.org/docs/api/"),
+            }
+            params["series_ids"] = config.get("series_ids", {})
+
+        elif source_type == "yfinance":
+            connection = {
+                "docs": config.get("docs", "https://pypi.org/project/yfinance/"),
+            }
+            params["tickers"] = config.get("tickers", {})
+            params["period"] = config.get("period", "2y")
+
         else:
             # Generic - pass through config with template formatting
             connection = {}

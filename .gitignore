@@ -74,5 +74,8 @@ catalog_output.yaml
 PLAN.md
 ROADMAP.md
 
+# Scratch / cross-repo instruction files
+PORTAL_INTEGRATION_INSTRUCTIONS.md
+
 # Local Claude Code documentation
 CLAUDE.md

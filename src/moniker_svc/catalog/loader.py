@@ -234,10 +234,17 @@ class CatalogLoader:
             except ValueError:
                 logger.warning(f"Unknown status '{data['status']}' for {path}, defaulting to active")
 
+        # Parse quality shorthand into metadata if present
+        metadata = data.get("metadata", {})
+        if "quality" in data and isinstance(data["quality"], dict):
+            metadata["quality"] = data["quality"]
+
         return CatalogNode(
             path=path,
             display_name=data.get("display_name", ""),
             description=data.get("description", ""),
+            asset_class=data.get("asset_class", ""),
+            update_frequency=data.get("update_frequency", ""),
             domain=data.get("domain"),
             ownership=ownership,
             source_binding=source_binding,
@@ -249,7 +256,7 @@ class CatalogLoader:
             documentation=documentation,
             classification=data.get("classification", "internal"),
             tags=tags,
-            metadata=data.get("metadata", {}),
+            metadata=metadata,
             status=status,
             deprecation_message=data.get("deprecation_message"),
             successor=data.get("successor"),

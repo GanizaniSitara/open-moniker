@@ -172,23 +172,20 @@ async def submit_request(body: SubmitRequestBody):
 
     # Domain guard: determine level and validate parent
     segments = path.split("/")
-    # Also consider dot-separated top-level domains
-    top_level = segments[0].split(".")[0] if "." in segments[0] else segments[0]
+    top_level = segments[0]
 
-    if len(segments) == 1 and "." not in path:
-        # Single segment, no dots = top-level domain request
+    if len(segments) == 1:
+        # Single segment = top-level domain request
         domain_level = DomainLevel.TOP_LEVEL
     else:
         domain_level = DomainLevel.SUB_PATH
         # Verify parent path exists
-        parent_path = segments[0] if len(segments) > 1 else path.rsplit(".", 1)[0]
+        parent_path = segments[0]
         if not cat_registry.exists(parent_path):
-            # Try the full first segment (could be dot-notated)
-            if not cat_registry.exists(segments[0]):
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Top-level domain '{segments[0]}' does not exist. Create it first.",
-                )
+            raise HTTPException(
+                status_code=400,
+                detail=f"Top-level domain '{segments[0]}' does not exist. Create it first.",
+            )
 
     # Create the catalog node with PENDING_REVIEW status
     from ..catalog.types import CatalogNode, NodeStatus, Ownership

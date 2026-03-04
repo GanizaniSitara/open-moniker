@@ -320,7 +320,7 @@ class ModelRegistry:
             tree: dict = {}
 
             for model in sorted(self._models.values(), key=lambda m: m.path):
-                parts = model.path.replace(".", "/").split("/")
+                parts = model.path.split("/")
                 current = tree
 
                 for i, part in enumerate(parts):

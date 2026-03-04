@@ -213,17 +213,17 @@ mcp = FastMCP(
         "  Dots (.)  separate logical groupings within a domain namespace:\n"
         "            risk.cvar, credit.exposures, rates.swap\n\n"
         "  Slashes (/) separate navigable path segments used for filtering:\n"
-        "            fixed_income/govies/treasury\n"
-        "            fixed_income/govies/sovereign/DE        ← filter to Germany\n"
-        "            fixed_income/govies/sovereign/DE/10Y    ← filter to German 10Y\n\n"
+        "            fixed.income/govies/treasury\n"
+        "            fixed.income/govies/sovereign/DE        ← filter to Germany\n"
+        "            fixed.income/govies/sovereign/DE/10Y    ← filter to German 10Y\n\n"
         "  Segments after the leaf moniker act as query filters. "
         "Omitting a segment returns all values for that dimension. "
         "Never use 'ALL' — just omit the segment.\n\n"
 
         "## Naming Conventions\n"
-        "  - Top-level: short domain name (risk, credit, rates, fixed_income, reports)\n"
+        "  - Top-level: short domain name (risk, credit, rates, fixed.income, reports)\n"
         "  - Use dots for logical sub-namespacing: risk.cvar, risk.greeks\n"
-        "  - Use slashes for navigable hierarchy: fixed_income/govies/treasury\n"
+        "  - Use slashes for navigable hierarchy: fixed.income/govies/treasury\n"
         "  - Leaf segments are the actual data asset: credit.exposures, rates.swap\n"
         "  - Filter segments follow the leaf: rates.swap/USD or rates.swap/USD/5Y\n\n"
 
@@ -365,7 +365,7 @@ async def list_children(path: str) -> str:
     description=(
         "Get metadata for a moniker path: display name, description, ownership, "
         "source type, data quality, schema, documentation links, and related models. "
-        "Example: describe_moniker('fixed_income/govies/treasury')"
+        "Example: describe_moniker('fixed.income/govies/treasury')"
     ),
 )
 async def describe_moniker(path: str) -> str:
@@ -981,9 +981,9 @@ domain[.subdomain]/[filter_segment_1]/[filter_segment_2]
 | `domain.leaf` | `credit.exposures` | Counterparty credit exposure data |
 | `domain.leaf/seg` | `rates.swap/USD` | USD swap rates only |
 | `domain.leaf/seg1/seg2` | `rates.swap/USD/5Y` | USD 5-year swap rate |
-| `domain/sub/leaf` | `fixed_income/govies/treasury` | All US Treasury data |
-| `domain/sub/leaf/filter` | `fixed_income/govies/sovereign/DE` | German Bunds only |
-| `domain/sub/leaf/f1/f2` | `fixed_income/govies/sovereign/DE/10Y` | German 10Y Bund |
+| `domain/sub/leaf` | `fixed.income/govies/treasury` | All US Treasury data |
+| `domain/sub/leaf/filter` | `fixed.income/govies/sovereign/DE` | German Bunds only |
+| `domain/sub/leaf/f1/f2` | `fixed.income/govies/sovereign/DE/10Y` | German 10Y Bund |
 
 ## Conventions
 
@@ -991,7 +991,7 @@ domain[.subdomain]/[filter_segment_1]/[filter_segment_2]
 - **Dots** (`.`) group logical sub-namespaces within a domain:
   `risk.cvar`, `risk.greeks`, `credit.exposures`, `credit.limits`
 - **Slashes** (`/`) create a navigable hierarchy used for path browsing AND filtering:
-  `fixed_income/govies/treasury`
+  `fixed.income/govies/treasury`
 
 ### Segment Filtering
 After the leaf moniker, path segments act as progressive filters.
@@ -1001,9 +1001,9 @@ The segment names and their meaning are defined in the catalog's `segment_names`
 rates.swap                    # all currencies, all tenors
 rates.swap/USD                # USD only, all tenors
 rates.swap/USD/5Y             # USD 5-year only
-fixed_income/govies/sovereign # all countries, all tenors
-fixed_income/govies/sovereign/DE      # Germany only
-fixed_income/govies/sovereign/DE/10Y  # German 10-year only
+fixed.income/govies/sovereign # all countries, all tenors
+fixed.income/govies/sovereign/DE      # Germany only
+fixed.income/govies/sovereign/DE/10Y  # German 10-year only
 ```
 
 **Never use `ALL`** — just omit the segment. A missing segment returns all values.
@@ -1011,7 +1011,7 @@ fixed_income/govies/sovereign/DE/10Y  # German 10-year only
 ### Naming Best Practices
 1. Top-level names should be short, memorable domain names: `risk`, `credit`, `rates`
 2. Use dots for logical sub-grouping that shares ownership: `risk.cvar`, `risk.limits`
-3. Use slashes for hierarchy that users will browse: `fixed_income/govies/treasury`
+3. Use slashes for hierarchy that users will browse: `fixed.income/govies/treasury`
 4. Filter dimensions should be natural identifiers: ISO country codes, currency codes, tenor labels
 5. Avoid encoding dates in the base path — use versioning (`@20260115`) for point-in-time
 

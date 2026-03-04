@@ -530,27 +530,24 @@ class CatalogRegistry:
     def _parent_path(path: str) -> str | None:
         """Get parent path, or None if at root.
 
-        Handles both '.' and '/' as hierarchy separators.
+        Only '/' is a hierarchy separator; '.' is part of the node name.
         Examples:
-            'analytics.risk/var' -> 'analytics.risk'
-            'analytics.risk' -> 'analytics'
-            'analytics' -> '' (root)
+            'fixed.income/govies/treasury' -> 'fixed.income/govies'
+            'fixed.income/govies' -> 'fixed.income'
+            'fixed.income' -> '' (root)
         """
         if not path:
             return None
-        # Check for '/' first (more specific), then '.'
         if "/" in path:
             return path.rsplit("/", 1)[0]
-        if "." in path:
-            return path.rsplit(".", 1)[0]
-        return ""  # Parent is root
+        return ""  # No slash = root node
 
     @staticmethod
     def _ancestor_paths(path: str) -> list[str]:
         """Get all ancestor paths from root to parent.
 
-        Handles both '.' and '/' as hierarchy separators.
-        Example: 'analytics.risk/var' -> ['analytics', 'analytics.risk']
+        Only '/' is a hierarchy separator; '.' is part of the node name.
+        Example: 'fixed.income/govies/treasury' -> ['fixed.income', 'fixed.income/govies']
         """
         if not path:
             return []
@@ -558,13 +555,10 @@ class CatalogRegistry:
         result = []
         current = path
         while True:
-            # Find parent by removing last segment (either after '/' or '.')
             if "/" in current:
                 parent = current.rsplit("/", 1)[0]
-            elif "." in current:
-                parent = current.rsplit(".", 1)[0]
             else:
-                break  # No more parents
+                break  # No more parents (no slash = root node)
 
             if parent:
                 result.insert(0, parent)  # Insert at beginning to maintain root->parent order

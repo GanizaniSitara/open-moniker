@@ -5,6 +5,7 @@ from .registry import AdapterRegistry
 from .snowflake import SnowflakeAdapter
 from .oracle import OracleAdapter
 from .mssql import MssqlAdapter
+from .rest import RestApiAdapter
 
 __all__ = [
     "DataAdapter",
@@ -14,4 +15,5 @@ __all__ = [
     "SnowflakeAdapter",
     "OracleAdapter",
     "MssqlAdapter",
+    "RestApiAdapter",
 ]

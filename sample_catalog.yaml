@@ -485,7 +485,7 @@ prices.equity:
         \ vwap\nFROM EQUITY_EOD\nWHERE {filter[0]:symbol}\n  AND trade_date = CASE\n\
         \    WHEN {is_latest} = 'true' THEN (SELECT MAX(trade_date) FROM EQUITY_EOD)\n\
         \    ELSE {version_date}\n  END\n"
-prices.fixed_income:
+prices.fixed.income:
   display_name: Fixed Income Prices
   source_binding:
     type: snowflake
@@ -698,6 +698,7 @@ risk:
 risk.cvar:
   display_name: Conditional Value at Risk
   description: CVaR tail risk measures by portfolio, currency, and security
+  asset_class: risk
   ownership:
     adop: quant-research@firm.com
     ads: risk-data-steward@firm.com
@@ -1080,3 +1081,341 @@ reports/regulatory:
       base_path: /data/reports/regulatory
       file_pattern: "{segments[0]}/{segments[1]}.xlsx"
       sheet: Summary
+
+# ==========================================================================
+# FIXED INCOME DATA LANDSCAPE — Public data sources for portal display
+# These entries use FRED API and yfinance as source bindings.
+# Consumers call sources directly with their own credentials.
+# ==========================================================================
+
+# --------------------------------------------------------------------------
+# RATES
+# --------------------------------------------------------------------------
+rates.treasury.yield-curve.daily:
+  display_name: "US Treasury Yield Curve (Daily)"
+  description: "Constant maturity Treasury rates — full curve from 1M to 30Y"
+  asset_class: rates
+  ownership:
+    accountable_owner: "rates-analytics@example.com"
+    support_channel: "#rates-data"
+  source_binding:
+    type: fred
+    config:
+      base_url: "https://api.stlouisfed.org/fred/series/observations"
+      series_ids:
+        1M: DGS1MO
+        3M: DGS3MO
+        6M: DGS6MO
+        1Y: DGS1
+        2Y: DGS2
+        3Y: DGS3
+        5Y: DGS5
+        7Y: DGS7
+        10Y: DGS10
+        20Y: DGS20
+        30Y: DGS30
+      auth: api_key
+      docs: "https://fred.stlouisfed.org/docs/api/"
+  update_frequency: daily
+  quality:
+    completeness: 0.99
+    timeliness: "T+1 business day 18:00 ET"
+
+rates.treasury.spreads:
+  display_name: "Treasury Curve Spreads"
+  description: "Key yield curve spread measures"
+  asset_class: rates
+  ownership:
+    accountable_owner: "rates-analytics@example.com"
+  source_binding:
+    type: fred
+    config:
+      base_url: "https://api.stlouisfed.org/fred/series/observations"
+      series_ids:
+        10Y_minus_2Y: T10Y2Y
+        10Y_minus_3M: T10Y3M
+      auth: api_key
+      docs: "https://fred.stlouisfed.org/docs/api/"
+  update_frequency: daily
+
+rates.fed-funds:
+  display_name: "Federal Funds Effective Rate"
+  description: "Daily effective federal funds rate"
+  asset_class: rates
+  source_binding:
+    type: fred
+    config:
+      base_url: "https://api.stlouisfed.org/fred/series/observations"
+      series_ids:
+        effective_rate: DFF
+      auth: api_key
+      docs: "https://fred.stlouisfed.org/docs/api/"
+  update_frequency: daily
+
+# --------------------------------------------------------------------------
+# CREDIT
+# --------------------------------------------------------------------------
+credit.spreads.ig:
+  display_name: "US Investment Grade Credit Spreads"
+  description: "ICE BofA US Corporate Master Option-Adjusted Spread"
+  asset_class: credit
+  ownership:
+    accountable_owner: "credit-analytics@example.com"
+    support_channel: "#credit-data"
+  source_binding:
+    type: fred
+    config:
+      base_url: "https://api.stlouisfed.org/fred/series/observations"
+      series_ids:
+        ig_oas: BAMLC0A0CM
+      auth: api_key
+      docs: "https://fred.stlouisfed.org/docs/api/"
+  update_frequency: daily
+  quality:
+    completeness: 0.99
+
+credit.spreads.hy:
+  display_name: "US High Yield Credit Spreads"
+  description: "ICE BofA high yield OAS by rating tier"
+  asset_class: credit
+  source_binding:
+    type: fred
+    config:
+      base_url: "https://api.stlouisfed.org/fred/series/observations"
+      series_ids:
+        hy_master: BAMLH0A0HYM2
+        bb: BAMLH0A1HYBB
+        b: BAMLH0A2HYB
+        ccc: BAMLH0A3HYC
+      auth: api_key
+      docs: "https://fred.stlouisfed.org/docs/api/"
+  update_frequency: daily
+
+credit.spreads.bbb:
+  display_name: "US BBB Corporate Spreads"
+  description: "ICE BofA BBB US Corporate Index OAS"
+  asset_class: credit
+  source_binding:
+    type: fred
+    config:
+      base_url: "https://api.stlouisfed.org/fred/series/observations"
+      series_ids:
+        bbb_oas: BAMLC0A4CBBB
+      auth: api_key
+      docs: "https://fred.stlouisfed.org/docs/api/"
+  update_frequency: daily
+
+# --------------------------------------------------------------------------
+# MORTGAGES
+# --------------------------------------------------------------------------
+mortgages.rates:
+  display_name: "US Mortgage Rates"
+  description: "Freddie Mac Primary Mortgage Market Survey — 30Y and 15Y fixed"
+  asset_class: mortgages
+  ownership:
+    accountable_owner: "mortgage-analytics@example.com"
+  source_binding:
+    type: fred
+    config:
+      base_url: "https://api.stlouisfed.org/fred/series/observations"
+      series_ids:
+        rate_30y: MORTGAGE30US
+        rate_15y: MORTGAGE15US
+      auth: api_key
+      docs: "https://fred.stlouisfed.org/docs/api/"
+  update_frequency: weekly
+
+# --------------------------------------------------------------------------
+# MACRO
+# --------------------------------------------------------------------------
+macro.us.gdp:
+  display_name: "US Real GDP"
+  description: "Real GDP, seasonally adjusted annual rate (quarterly)"
+  asset_class: macro
+  source_binding:
+    type: fred
+    config:
+      base_url: "https://api.stlouisfed.org/fred/series/observations"
+      series_ids:
+        real_gdp: GDPC1
+      auth: api_key
+      docs: "https://fred.stlouisfed.org/docs/api/"
+  update_frequency: quarterly
+
+macro.us.inflation:
+  display_name: "US Inflation (CPI)"
+  description: "Consumer Price Index — all items and core"
+  asset_class: macro
+  source_binding:
+    type: fred
+    config:
+      base_url: "https://api.stlouisfed.org/fred/series/observations"
+      series_ids:
+        cpi_all: CPIAUCSL
+        cpi_core: CPILFESL
+      auth: api_key
+      docs: "https://fred.stlouisfed.org/docs/api/"
+  update_frequency: monthly
+
+macro.us.inflation-expectations:
+  display_name: "US Inflation Expectations"
+  description: "Market-implied and survey-based inflation expectations"
+  asset_class: macro
+  source_binding:
+    type: fred
+    config:
+      base_url: "https://api.stlouisfed.org/fred/series/observations"
+      series_ids:
+        breakeven_5y: T5YIE
+        breakeven_10y: T10YIE
+        forward_5y5y: T5YIFR
+        umich_survey: MICH
+      auth: api_key
+      docs: "https://fred.stlouisfed.org/docs/api/"
+  update_frequency: daily
+
+macro.us.employment:
+  display_name: "US Employment"
+  description: "Nonfarm payrolls, unemployment rate, initial claims"
+  asset_class: macro
+  source_binding:
+    type: fred
+    config:
+      base_url: "https://api.stlouisfed.org/fred/series/observations"
+      series_ids:
+        nonfarm_payrolls: PAYEMS
+        unemployment_rate: UNRATE
+        initial_claims: ICSA
+      auth: api_key
+      docs: "https://fred.stlouisfed.org/docs/api/"
+  update_frequency: monthly
+
+# --------------------------------------------------------------------------
+# RISK / VOLATILITY
+# --------------------------------------------------------------------------
+risk.volatility.vix:
+  display_name: "CBOE Volatility Index (VIX)"
+  description: "Market-implied 30-day volatility from S&P 500 options"
+  asset_class: risk
+  source_binding:
+    type: fred
+    config:
+      base_url: "https://api.stlouisfed.org/fred/series/observations"
+      series_ids:
+        vix: VIXCLS
+      auth: api_key
+      docs: "https://fred.stlouisfed.org/docs/api/"
+  update_frequency: daily
+
+# --------------------------------------------------------------------------
+# FX
+# --------------------------------------------------------------------------
+fx.dollar-index:
+  display_name: "US Dollar Index (Trade-Weighted)"
+  description: "Broad trade-weighted US dollar index"
+  asset_class: fx
+  source_binding:
+    type: fred
+    config:
+      base_url: "https://api.stlouisfed.org/fred/series/observations"
+      series_ids:
+        dollar_broad: DTWEXBGS
+      auth: api_key
+      docs: "https://fred.stlouisfed.org/docs/api/"
+  update_frequency: daily
+
+# --------------------------------------------------------------------------
+# EQUITIES
+# --------------------------------------------------------------------------
+equities.indices.us:
+  display_name: "US Equity Indices"
+  description: "S&P 500 and Nasdaq Composite"
+  asset_class: equities
+  source_binding:
+    type: yfinance
+    config:
+      tickers:
+        sp500: "^GSPC"
+        nasdaq: "^IXIC"
+      period: "2y"
+      docs: "https://pypi.org/project/yfinance/"
+  update_frequency: daily
+
+equities.indices.em:
+  display_name: "Emerging Market Equities"
+  description: "MSCI EM proxied by EEM and VWO ETFs"
+  asset_class: em
+  source_binding:
+    type: yfinance
+    config:
+      tickers:
+        eem: EEM
+        vwo: VWO
+      period: "2y"
+      docs: "https://pypi.org/project/yfinance/"
+  update_frequency: daily
+
+# --------------------------------------------------------------------------
+# COMMODITIES
+# --------------------------------------------------------------------------
+commodities.energy.crude:
+  display_name: "WTI Crude Oil"
+  description: "West Texas Intermediate crude oil futures"
+  asset_class: commodities
+  source_binding:
+    type: yfinance
+    config:
+      tickers:
+        wti: "CL=F"
+      period: "2y"
+      docs: "https://pypi.org/project/yfinance/"
+  update_frequency: daily
+
+commodities.metals.gold:
+  display_name: "Gold"
+  description: "Gold futures"
+  asset_class: commodities
+  source_binding:
+    type: yfinance
+    config:
+      tickers:
+        gold: "GC=F"
+      period: "2y"
+      docs: "https://pypi.org/project/yfinance/"
+  update_frequency: daily
+
+# --------------------------------------------------------------------------
+# EM BONDS
+# --------------------------------------------------------------------------
+em.bonds:
+  display_name: "Emerging Market Bonds"
+  description: "EM sovereign debt proxied by EMB (USD) and EMLC (local currency) ETFs"
+  asset_class: em
+  source_binding:
+    type: yfinance
+    config:
+      tickers:
+        emb_usd: EMB
+        emlc_local: EMLC
+      period: "2y"
+      docs: "https://pypi.org/project/yfinance/"
+  update_frequency: daily
+
+# --------------------------------------------------------------------------
+# BOND ETF PROXIES
+# --------------------------------------------------------------------------
+bonds.etf.proxies:
+  display_name: "Bond ETF Proxies"
+  description: "Liquid ETFs used as proxies for fixed income sectors"
+  asset_class: fixed.income
+  source_binding:
+    type: yfinance
+    config:
+      tickers:
+        mbs: MBB
+        long_treasury: TLT
+        hy_corporate: HYG
+        ig_corporate: LQD
+      period: "2y"
+      docs: "https://pypi.org/project/yfinance/"
+  update_frequency: daily

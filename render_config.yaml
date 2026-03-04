@@ -1,0 +1,14 @@
+# Render deployment config — minimal overrides for production
+# Points to the expanded sample_catalog.yaml as the catalog source
+
+catalog:
+  definition_file: "./sample_catalog.yaml"
+
+# Auth disabled for public demo
+auth:
+  enabled: false
+
+# Console telemetry for Render logs
+telemetry:
+  enabled: true
+  sink_type: console
