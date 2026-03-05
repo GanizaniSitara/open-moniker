@@ -239,17 +239,40 @@ async def root(request: Request):
             padding: var(--sp-5);
             border-bottom: 3px solid var(--c-peacock);
         }}
+        .header-content {{
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
         header h1 {{
             font-size: var(--fs-900);
             color: white;
-            max-width: 1200px;
-            margin: 0 auto;
+            margin: 0;
         }}
         header p {{
             color: rgba(255,255,255,0.8);
-            max-width: 1200px;
-            margin: var(--sp-2) auto 0;
+            margin: var(--sp-2) 0 0;
             font-size: var(--fs-600);
+        }}
+        .header-nav {{
+            display: flex;
+            gap: var(--sp-4);
+        }}
+        .header-nav a {{
+            color: white;
+            text-decoration: none;
+            font-size: var(--fs-700);
+            padding: var(--sp-2) var(--sp-3);
+            border-radius: var(--radius-1);
+            transition: background 0.2s;
+        }}
+        .header-nav a:hover {{
+            background: rgba(255,255,255,0.1);
+        }}
+        .header-nav a.active {{
+            background: var(--c-peacock);
         }}
         .container {{
             max-width: 1200px;
@@ -383,8 +406,16 @@ async def root(request: Request):
 </head>
 <body>
     <header>
-        <h1>{project_name}</h1>
-        <p>Management API - Control Plane</p>
+        <div class="header-content">
+            <div>
+                <h1>{project_name}</h1>
+                <p>Management API - Control Plane</p>
+            </div>
+            <nav class="header-nav">
+                <a href="/" class="active">Home</a>
+                <a href="/telemetry">Live Telemetry</a>
+            </nav>
+        </div>
     </header>
 
     <div class="container">
@@ -423,20 +454,6 @@ async def root(request: Request):
             </div>
         </div>
 
-        <h3 class="section-title">Live Telemetry</h3>
-        <div class="telemetry-section">
-            <div class="telemetry-header">
-                <h3>Resolver Metrics (Last 10s)</h3>
-                <div class="status-indicator">
-                    <span class="status-dot" id="ws-status"></span>
-                    <span id="ws-status-text">Connecting...</span>
-                </div>
-            </div>
-            <div id="telemetry-content" class="no-data">
-                Waiting for telemetry data...
-            </div>
-        </div>
-
         <h3 class="section-title">API Documentation</h3>
         <div class="grid">
             <div class="card docs">
@@ -467,6 +484,247 @@ async def root(request: Request):
                 <h2>Catalog Paths</h2>
                 <p>List all registered catalog paths.</p>
                 <a href="/catalog">Catalog API</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 {project_name}. All rights reserved.</p>
+    </footer>
+</body>
+</html>
+"""
+    return HTMLResponse(content=html)
+
+
+@app.get("/telemetry", response_class=HTMLResponse, tags=["Dashboard"])
+async def telemetry_page(request: Request):
+    """Live telemetry page showing resolver metrics."""
+    project_name = request.app.state.config.project_name
+
+    html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Telemetry - {project_name}</title>
+    <style>
+        :root {{
+            --font-sans: Arial, Helvetica, sans-serif;
+            --fs-900: 20px;
+            --fs-800: 18px;
+            --fs-700: 16px;
+            --fs-600: 14px;
+            --fs-500: 12px;
+            --fw-regular: 400;
+            --fw-bold: 700;
+            --sp-1: 4px;
+            --sp-2: 8px;
+            --sp-3: 12px;
+            --sp-4: 16px;
+            --sp-5: 24px;
+            --sp-6: 32px;
+            --radius-1: 4px;
+            --radius-2: 8px;
+            --c-navy: #022D5E;
+            --c-gray: #53565A;
+            --c-peacock: #005587;
+            --c-teal: #00897B;
+            --c-olive: #789D4A;
+            --c-cerulean: #008BCD;
+            --c-red: #D0002B;
+            --c-green: #009639;
+            --color-bg: #f8f9fa;
+            --color-surface: #ffffff;
+            --color-text: #111111;
+            --color-muted: var(--c-gray);
+            --border: rgba(83, 86, 90, 0.25);
+        }}
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{
+            font-family: var(--font-sans);
+            font-size: var(--fs-700);
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.45;
+        }}
+        header {{
+            background: var(--c-navy);
+            padding: var(--sp-5);
+            border-bottom: 3px solid var(--c-peacock);
+        }}
+        .header-content {{
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+        header h1 {{
+            font-size: var(--fs-900);
+            color: white;
+            margin: 0;
+        }}
+        header p {{
+            color: rgba(255,255,255,0.8);
+            margin: var(--sp-2) 0 0;
+            font-size: var(--fs-600);
+        }}
+        .header-nav {{
+            display: flex;
+            gap: var(--sp-4);
+        }}
+        .header-nav a {{
+            color: white;
+            text-decoration: none;
+            font-size: var(--fs-700);
+            padding: var(--sp-2) var(--sp-3);
+            border-radius: var(--radius-1);
+            transition: background 0.2s;
+        }}
+        .header-nav a:hover {{
+            background: rgba(255,255,255,0.1);
+        }}
+        .header-nav a.active {{
+            background: var(--c-peacock);
+        }}
+        .container {{
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--sp-5);
+        }}
+        .page-title {{
+            font-size: var(--fs-900);
+            color: var(--c-navy);
+            margin-bottom: var(--sp-2);
+        }}
+        .page-subtitle {{
+            color: var(--color-muted);
+            font-size: var(--fs-700);
+            margin-bottom: var(--sp-5);
+        }}
+        .telemetry-section {{
+            background: var(--color-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-2);
+            padding: var(--sp-5);
+            margin-bottom: var(--sp-5);
+        }}
+        .telemetry-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--sp-4);
+            padding-bottom: var(--sp-3);
+            border-bottom: 2px solid var(--c-peacock);
+        }}
+        .telemetry-header h2 {{
+            font-size: var(--fs-800);
+            color: var(--c-navy);
+            margin: 0;
+        }}
+        .status-indicator {{
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            font-size: var(--fs-600);
+            color: var(--color-muted);
+        }}
+        .status-dot {{
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--c-gray);
+        }}
+        .status-dot.connected {{ background: var(--c-green); }}
+        .telemetry-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--sp-4);
+        }}
+        .telemetry-card {{
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-1);
+            padding: var(--sp-4);
+            transition: box-shadow 0.2s;
+        }}
+        .telemetry-card:hover {{
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }}
+        .telemetry-card .label {{
+            font-size: var(--fs-600);
+            color: var(--c-navy);
+            font-weight: var(--fw-bold);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--sp-2);
+        }}
+        .telemetry-card .value {{
+            font-size: 32px;
+            font-weight: var(--fw-bold);
+            color: var(--c-peacock);
+            margin-bottom: var(--sp-2);
+        }}
+        .telemetry-card .metric {{
+            font-size: var(--fs-600);
+            color: var(--color-muted);
+            margin-bottom: var(--sp-1);
+            display: flex;
+            justify-content: space-between;
+        }}
+        .telemetry-card .metric .metric-label {{
+            font-weight: var(--fw-bold);
+        }}
+        .metric-value.error {{
+            color: var(--c-red);
+        }}
+        .metric-value.success {{
+            color: var(--c-green);
+        }}
+        .no-data {{
+            text-align: center;
+            color: var(--color-muted);
+            padding: var(--sp-6);
+            font-style: italic;
+        }}
+        footer {{
+            text-align: center;
+            padding: var(--sp-5);
+            color: var(--color-muted);
+            font-size: var(--fs-500);
+        }}
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div>
+                <h1>{project_name}</h1>
+                <p>Management API - Control Plane</p>
+            </div>
+            <nav class="header-nav">
+                <a href="/">Home</a>
+                <a href="/telemetry" class="active">Live Telemetry</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1 class="page-title">Live Telemetry</h1>
+        <p class="page-subtitle">Real-time metrics from resolver instances (last 10 seconds)</p>
+
+        <div class="telemetry-section">
+            <div class="telemetry-header">
+                <h2>Resolver Metrics</h2>
+                <div class="status-indicator">
+                    <span class="status-dot" id="ws-status"></span>
+                    <span id="ws-status-text">Connecting...</span>
+                </div>
+            </div>
+            <div id="telemetry-content" class="no-data">
+                Waiting for telemetry data...
             </div>
         </div>
     </div>
@@ -526,11 +784,21 @@ async def root(request: Request):
                 <div class="telemetry-card">
                     <div class="label">${{r.resolver_id}}</div>
                     <div class="value">${{r.rps.toFixed(1)}} req/s</div>
-                    <div class="subvalue">
-                        Latency: ${{r.avg_latency_ms.toFixed(1)}}ms avg, ${{r.p95_latency_ms.toFixed(1)}}ms p95
+                    <div class="metric">
+                        <span class="metric-label">Avg Latency:</span>
+                        <span>${{r.avg_latency_ms.toFixed(1)}}ms</span>
                     </div>
-                    <div class="subvalue">
-                        Errors: <span style="color: ${{r.errors > 0 ? 'var(--c-red)' : 'var(--c-green)'}}">${{r.errors}}</span>
+                    <div class="metric">
+                        <span class="metric-label">P95 Latency:</span>
+                        <span>${{r.p95_latency_ms.toFixed(1)}}ms</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Errors:</span>
+                        <span class="metric-value ${{r.errors > 0 ? 'error' : 'success'}}">${{r.errors}}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Cache Hits:</span>
+                        <span>${{r.cache_hits}}</span>
                     </div>
                 </div>
             `).join('');
