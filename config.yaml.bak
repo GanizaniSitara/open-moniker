@@ -1,0 +1,59 @@
+# Service Configuration
+
+# Project branding
+project_name: "Open Moniker"
+
+server:
+  host: "0.0.0.0"
+  port: 8050
+
+telemetry:
+  enabled: true
+  sink_type: sqlite  # console | file | rotating_file | postgres | sqlite
+  sink_config:
+    db_path: "./deployments/local/dev/telemetry.db"
+
+    # ─── File Sink ───────────────────────────────────────────────
+    # path: "./telemetry/events.jsonl"
+
+    # ─── Rotating File Sink ──────────────────────────────────────
+    # directory: "./telemetry"
+    # path_pattern: "telemetry-20060102-15.jsonl"
+    # max_bytes: 104857600  # 100MB
+
+    # ─── PostgreSQL Sink (Production - Queryable Audit Trail) ───
+    # Option 1: Connection string
+    # connection_string: "postgres://telemetry:password@localhost:5432/moniker_telemetry?sslmode=disable"
+
+    # Option 2: Individual parameters
+    # host: localhost
+    # port: 5432
+    # database: moniker_telemetry
+    # user: telemetry
+    # password: telemetry_dev_password  # Use env var in production: ${TELEMETRY_DB_PASSWORD}
+    # sslmode: disable  # disable | require | verify-ca | verify-full
+    # max_retries: 3
+    # retry_delay_ms: 100
+
+  batch_size: 1000
+  flush_interval_seconds: 0.15  # 150ms - optimized for 21K req/s
+  max_queue_size: 10240  # ~500ms buffer at 21K req/s
+
+cache:
+  enabled: true
+  max_size: 10000
+  default_ttl_seconds: 60   # 1 minute — safe day-1 default; raise once stable
+
+catalog:
+  definition_file: "./sample_catalog.yaml"
+  reload_interval_seconds: 60
+
+auth:
+  enabled: false
+  enforce: false
+  method_order: [kerberos, jwt]
+
+config_ui:
+  enabled: true
+  yaml_output_path: "catalog_output.yaml"
+  show_file_paths: false

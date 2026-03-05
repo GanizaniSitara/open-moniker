@@ -34,7 +34,7 @@ from .catalog.registry import CatalogRegistry
 from .catalog.loader import load_catalog
 from .catalog.types import (
     CatalogNode, Ownership, SourceBinding, SourceType,
-    DataSchema, ColumnSchema, DataQuality, Freshness, SLA, AccessPolicy, Documentation,
+    DataSchema, ColumnSchema, DataQuality, SLA, AccessPolicy, Documentation,
 )
 from .config import Config
 from .moniker.parser import parse_moniker
@@ -74,15 +74,17 @@ class ResolveResponse(BaseModel):
     """Response from /resolve - tells client how to connect to source."""
     moniker: str
     path: str
-    source_type: str
-    connection: dict[str, Any]
+    type: str  # "leaf" for resolvable endpoints, "parent" for catalog nodes with children
+    source_type: str | None = None  # Optional for parent nodes
+    connection: dict[str, Any] | None = None  # Optional for parent nodes
     query: str | None = None
     params: dict[str, Any] = {}
     schema_info: dict[str, Any] | None = None
     read_only: bool = True
     ownership: dict[str, Any]
-    binding_path: str
+    binding_path: str | None = None  # Optional for parent nodes
     sub_path: str | None = None
+    children: list[str] | None = None  # Populated for parent nodes
     # Enterprise additions
     status: str | None = None            # Node lifecycle status
     deprecation_message: str | None = None  # Warning if deprecated
@@ -124,7 +126,6 @@ class DescribeResponse(BaseModel):
     # Data governance fields
     data_quality: dict[str, Any] | None = None
     sla: dict[str, Any] | None = None
-    freshness: dict[str, Any] | None = None
 
     # Machine-readable schema for AI agents
     schema: dict[str, Any] | None = None
@@ -763,13 +764,7 @@ def create_demo_catalog() -> CatalogRegistry:
             ),
             last_validated="2026-01-28T06:30:00Z",
         ),
-        freshness=Freshness(
-            last_loaded="2026-01-28T07:15:00Z",
-            refresh_schedule="07:00 ET daily",
-            source_system="Credit Risk Engine (SQL Server)",
-        ),
         sla=SLA(
-            freshness="T+1",
             availability="99.5%",
             support_hours="business hours ET",
             escalation_contact="credit-risk-oncall@firm.com",
@@ -839,13 +834,7 @@ def create_demo_catalog() -> CatalogRegistry:
             ),
             last_validated="2026-01-28T06:30:00Z",
         ),
-        freshness=Freshness(
-            last_loaded="2026-01-28T07:15:00Z",
-            refresh_schedule="07:00 ET daily",
-            source_system="Credit Risk Engine (SQL Server)",
-        ),
         sla=SLA(
-            freshness="T+0 (intraday updates)",
             availability="99.9%",
             support_hours="24/7",
             escalation_contact="credit-risk-oncall@firm.com",
@@ -978,9 +967,32 @@ async def lifespan(app: FastAPI):
     )
     logger.info("Dashboard enabled")
 
+    # Initialize telemetry database for dashboard
+    from .telemetry import db as telemetry_db
+    import os
+    db_type = os.environ.get("TELEMETRY_DB_TYPE", "sqlite")
+    if db_type.lower() == "sqlite":
+        db_path = os.environ.get("TELEMETRY_DB_PATH", "./telemetry.db")
+        await telemetry_db.initialize("sqlite", db_path=db_path)
+    else:
+        # PostgreSQL
+        await telemetry_db.initialize(
+            "postgres",
+            host=os.environ.get("TELEMETRY_DB_HOST", "localhost"),
+            port=int(os.environ.get("TELEMETRY_DB_PORT", "5432")),
+            database=os.environ.get("TELEMETRY_DB_NAME", "moniker_telemetry"),
+            user=os.environ.get("TELEMETRY_DB_USER", "telemetry"),
+            password=os.environ.get("TELEMETRY_DB_PASSWORD", ""),
+            pool_size=int(os.environ.get("TELEMETRY_DB_POOL_SIZE", "10")),
+        )
+    logger.info(f"Telemetry database initialized ({db_type})")
+
     _redis_cache, _cache_manager, _cache_refresh_task = await bs.setup_redis_and_cache_manager(
         config, catalog, _adapter_registry,
     )
+
+    # Store config on app state for route handlers
+    app.state.config = config
 
     logger.info("Moniker resolution service started")
 
@@ -1018,6 +1030,10 @@ async def lifespan(app: FastAPI):
 
     await emitter.stop()
     await batcher.stop()
+
+    # Close telemetry database
+    from .telemetry import db as telemetry_db
+    await telemetry_db.close()
 
     logger.info("Moniker resolution service stopped")
 
@@ -1215,15 +1231,21 @@ async def resolve_moniker(
         sunset_deadline = getattr(node, 'sunset_deadline', None)
         migration_guide_url = getattr(node, 'migration_guide_url', None)
 
+    # Determine if this is a parent or leaf node
+    is_parent = result.source is None and result.children is not None
+    node_type = "parent" if is_parent else "leaf"
+
     response = ResolveResponse(
         moniker=result.moniker,
         path=result.path,
-        source_type=result.source.source_type,
-        connection=result.source.connection,
-        query=result.source.query,
-        params=result.source.params,
-        schema_info=result.source.schema,
-        read_only=result.source.read_only,
+        type=node_type,
+        source_type=result.source.source_type if result.source else None,
+        connection=result.source.connection if result.source else None,
+        query=result.source.query if result.source else None,
+        params=result.source.params if result.source else {},
+        schema_info=result.source.schema if result.source else None,
+        read_only=result.source.read_only if result.source else True,
+        children=result.children,
         ownership={
             "accountable_owner": result.ownership.accountable_owner,
             "accountable_owner_source": result.ownership.accountable_owner_source,
@@ -1334,21 +1356,9 @@ async def describe_moniker(
     if result.node and result.node.sla:
         s = result.node.sla
         sla = {
-            "freshness": s.freshness,
             "availability": s.availability,
             "support_hours": s.support_hours,
             "escalation_contact": s.escalation_contact,
-        }
-
-    # Build freshness dict if present
-    freshness = None
-    if result.node and result.node.freshness:
-        f = result.node.freshness
-        freshness = {
-            "last_loaded": f.last_loaded,
-            "refresh_schedule": f.refresh_schedule,
-            "source_system": f.source_system,
-            "upstream_dependencies": list(f.upstream_dependencies),
         }
 
     # Build schema dict if present (AI-readable metadata)
@@ -1435,7 +1445,6 @@ async def describe_moniker(
         tags=list(result.node.tags) if result.node else [],
         data_quality=data_quality,
         sla=sla,
-        freshness=freshness,
         schema=schema,
         documentation=documentation,
         models=models_list,
@@ -2071,24 +2080,12 @@ async def get_metadata(
             "max_rows_block": ap.max_rows_block,
         }
 
-    # Build temporal coverage from freshness info
-    temporal_coverage = None
-    if node and node.freshness:
-        f = node.freshness
-        temporal_coverage = {
-            "last_loaded": f.last_loaded,
-            "refresh_schedule": f.refresh_schedule,
-            "source_system": f.source_system,
-            "upstream_dependencies": list(f.upstream_dependencies) if f.upstream_dependencies else [],
-        }
-
     # Build relationships from schema related_monikers
     relationships = None
     if node and node.data_schema:
         ds = node.data_schema
         relationships = {
             "related_monikers": list(ds.related_monikers) if ds.related_monikers else [],
-            "upstream_dependencies": list(node.freshness.upstream_dependencies) if node.freshness and node.freshness.upstream_dependencies else [],
             "foreign_keys": [
                 {"column": col.name, "references": col.foreign_key}
                 for col in ds.columns if col.foreign_key
@@ -2578,12 +2575,577 @@ _LANDING_HTML = """
 
 
 @app.get("/", response_class=HTMLResponse, tags=["Health"])
-async def root():
+async def root(request: Request):
     """Landing page with links to all UIs and documentation."""
-    project_name = _config.project_name if _config else "Open Moniker"
+    project_name = request.app.state.config.project_name if hasattr(request.app.state, 'config') else "Open Moniker"
 
-    # Generate dynamic HTML with project name
-    html = _LANDING_HTML.replace("Moniker Service", project_name)
+    html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{project_name}</title>
+    <style>
+        :root {{
+            --font-sans: Arial, Helvetica, sans-serif;
+            --fs-900: 20px;
+            --fs-800: 18px;
+            --fs-700: 16px;
+            --fs-600: 14px;
+            --fs-500: 12px;
+            --fw-regular: 400;
+            --fw-bold: 700;
+            --sp-1: 4px;
+            --sp-2: 8px;
+            --sp-3: 12px;
+            --sp-4: 16px;
+            --sp-5: 24px;
+            --sp-6: 32px;
+            --radius-1: 4px;
+            --radius-2: 8px;
+            --c-navy: #022D5E;
+            --c-gray: #53565A;
+            --c-peacock: #005587;
+            --c-teal: #00897B;
+            --c-olive: #789D4A;
+            --c-cerulean: #008BCD;
+            --c-red: #D0002B;
+            --c-green: #009639;
+            --color-bg: #f8f9fa;
+            --color-surface: #ffffff;
+            --color-text: #111111;
+            --color-muted: var(--c-gray);
+            --border: rgba(83, 86, 90, 0.25);
+        }}
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{
+            font-family: var(--font-sans);
+            font-size: var(--fs-700);
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.45;
+        }}
+        header {{
+            background: var(--c-navy);
+            padding: var(--sp-5);
+            border-bottom: 3px solid var(--c-peacock);
+        }}
+        .header-content {{
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+        header h1 {{
+            font-size: var(--fs-900);
+            color: white;
+            margin: 0;
+        }}
+        header p {{
+            color: rgba(255,255,255,0.8);
+            margin: var(--sp-2) 0 0;
+            font-size: var(--fs-600);
+        }}
+        .header-nav {{
+            display: flex;
+            gap: var(--sp-4);
+        }}
+        .header-nav a {{
+            color: white;
+            text-decoration: none;
+            font-size: var(--fs-700);
+            padding: var(--sp-2) var(--sp-3);
+            border-radius: var(--radius-1);
+            transition: background 0.2s;
+        }}
+        .header-nav a:hover {{
+            background: rgba(255,255,255,0.1);
+        }}
+        .header-nav a.active {{
+            background: var(--c-peacock);
+        }}
+        .container {{
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--sp-5);
+        }}
+        .grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--sp-5);
+            margin-top: var(--sp-5);
+        }}
+        .card {{
+            background: var(--color-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-2);
+            padding: var(--sp-5);
+            transition: box-shadow 0.2s, transform 0.2s;
+        }}
+        .card:hover {{
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }}
+        .card h2 {{
+            font-size: var(--fs-800);
+            color: var(--c-navy);
+            margin-bottom: var(--sp-2);
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+        }}
+        .card p {{
+            color: var(--color-muted);
+            font-size: var(--fs-600);
+            margin-bottom: var(--sp-4);
+        }}
+        .card a {{
+            display: inline-block;
+            background: var(--c-peacock);
+            color: white;
+            padding: var(--sp-2) var(--sp-4);
+            border-radius: var(--radius-1);
+            text-decoration: none;
+            font-weight: var(--fw-bold);
+            font-size: var(--fs-600);
+            transition: filter 0.2s;
+        }}
+        .card a:hover {{ filter: brightness(0.9); }}
+        .card.docs a {{ background: var(--c-olive); }}
+        .card.api a {{ background: var(--c-teal); }}
+        .section-title {{
+            font-size: var(--fs-800);
+            color: var(--c-navy);
+            margin-top: var(--sp-6);
+            padding-bottom: var(--sp-2);
+            border-bottom: 2px solid var(--c-peacock);
+        }}
+        footer {{
+            text-align: center;
+            padding: var(--sp-5);
+            color: var(--color-muted);
+            font-size: var(--fs-500);
+        }}
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div>
+                <h1>{project_name}</h1>
+                <p>Data catalog resolution and governance platform</p>
+            </div>
+            <nav class="header-nav">
+                <a href="/" class="active">Home</a>
+                <a href="/telemetry">Live Telemetry</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <h3 class="section-title">Administration</h3>
+        <div class="grid">
+            <div class="card">
+                <h2>Dashboard</h2>
+                <p>View catalog statistics, request queue, and live telemetry from resolver instances.</p>
+                <a href="/dashboard/ui">Open Dashboard</a>
+            </div>
+            <div class="card">
+                <h2>Domain Configuration</h2>
+                <p>Manage data domains with governance metadata: ownership, confidentiality, PII flags.</p>
+                <a href="/domains/ui">Configure Domains</a>
+            </div>
+            <div class="card">
+                <h2>Catalog Config</h2>
+                <p>Edit monikers, source bindings, and ownership configuration.</p>
+                <a href="/config/ui">Catalog Config UI</a>
+            </div>
+            <div class="card">
+                <h2>Catalog Browser</h2>
+                <p>Browse the moniker catalog hierarchy, view ownership and metadata for data assets.</p>
+                <a href="/ui">Open Catalog Browser</a>
+            </div>
+            <div class="card">
+                <h2>Business Models</h2>
+                <p>Manage business models (measures, metrics, fields) that appear across monikers.</p>
+                <a href="/models/ui">Models Browser</a>
+            </div>
+            <div class="card">
+                <h2>Review Queue</h2>
+                <p>Review and approve moniker requests. Manage the governance approval workflow.</p>
+                <a href="/requests/ui">Open Review Queue</a>
+                <a href="/docs" style="margin-left:12px">Swagger</a>
+            </div>
+        </div>
+
+        <h3 class="section-title">API Documentation</h3>
+        <div class="grid">
+            <div class="card docs">
+                <h2>Swagger UI</h2>
+                <p>Interactive API documentation with try-it-out functionality.</p>
+                <a href="/docs">Open Swagger</a>
+            </div>
+        </div>
+
+        <h3 class="section-title">API Endpoints</h3>
+        <div class="grid">
+            <div class="card api">
+                <h2>Catalog Tree</h2>
+                <p>View full catalog hierarchy as JSON tree structure.</p>
+                <a href="/tree">View Tree API</a>
+            </div>
+            <div class="card api">
+                <h2>Domains</h2>
+                <p>List all configured data domains with governance info.</p>
+                <a href="/domains">Domains API</a>
+            </div>
+            <div class="card api">
+                <h2>Models</h2>
+                <p>List all business models with their moniker mappings.</p>
+                <a href="/models">Models API</a>
+            </div>
+            <div class="card api">
+                <h2>Catalog Paths</h2>
+                <p>List all registered catalog paths.</p>
+                <a href="/catalog">Catalog API</a>
+            </div>
+            <div class="card api">
+                <h2>OpenAPI Schema</h2>
+                <p>Raw OpenAPI 3.0 specification in JSON format.</p>
+                <a href="/openapi.json">View Schema</a>
+            </div>
+            <div class="card api">
+                <h2>Health Check</h2>
+                <p>Service health, telemetry stats, and cache metrics.</p>
+                <a href="/health">Check Health</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2024 {project_name}. All rights reserved.
+    </footer>
+</body>
+</html>
+"""
+    return HTMLResponse(content=html)
+
+
+@app.get("/telemetry", response_class=HTMLResponse, tags=["Dashboard"])
+async def telemetry_page(request: Request):
+    """Live telemetry page showing resolver metrics."""
+    project_name = request.app.state.config.project_name if hasattr(request.app.state, 'config') else "Open Moniker"
+
+    html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Telemetry - {project_name}</title>
+    <style>
+        :root {{
+            --font-sans: Arial, Helvetica, sans-serif;
+            --fs-900: 20px;
+            --fs-800: 18px;
+            --fs-700: 16px;
+            --fs-600: 14px;
+            --fs-500: 12px;
+            --fw-regular: 400;
+            --fw-bold: 700;
+            --sp-1: 4px;
+            --sp-2: 8px;
+            --sp-3: 12px;
+            --sp-4: 16px;
+            --sp-5: 24px;
+            --sp-6: 32px;
+            --radius-1: 4px;
+            --radius-2: 8px;
+            --c-navy: #022D5E;
+            --c-gray: #53565A;
+            --c-peacock: #005587;
+            --c-teal: #00897B;
+            --c-olive: #789D4A;
+            --c-cerulean: #008BCD;
+            --c-red: #D0002B;
+            --c-green: #009639;
+            --color-bg: #f8f9fa;
+            --color-surface: #ffffff;
+            --color-text: #111111;
+            --color-muted: var(--c-gray);
+            --border: rgba(83, 86, 90, 0.25);
+        }}
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{
+            font-family: var(--font-sans);
+            font-size: var(--fs-700);
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.45;
+        }}
+        header {{
+            background: var(--c-navy);
+            padding: var(--sp-5);
+            border-bottom: 3px solid var(--c-peacock);
+        }}
+        .header-content {{
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+        header h1 {{
+            font-size: var(--fs-900);
+            color: white;
+            margin: 0;
+        }}
+        header p {{
+            color: rgba(255,255,255,0.8);
+            margin: var(--sp-2) 0 0;
+            font-size: var(--fs-600);
+        }}
+        .header-nav {{
+            display: flex;
+            gap: var(--sp-4);
+        }}
+        .header-nav a {{
+            color: white;
+            text-decoration: none;
+            font-size: var(--fs-700);
+            padding: var(--sp-2) var(--sp-3);
+            border-radius: var(--radius-1);
+            transition: background 0.2s;
+        }}
+        .header-nav a:hover {{
+            background: rgba(255,255,255,0.1);
+        }}
+        .header-nav a.active {{
+            background: var(--c-peacock);
+        }}
+        .container {{
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--sp-5);
+        }}
+        .page-title {{
+            font-size: var(--fs-900);
+            color: var(--c-navy);
+            margin-bottom: var(--sp-2);
+        }}
+        .page-subtitle {{
+            color: var(--color-muted);
+            font-size: var(--fs-700);
+            margin-bottom: var(--sp-5);
+        }}
+        .telemetry-section {{
+            background: var(--color-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-2);
+            padding: var(--sp-5);
+            margin-bottom: var(--sp-5);
+        }}
+        .telemetry-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--sp-4);
+            padding-bottom: var(--sp-3);
+            border-bottom: 2px solid var(--c-peacock);
+        }}
+        .telemetry-header h2 {{
+            font-size: var(--fs-800);
+            color: var(--c-navy);
+            margin: 0;
+        }}
+        .status-indicator {{
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            font-size: var(--fs-600);
+            color: var(--color-muted);
+        }}
+        .status-dot {{
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--c-gray);
+        }}
+        .status-dot.connected {{ background: var(--c-green); }}
+        .telemetry-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--sp-4);
+        }}
+        .telemetry-card {{
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-1);
+            padding: var(--sp-4);
+            transition: box-shadow 0.2s;
+        }}
+        .telemetry-card:hover {{
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }}
+        .telemetry-card .label {{
+            font-size: var(--fs-600);
+            color: var(--c-navy);
+            font-weight: var(--fw-bold);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--sp-2);
+        }}
+        .telemetry-card .value {{
+            font-size: 32px;
+            font-weight: var(--fw-bold);
+            color: var(--c-peacock);
+            margin-bottom: var(--sp-2);
+        }}
+        .telemetry-card .metric {{
+            font-size: var(--fs-600);
+            color: var(--color-muted);
+            margin-bottom: var(--sp-1);
+            display: flex;
+            justify-content: space-between;
+        }}
+        .telemetry-card .metric .metric-label {{
+            font-weight: var(--fw-bold);
+        }}
+        .metric-value.error {{
+            color: var(--c-red);
+        }}
+        .metric-value.success {{
+            color: var(--c-green);
+        }}
+        .no-data {{
+            text-align: center;
+            color: var(--color-muted);
+            padding: var(--sp-6);
+            font-style: italic;
+        }}
+        footer {{
+            text-align: center;
+            padding: var(--sp-5);
+            color: var(--color-muted);
+            font-size: var(--fs-500);
+        }}
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div>
+                <h1>{project_name}</h1>
+                <p>Data catalog resolution and governance platform</p>
+            </div>
+            <nav class="header-nav">
+                <a href="/">Home</a>
+                <a href="/telemetry" class="active">Live Telemetry</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1 class="page-title">Live Telemetry</h1>
+        <p class="page-subtitle">Real-time metrics from resolver instances (last 10 seconds)</p>
+
+        <div class="telemetry-section">
+            <div class="telemetry-header">
+                <h2>Resolver Metrics</h2>
+                <div class="status-indicator">
+                    <span class="status-dot" id="ws-status"></span>
+                    <span id="ws-status-text">Connecting...</span>
+                </div>
+            </div>
+            <div id="telemetry-content" class="no-data">
+                Waiting for telemetry data...
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 {project_name}. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // WebSocket connection for live telemetry
+        const wsUrl = `ws://${{window.location.host}}/dashboard/live`;
+        let ws = null;
+        let reconnectTimer = null;
+
+        function connectWebSocket() {{
+            try {{
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = () => {{
+                    console.log('WebSocket connected');
+                    document.getElementById('ws-status').classList.add('connected');
+                    document.getElementById('ws-status-text').textContent = 'Connected';
+                }};
+
+                ws.onmessage = (event) => {{
+                    const data = JSON.parse(event.data);
+                    updateTelemetry(data.resolvers || []);
+                }};
+
+                ws.onerror = (error) => {{
+                    console.error('WebSocket error:', error);
+                }};
+
+                ws.onclose = () => {{
+                    console.log('WebSocket closed, reconnecting...');
+                    document.getElementById('ws-status').classList.remove('connected');
+                    document.getElementById('ws-status-text').textContent = 'Reconnecting...';
+                    reconnectTimer = setTimeout(connectWebSocket, 2000);
+                }};
+            }} catch (error) {{
+                console.error('Failed to connect WebSocket:', error);
+                reconnectTimer = setTimeout(connectWebSocket, 2000);
+            }}
+        }}
+
+        function updateTelemetry(resolvers) {{
+            const container = document.getElementById('telemetry-content');
+
+            if (!resolvers || resolvers.length === 0) {{
+                container.className = 'no-data';
+                container.textContent = 'No telemetry data available. Generate some traffic to see live metrics.';
+                return;
+            }}
+
+            container.className = 'telemetry-grid';
+            container.innerHTML = resolvers.map(r => `
+                <div class="telemetry-card">
+                    <div class="label">${{r.resolver_id}}</div>
+                    <div class="value">${{r.rps.toFixed(1)}} req/s</div>
+                    <div class="metric">
+                        <span class="metric-label">Avg Latency:</span>
+                        <span>${{r.avg_latency_ms.toFixed(1)}}ms</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">P95 Latency:</span>
+                        <span>${{r.p95_latency_ms.toFixed(1)}}ms</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Errors:</span>
+                        <span class="metric-value ${{r.errors > 0 ? 'error' : 'success'}}">${{r.errors}}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Cache Hits:</span>
+                        <span>${{r.cache_hits}}</span>
+                    </div>
+                </div>
+            `).join('');
+        }}
+
+        // Start connection
+        connectWebSocket();
+    </script>
+</body>
+</html>
+"""
     return HTMLResponse(content=html)
 
 
