@@ -63,17 +63,20 @@ def create_postgres_database():
 def create_python_service(db_id):
     """Create Python admin service."""
     print("\n🐍 Creating Python admin service...")
-    
+
     data = {
         "name": "moniker-admin",
         "type": "web_service",
         "repo": GITHUB_REPO,
         "branch": BRANCH,
         "region": "oregon",
-        "plan": "starter",
-        "buildCommand": "pip install --upgrade pip && pip install -r requirements.txt",
-        "startCommand": "cd src && PYTHONPATH=/opt/render/project/src uvicorn moniker_svc.main:app --host 0.0.0.0 --port $PORT",
-        "healthCheckPath": "/health",
+        "plan": "free",
+        "runtime": "python",
+        "envSpecificDetails": {
+            "buildCommand": "pip install --upgrade pip && pip install -r requirements.txt",
+            "startCommand": "cd src && PYTHONPATH=/opt/render/project/src uvicorn moniker_svc.management_app:app --host 0.0.0.0 --port $PORT",
+            "healthCheckPath": "/health",
+        },
         "envVars": [
             {"key": "PYTHONPATH", "value": "/opt/render/project/src"},
             {"key": "CONFIG_FILE", "value": "/opt/render/project/src/sample_config.yaml"},
@@ -97,14 +100,14 @@ def create_python_service(db_id):
 def create_java_service():
     """Create Java resolver service."""
     print("\n☕ Creating Java resolver service...")
-    
+
     data = {
         "name": "moniker-resolver-java",
         "type": "web_service",
         "repo": GITHUB_REPO,
         "branch": BRANCH,
         "region": "oregon",
-        "plan": "starter",
+        "plan": "free",
         "runtime": "docker",
         "dockerfilePath": "./deployments/render/Dockerfile.java",
         "dockerContext": ".",

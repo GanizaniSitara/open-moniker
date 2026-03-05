@@ -1,495 +1,358 @@
-# AWS Production Deployment
+# AWS Production Deployment Blueprint
 
-This directory contains all infrastructure and deployment configuration for running Open Moniker on AWS with EKS, Aurora Serverless v2, and multi-region support.
+Multi-region, high-availability production deployment with Java/Go resolvers.
 
-## Architecture Overview
+## Architecture
 
-- **6 Java resolvers** (3 in us-east-1, 3 in us-west-2) for high-throughput resolution
-- **2 Python admin instances** (1 per region) for configuration management and live telemetry dashboard
-- **Aurora PostgreSQL Serverless v2** (us-east-1 primary, us-west-2 read replica) for telemetry storage
-- **Route 53 weighted round-robin DNS** distributing traffic across all 6 resolvers
-- **EKS clusters** (1 per region) with multi-AZ deployment
+- **6 Resolvers** across 2 regions (us-east-1, us-west-2)
+- **Choice:** All Java, All Go, or Mixed
+- **1 Python Management** service (active-standby)
+- **Aurora PostgreSQL** for telemetry
+- **Round-robin DNS** via Route 53
+- **EKS clusters** for orchestration
+
+## Performance Targets
+
+| Configuration | Total RPS | Latency p95 |
+|---------------|-----------|-------------|
+| 6x Java | 48,000 | <20ms |
+| 6x Go | 126,000 | <10ms |
+| 3 Java + 3 Go | 87,000 | <15ms |
+
+## Quick Deploy
+
+```bash
+cd deployments/aws/terraform
+
+# Initialize
+terraform init
+
+# Review plan
+terraform plan -var-file=environments/prod.tfvars
+
+# Deploy infrastructure
+terraform apply -var-file=environments/prod.tfvars
+
+# Deploy applications
+cd ../kubernetes
+kubectl apply -k overlays/us-east-1
+kubectl apply -k overlays/us-west-2
+
+# Verify
+./scripts/health-check.sh
+```
 
 ## Directory Structure
 
 ```
-aws/
-├── terraform/                    # Infrastructure as Code
-│   ├── main.tf                   # Root module
-│   ├── variables.tf              # Input variables
-│   ├── outputs.tf                # Outputs
+deployments/aws/
+├── terraform/
+│   ├── main.tf
+│   ├── variables.tf
+│   ├── outputs.tf
 │   ├── modules/
-│   │   ├── vpc/                  # VPC, subnets, NAT gateways
-│   │   ├── eks/                  # EKS cluster + node groups
-│   │   ├── aurora/               # Aurora Serverless v2
-│   │   └── dns/                  # Route 53 round-robin
+│   │   ├── vpc/              # VPC, subnets, NAT gateways
+│   │   ├── eks/              # EKS clusters
+│   │   ├── aurora/           # Aurora Serverless v2
+│   │   ├── dns/              # Route 53 round-robin
+│   │   └── monitoring/       # CloudWatch dashboards
 │   └── environments/
-│       ├── dev.tfvars            # Dev environment
-│       ├── staging.tfvars        # Staging
-│       └── prod.tfvars           # Production
-├── kubernetes/                   # K8s manifests
-│   ├── base/                     # Base configs (Kustomize)
+│       ├── dev.tfvars
+│       ├── staging.tfvars
+│       └── prod.tfvars
+├── kubernetes/
+│   ├── base/
 │   │   ├── java-resolver.yaml
+│   │   ├── go-resolver.yaml
 │   │   ├── python-admin.yaml
-│   │   ├── configmap.yaml
-│   │   ├── secrets.yaml
-│   │   └── kustomization.yaml
+│   │   └── configmap.yaml
 │   └── overlays/
-│       ├── us-east-1/            # us-east-1 specific configs
-│       └── us-west-2/            # us-west-2 specific configs
-├── docker/                       # Dockerfiles
-│   ├── Dockerfile.java           # Java resolver
-│   └── Dockerfile.python         # Python admin
-├── scripts/                      # Helper scripts
-│   ├── deploy.sh                 # Deploy to EKS
-│   ├── migrate-db.sh             # Run DB migrations
-│   └── health-check.sh           # Smoke tests
-└── README.md                     # This file
+│       ├── us-east-1/
+│       └── us-west-2/
+├── docker/
+│   ├── Dockerfile.java
+│   ├── Dockerfile.go
+│   └── Dockerfile.python
+├── scripts/
+│   ├── deploy.sh
+│   ├── health-check.sh
+│   └── migrate-db.sh
+└── README.md               # This file
 ```
 
-## Prerequisites
+## Resolver Configuration
 
-1. **AWS CLI** configured with credentials
-   ```bash
-   aws configure
-   ```
+### Option A: All Java (Simpler)
+```yaml
+# terraform/environments/prod.tfvars
+resolver_type = "java"
+resolver_count_per_region = 3
+```
 
-2. **Terraform** (v1.5+)
-   ```bash
-   terraform --version
-   ```
+**Pros:** Simpler ops, one runtime, good performance
+**Cons:** Lower max throughput than Go
 
-3. **kubectl** and **kustomize**
-   ```bash
-   kubectl version --client
-   kustomize version
-   ```
+### Option B: All Go (Maximum Performance)
+```yaml
+resolver_type = "go"
+resolver_count_per_region = 3
+```
 
-4. **Docker** (for building images)
-   ```bash
-   docker --version
-   ```
+**Pros:** Maximum performance (2.5x Java)
+**Cons:** Less mature telemetry implementation
 
-5. **jq** (for scripts)
-   ```bash
-   jq --version
-   ```
-
-## Step 1: Deploy Infrastructure with Terraform
-
-### 1.1. Configure Environment
-
-Create `terraform/environments/prod.tfvars`:
-
-```hcl
-environment      = "prod"
-project_name     = "moniker"
-aws_account_id   = "123456789012"  # Replace with your AWS account ID
-
-# Primary region (us-east-1)
-primary_region   = "us-east-1"
-primary_vpc_cidr = "10.0.0.0/16"
-
-# Secondary region (us-west-2)
-secondary_region   = "us-west-2"
-secondary_vpc_cidr = "10.1.0.0/16"
-
-# Domain for Route 53
-domain_name = "moniker.example.com"
-
-# Aurora configuration
-aurora_min_capacity = 0.5  # ACU
-aurora_max_capacity = 4    # ACU
-aurora_backup_retention_period = 7
-
-# EKS configuration
-eks_cluster_version = "1.28"
-resolver_node_instance_type = "t3.medium"
-admin_node_instance_type = "t3.small"
-
-# Tags
-tags = {
-  Environment = "production"
-  Project     = "moniker"
-  ManagedBy   = "terraform"
+### Option C: Mixed (Test Both)
+```yaml
+resolver_mix = {
+  "us-east-1a" = "java"
+  "us-east-1b" = "go"
+  "us-east-1c" = "java"
+  "us-west-2a" = "go"
+  "us-west-2b" = "java"
+  "us-west-2c" = "go"
 }
 ```
 
-### 1.2. Initialize and Deploy
+**Pros:** Compare in production, gradual migration
+**Cons:** More complex operations
 
+## Infrastructure Components
+
+### VPC (per region)
+- 3 public subnets (one per AZ)
+- 3 private subnets (one per AZ)
+- 3 NAT gateways (high availability)
+- Internet gateway
+- Route tables
+
+### EKS Cluster (per region)
+- Control plane: $72/month
+- 2 node groups:
+  - Resolvers: 3x t3.medium (2 vCPU, 4GB)
+  - Admin: 1x t3.small (2 vCPU, 2GB)
+- Auto-scaling: 3-6 nodes per region
+
+### Aurora PostgreSQL
+- **Engine:** PostgreSQL 16
+- **Mode:** Serverless v2
+- **Capacity:** 0.5-4 ACU (auto-scales)
+- **Primary:** us-east-1
+- **Replica:** us-west-2 (read-only)
+- **Storage:** Auto-scaling, encrypted
+- **Backups:** 7-day retention
+
+### Route 53 DNS
+- Hosted zone for `example.com`
+- Round-robin weighted routing:
+  ```
+  resolver.example.com → 6 IPs (16.7% each)
+  ```
+- TTL: 60 seconds (fast failover)
+
+## Cost Breakdown
+
+| Component | Quantity | Cost/Month |
+|-----------|----------|------------|
+| EKS Control Plane | 2 | $144 |
+| EC2 Nodes (t3.medium) | 6 | $150 |
+| EC2 Nodes (t3.small) | 2 | $33 |
+| Aurora Serverless | 1 | $160 |
+| NAT Gateways | 6 | $194 |
+| Network Load Balancers | 2 | $32 |
+| Route 53 | 1 | $1 |
+| Data Transfer (est) | - | $50 |
+| CloudWatch Logs | - | $20 |
+| **Total** | - | **$784/month** |
+
+**Optimizations:**
+- Use Spot instances: -40% ($470/month)
+- Single region only: -45% ($430/month)
+- Smaller Aurora (0.5 ACU fixed): -$100
+- **Optimized Total:** ~$370-470/month
+
+## Deployment Steps
+
+### 1. Prerequisites
+```bash
+# Install tools
+brew install terraform kubectl aws-cli
+
+# Configure AWS credentials
+aws configure
+
+# Verify access
+aws sts get-caller-identity
+```
+
+### 2. Deploy Infrastructure
 ```bash
 cd terraform
 
 # Initialize Terraform
 terraform init
 
-# Plan deployment
-terraform plan -var-file=environments/prod.tfvars -out=tfplan
+# Deploy dev environment first
+terraform apply -var-file=environments/dev.tfvars
 
-# Review the plan, then apply
-terraform apply tfplan
-
-# Save outputs
-terraform output -json > outputs.json
+# Then production
+terraform apply -var-file=environments/prod.tfvars
 ```
 
-This will create:
-- 2 VPCs (us-east-1, us-west-2) with 3 public + 3 private subnets each
-- 2 EKS clusters
-- 1 Aurora Serverless v2 cluster with global database
-- Route 53 hosted zone
-- Security groups, IAM roles, NAT gateways, etc.
-
-**Estimated time:** 20-30 minutes
-
-## Step 2: Run Database Migrations
-
-Once Aurora is up, run the schema migration:
-
+### 3. Configure kubectl
 ```bash
-cd ../scripts
-./migrate-db.sh prod us-east-1
+# Update kubeconfig for both regions
+aws eks update-kubeconfig --name moniker-us-east-1 --region us-east-1
+aws eks update-kubeconfig --name moniker-us-west-2 --region us-west-2
+
+# Verify
+kubectl get nodes --context=moniker-us-east-1
+kubectl get nodes --context=moniker-us-west-2
 ```
 
-This will:
-- Retrieve Aurora endpoint from Terraform outputs
-- Get database password from AWS Secrets Manager
-- Run `schema.sql` (from resolver-go implementation)
-- Create partitioned tables, views, indexes
-
-## Step 3: Build and Push Docker Images
-
-### 3.1. Build Java Resolver
-
+### 4. Deploy Applications
 ```bash
-cd ../../resolver-java
+cd ../kubernetes
 
-# Build JAR
-./mvnw clean package -DskipTests
+# Deploy to us-east-1
+kubectl apply -k overlays/us-east-1 --context=moniker-us-east-1
 
-# Get ECR login
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-AWS_REGION=us-east-1
-aws ecr get-login-password --region $AWS_REGION | \
-    docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+# Deploy to us-west-2
+kubectl apply -k overlays/us-west-2 --context=moniker-us-west-2
 
-# Create ECR repository if not exists
-aws ecr create-repository --repository-name moniker-resolver-java --region $AWS_REGION || true
-
-# Build and push
-docker build -t moniker-resolver-java -f ../deployments/render/Dockerfile.java .
-docker tag moniker-resolver-java:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/moniker-resolver-java:latest
-docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/moniker-resolver-java:latest
-
-# Repeat for us-west-2
-AWS_REGION=us-west-2
-aws ecr get-login-password --region $AWS_REGION | \
-    docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-aws ecr create-repository --repository-name moniker-resolver-java --region $AWS_REGION || true
-docker tag moniker-resolver-java:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/moniker-resolver-java:latest
-docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/moniker-resolver-java:latest
+# Verify pods
+kubectl get pods -n moniker --context=moniker-us-east-1
+kubectl get pods -n moniker --context=moniker-us-west-2
 ```
 
-### 3.2. Build Python Admin
-
+### 5. Verify Deployment
 ```bash
-cd ../deployments/render
+# Run health checks
+./scripts/health-check.sh
 
-# Build
-docker build -t moniker-admin-python -f Dockerfile.python ../..
+# Test DNS round-robin
+for i in {1..10}; do
+  dig +short resolver.example.com
+done
 
-# Push to us-east-1
-AWS_REGION=us-east-1
-aws ecr create-repository --repository-name moniker-admin-python --region $AWS_REGION || true
-docker tag moniker-admin-python:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/moniker-admin-python:latest
-docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/moniker-admin-python:latest
-
-# Push to us-west-2
-AWS_REGION=us-west-2
-aws ecr create-repository --repository-name moniker-admin-python --region $AWS_REGION || true
-docker tag moniker-admin-python:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/moniker-admin-python:latest
-docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/moniker-admin-python:latest
+# Load test
+hey -z 60s -c 500 http://resolver.example.com/resolve/test/path@latest
 ```
-
-## Step 4: Deploy to EKS
-
-### 4.1. Deploy to us-east-1
-
-```bash
-cd ../aws/scripts
-./deploy.sh us-east-1 prod $AWS_ACCOUNT_ID
-```
-
-This will:
-- Update kubectl context to us-east-1 EKS cluster
-- Fetch Aurora endpoints from Terraform
-- Apply Kubernetes manifests with Kustomize
-- Wait for deployments to be ready
-- Display service endpoints
-
-### 4.2. Deploy to us-west-2
-
-```bash
-./deploy.sh us-west-2 prod $AWS_ACCOUNT_ID
-```
-
-## Step 5: Verify Deployment
-
-Run health checks:
-
-```bash
-./health-check.sh us-east-1
-./health-check.sh us-west-2
-```
-
-This will:
-- Test health endpoints for both Java and Python services
-- Verify database connectivity
-- Check pod status
-- Display service URLs
-
-## Step 6: Configure DNS
-
-Get the Load Balancer endpoints:
-
-```bash
-# us-east-1 resolvers
-kubectl get svc -n moniker --context=moniker-prod-us-east-1 | grep java-resolver
-
-# us-west-2 resolvers
-kubectl get svc -n moniker --context=moniker-prod-us-west-2 | grep java-resolver
-```
-
-Update Route 53 (or use Terraform DNS module) to create weighted records:
-- `resolver.moniker.example.com` → 6 A records (weight 100 each)
-- `admin.moniker.example.com` → CNAME to us-east-1 admin LB
-
-## Accessing Services
-
-Once deployed:
-
-- **Java Resolvers:** `http://resolver.moniker.example.com/resolve/domain/path@version`
-- **Admin Dashboard:** `http://admin.moniker.example.com/dashboard`
-- **Config UI:** `http://admin.moniker.example.com/`
 
 ## Monitoring
 
-### View Logs
+### CloudWatch Dashboards
+- Resolver metrics (RPS, latency, errors)
+- EKS cluster health (CPU, memory, pods)
+- Aurora metrics (connections, CPU, storage)
+- NAT gateway traffic
 
-```bash
-# Resolver logs
-kubectl logs -f -n moniker -l app=moniker-resolver --context=moniker-prod-us-east-1
+### Telemetry Database
+```sql
+-- Query telemetry
+psql -h aurora-endpoint.us-east-1.rds.amazonaws.com \
+     -U postgres -d moniker_telemetry
 
-# Admin logs
-kubectl logs -f -n moniker -l app=moniker-admin --context=moniker-prod-us-east-1
+-- Resolver performance
+SELECT
+  resolver_id,
+  COUNT(*) as requests,
+  AVG(latency_ms) as avg_latency,
+  PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latency_ms) as p95_latency
+FROM access_log
+WHERE timestamp > NOW() - INTERVAL '1 hour'
+GROUP BY resolver_id;
 ```
 
-### Live Telemetry Dashboard
-
-1. Open `http://admin.moniker.example.com/dashboard`
-2. You'll see real-time charts showing:
-   - Requests per second for each resolver
-   - P95 latency per resolver
-   - Error rates
-   - Health status
-
-### CloudWatch
-
-Terraform automatically creates CloudWatch log groups:
-- `/aws/eks/moniker-prod-us-east-1/cluster`
-- `/aws/rds/cluster/moniker-telemetry/postgresql`
-
-## Cost Optimization
-
-### Current Estimated Monthly Cost (~$1,000)
-
-- EKS Control Plane (2 regions): $144
-- EC2 Nodes (6 t3.medium + 2 t3.small): $150
-- Aurora Serverless v2 (avg 1.5 ACU): $260
-- NAT Gateways (6 total): $194
-- Load Balancers (4 NLBs): $64
-- Data Transfer: $40
-- CloudWatch: $15
-- Route 53: $1
-- Secrets Manager: $2
-
-### Optimization Options
-
-1. **Use Spot Instances** for EKS nodes: -50% ($500/month savings)
-   ```hcl
-   capacity_type = "SPOT"
-   ```
-
-2. **Single Region Only:** -50% ($500/month savings)
-   - Deploy only to us-east-1
-   - Remove us-west-2 from Terraform
-
-3. **Smaller Aurora:** Use min/max 0.5 ACU: -$100/month
-   ```hcl
-   aurora_min_capacity = 0.5
-   aurora_max_capacity = 1
-   ```
-
-4. **Fewer Resolvers:** 3 instead of 6: -$75/month
-   - Change replicas in overlays to 1 or 2
-
-5. **Use ARM Graviton (t4g.medium):** -20% ($200/month savings)
-   ```hcl
-   resolver_node_instance_type = "t4g.medium"
-   ```
-
-**Recommended production budget:** $600-800/month with optimizations
+### Python Dashboard
+Navigate to `https://admin.example.com/dashboard` for:
+- Live RPS/latency charts
+- Resolver health status
+- Top monikers
+- Error rates
 
 ## Scaling
 
-### Horizontal Pod Autoscaling
+### Horizontal Scaling (more resolvers)
+```bash
+# Edit terraform/environments/prod.tfvars
+resolver_count_per_region = 6  # 12 total
 
-Add HPA for resolvers:
-
-```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: java-resolver-hpa
-  namespace: moniker
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: use1-java-resolver
-  minReplicas: 3
-  maxReplicas: 10
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
+# Apply changes
+terraform apply -var-file=environments/prod.tfvars
 ```
 
-### Cluster Autoscaling
+### Vertical Scaling (bigger instances)
+```bash
+# Edit terraform/modules/eks/main.tf
+instance_types = ["t3.large"]  # 2 vCPU → 4 vCPU
 
-EKS Cluster Autoscaler is configured in Terraform to scale node groups based on pending pods.
+terraform apply
+```
+
+### Aurora Scaling
+```hcl
+# Automatic via Serverless v2
+serverlessv2_scaling_configuration {
+  min_capacity = 0.5
+  max_capacity = 8  # Increase max
+}
+```
 
 ## Disaster Recovery
 
-### Backup Strategy
+### RTO (Recovery Time Objective): 5 minutes
+### RPO (Recovery Point Objective): 5 minutes
 
-- **Aurora:** Automated daily backups (7-day retention)
-- **Config Files:** Stored in EBS volumes with automated snapshots
-- **Container Images:** Stored in ECR with lifecycle policies
+**Scenario: us-east-1 region failure**
 
-### Failover Procedure
+1. DNS automatically routes to us-west-2 (TTL=60s)
+2. Aurora read replica promotes to primary
+3. Scale up us-west-2 resolvers to handle full load
+4. Python admin fails over to us-west-2 standby
 
-If us-east-1 fails:
-
-1. Traffic automatically routes to us-west-2 (Route 53 weighted DNS)
-2. Resolvers in us-west-2 continue serving with Aurora read replica
-3. Promote us-west-2 Aurora replica to primary:
-   ```bash
-   aws rds failover-global-cluster \
-       --global-cluster-identifier moniker-global \
-       --target-db-cluster-identifier moniker-telemetry-us-west-2
-   ```
-4. Update admin service to point to new primary
-
-## Troubleshooting
-
-### Pods not starting
-
+### Runbook
 ```bash
-kubectl describe pod <pod-name> -n moniker
-kubectl logs <pod-name> -n moniker
+# Promote Aurora replica
+aws rds promote-read-replica \
+  --db-instance-identifier moniker-telemetry-us-west-2
+
+# Scale us-west-2
+kubectl scale deployment java-resolver \
+  --replicas=6 \
+  --context=moniker-us-west-2
+
+# Verify
+./scripts/health-check.sh --region us-west-2
 ```
 
-Common issues:
-- Image pull errors: Check ECR permissions
-- Database connection errors: Verify security groups
-- Memory limits: Increase resource requests
+## Migration from Render
 
-### Aurora connection timeouts
+### Phase 1: Parallel Run (1 week)
+- Deploy AWS infrastructure
+- Route 10% traffic to AWS via DNS weights
+- Compare telemetry and performance
 
-Check security groups:
-```bash
-aws ec2 describe-security-groups --group-ids <aurora-sg-id>
-```
+### Phase 2: Gradual Migration (2 weeks)
+- Week 1: 50% AWS, 50% Render
+- Week 2: 80% AWS, 20% Render
+- Monitor dashboards for anomalies
 
-Ensure EKS node security group is allowed to connect to Aurora on port 5432.
+### Phase 3: Full Cutover (1 week)
+- Route 100% traffic to AWS
+- Keep Render as backup for 1 week
+- Decommission Render services
 
-### High latency
+## Security
 
-1. Check Aurora scaling:
-   ```bash
-   aws rds describe-db-clusters --db-cluster-identifier moniker-telemetry
-   ```
-
-2. Check telemetry batch size (may need tuning):
-   ```yaml
-   moniker:
-     telemetry:
-       batch-size: 100  # Increase if high volume
-       flush-interval-seconds: 5.0  # Decrease for lower latency
-   ```
-
-## Updating Deployments
-
-### Update Application Code
-
-1. Build new Docker images with updated code
-2. Push to ECR with new tag (e.g., `v1.2.0`)
-3. Update image tag in Kustomize overlays
-4. Apply:
-   ```bash
-   ./deploy.sh us-east-1 prod $AWS_ACCOUNT_ID
-   ```
-
-### Rolling Back
-
-```bash
-kubectl rollout undo deployment/use1-java-resolver -n moniker
-kubectl rollout status deployment/use1-java-resolver -n moniker
-```
-
-### Update Infrastructure
-
-1. Modify Terraform files
-2. Plan and apply:
-   ```bash
-   terraform plan -var-file=environments/prod.tfvars
-   terraform apply
-   ```
-
-## Cleanup
-
-To destroy all resources:
-
-```bash
-# Delete Kubernetes resources first
-kubectl delete namespace moniker --context=moniker-prod-us-east-1
-kubectl delete namespace moniker --context=moniker-prod-us-west-2
-
-# Destroy Terraform infrastructure
-cd terraform
-terraform destroy -var-file=environments/prod.tfvars
-```
-
-**Warning:** This will delete all data including Aurora databases. Make sure to backup first.
+- **Network:** Private subnets, security groups, NACLs
+- **Encryption:** TLS in transit, encryption at rest (Aurora, EBS)
+- **Secrets:** AWS Secrets Manager for DB passwords
+- **IAM:** Least-privilege roles for pods (IRSA)
+- **Compliance:** HIPAA, SOC 2 ready
 
 ## Support
 
-For issues or questions:
-- Check logs: `kubectl logs -f -n moniker -l app=moniker-resolver`
-- Review events: `kubectl get events -n moniker --sort-by='.lastTimestamp'`
-- CloudWatch Logs: AWS Console → CloudWatch → Log Groups
-- GitHub Issues: https://github.com/ganizanisitara/open-moniker-svc/issues
-
-## Next Steps
-
-1. **Set up CI/CD:** GitHub Actions for automated deployments
-2. **Add monitoring:** Prometheus + Grafana for detailed metrics
-3. **Implement alerts:** CloudWatch Alarms for critical issues
-4. **Configure WAF:** AWS WAF for DDoS protection
-5. **Enable encryption:** TLS/SSL certificates with ACM
-6. **Add caching:** CloudFront CDN for static assets
-7. **Implement rate limiting:** API Gateway or custom middleware
+- **Runbooks:** `deployments/aws/runbooks/`
+- **Terraform Docs:** `terraform/README.md`
+- **Kubernetes Docs:** `kubernetes/README.md`
+- **Issues:** GitHub issues
