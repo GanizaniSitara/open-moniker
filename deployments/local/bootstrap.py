@@ -35,14 +35,14 @@ PYTHON_SRC = PROJECT_ROOT / "src"
 ENVIRONMENTS = {
     "dev": {
         "java_port": 8054,
-        "python_port": 8052,
+        "python_port": 8050,
         "db_path": "dev/telemetry.db",
         "config_dir": "dev",
         "resolver_name": "local-dev",
     },
     "uat": {
         "java_port": 9054,
-        "python_port": 9052,
+        "python_port": 9050,
         "db_path": "uat/telemetry.db",
         "config_dir": "uat",
         "resolver_name": "local-uat",
@@ -222,7 +222,7 @@ class Environment:
                         sys.executable,
                         "-m",
                         "uvicorn",
-                        "moniker_svc.management_app:app",
+                        "moniker_svc.main:app",
                         "--host",
                         "0.0.0.0",
                         "--port",
