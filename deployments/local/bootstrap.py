@@ -164,7 +164,8 @@ class Environment:
                 "AWS_AZ": "local",
             })
 
-            # Start Java process with system properties for config
+            # Start Java process with system properties
+            # Note: Passing telemetry config directly since config file loading isn't working
             log_file = SCRIPT_DIR / f"{self.name}-java.log"
             with open(log_file, "w") as log:
                 process = subprocess.Popen(
@@ -172,6 +173,8 @@ class Environment:
                         "java",
                         f"-Dmoniker.config-file={self.config_dir / 'config.yaml'}",
                         f"-Dmoniker.telemetry.enabled=true",
+                        f"-Dmoniker.telemetry.sinkType=sqlite",
+                        f"-Dmoniker.telemetry.sinkConfig.dbPath={self.db_path}",
                         "-jar",
                         str(jar_file)
                     ],
