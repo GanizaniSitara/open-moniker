@@ -1,199 +1,293 @@
 # Local Development Environment
 
-Side-by-side dev/UAT environments for Open Moniker local development.
+Quick start guide for running Open Moniker locally with Python app + Java/Go resolvers.
 
-## Features
-
-- **Two independent environments**: dev (ports 8054/8052) and UAT (ports 9054/9052)
-- **SQLite telemetry**: Separate databases for each environment
-- **Automatic setup**: Config files copied from samples
-- **Process management**: Simple start/stop/status commands
-
-## Quick Start
+## One-Command Quick Start
 
 ```bash
-cd deployments/local
-
-# Start dev environment
-python bootstrap.py dev
-
-# Start UAT environment (for colleagues)
-python bootstrap.py uat
-
-# Start both side-by-side
-python bootstrap.py both
-
-# Check status
-python bootstrap.py status
-
-# Stop environments
-python bootstrap.py stop dev
-python bootstrap.py stop all
+# Start everything, run tests, verify, and open dashboard
+python3 quick_start.py
 ```
 
-## Endpoints
+This single command:
+1. ✅ Starts Python app (port 8050) + Java resolver (port 8054)
+2. ✅ Runs health checks
+3. ✅ Generates test traffic (15s)
+4. ✅ Verifies telemetry is working
+5. ✅ Opens dashboard in browser
+
+**Stop everything:**
+```bash
+python3 quick_start.py --stop
+```
+
+---
+
+## Manual Control (Advanced)
+
+### Bootstrap Script
+
+**Start services:**
+```bash
+python3 bootstrap.py dev           # Start dev environment
+python3 bootstrap.py uat           # Start UAT environment
+python3 bootstrap.py both          # Run both side-by-side
+```
+
+**Stop services:**
+```bash
+python3 bootstrap.py stop dev      # Stop dev
+python3 bootstrap.py stop uat      # Stop UAT
+python3 bootstrap.py stop both     # Stop all
+```
+
+**What it does:**
+- Starts Python app (main.py) on configured port
+- Starts Java resolver on configured port
+- Manages PID files in `.pids/`
+- Logs to `dev-python.log` and `dev-java.log`
+
+### Load Tester
+
+**Generate test traffic:**
+```bash
+cd ../../tests
+python3 load_tester.py --duration 60 --concurrent 10 --rps 20
+```
+
+**Options:**
+- `--duration`: Test duration in seconds (default: 30)
+- `--concurrent`: Number of concurrent workers (default: 10)
+- `--rps`: Target requests per second (default: 50)
+- `--url`: Base URL (default: http://localhost:8054)
+
+**Examples:**
+```bash
+# Light load for 30 seconds
+python3 load_tester.py --duration 30 --rps 10
+
+# Heavy load for 2 minutes
+python3 load_tester.py --duration 120 --concurrent 20 --rps 100
+
+# Stress test
+python3 load_tester.py --duration 60 --concurrent 50 --rps 500
+```
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Python App (main.py)                                   │
+│  Port: 8050 (dev) / 9050 (uat)                         │
+│  - Admin UI & config management                         │
+│  - Live telemetry dashboard                             │
+│  - Catalog CRUD operations                              │
+│  - Can also handle resolution (for dev/testing)         │
+└─────────────────────────────────────────────────────────┘
+                          ↓
+               Shared Catalog YAML Files
+                          ↓
+         ┌────────────────┴────────────────┐
+         ↓                                  ↓
+┌──────────────────┐              ┌──────────────────┐
+│ Java Resolver    │              │ Go Resolver      │
+│ Port: 8054 (dev) │              │ Port: 8053       │
+│ High-performance │              │ High-performance │
+│ Complementary    │              │ Complementary    │
+└──────────────────┘              └──────────────────┘
+         ↓                                  ↓
+         └────────────────┬─────────────────┘
+                          ↓
+               Shared Telemetry Database
+                 (SQLite or PostgreSQL)
+```
+
+**All three can run together:**
+- Python manages catalog files
+- Java/Go read same catalog files (hot-reload on changes)
+- All write to same telemetry database
+- Dashboard shows metrics from all resolvers
+
+---
+
+## Ports
 
 ### Dev Environment
-
-- **Java Resolver**: http://localhost:8054
-  - Health: http://localhost:8054/health
-  - Resolve: http://localhost:8054/resolve/{path}
-  - UI: http://localhost:8054/ui
-
-- **Python Admin**: http://localhost:8052
-  - Health: http://localhost:8052/health
-  - Config UI: http://localhost:8052/config
-  - Dashboard: http://localhost:8052/dashboard (catalog stats + live telemetry)
+- **8050** - Python app (main.py)
+- **8053** - Go resolver (if running)
+- **8054** - Java resolver
 
 ### UAT Environment
+- **9050** - Python app (main.py)
+- **9053** - Go resolver (if running)
+- **9054** - Java resolver
 
-- **Java Resolver**: http://localhost:9054
-- **Python Admin**: http://localhost:9052
-
-## Directory Structure
-
-```
-deployments/local/
-├── bootstrap.py           # Main orchestration script
-├── dev/
-│   ├── config.yaml       # Dev configuration
-│   ├── catalog.yaml      # Working catalog
-│   └── telemetry.db      # SQLite telemetry database
-├── uat/
-│   ├── config.yaml       # UAT configuration
-│   ├── catalog.yaml      # Stable catalog for demos
-│   └── telemetry.db      # Separate SQLite database
-├── .pids/                # Process ID files (auto-created)
-│   ├── dev-java.pid
-│   ├── dev-python.pid
-│   ├── uat-java.pid
-│   └── uat-python.pid
-├── dev-java.log          # Java resolver logs (dev)
-├── dev-python.log        # Python admin logs (dev)
-├── uat-java.log          # Java resolver logs (UAT)
-└── uat-python.log        # Python admin logs (UAT)
-```
+---
 
 ## Configuration
 
-### Environment Variables
+Each environment has its own config directory:
 
-The bootstrap script sets these automatically:
+```
+dev/
+├── config.yaml           # Python app config
+├── catalog.yaml          # Catalog definition
+└── telemetry.db          # SQLite telemetry database
 
-**Java Resolver:**
-- `PORT`: 8054 (dev) or 9054 (UAT)
-- `CONFIG_FILE`: Path to config.yaml
-- `CATALOG_FILE`: Path to catalog.yaml
-- `TELEMETRY_ENABLED`: true
-- `TELEMETRY_SINK_TYPE`: sqlite
-- `TELEMETRY_DB_PATH`: Path to telemetry.db
-- `RESOLVER_NAME`: local-dev or local-uat
-
-**Python Admin:**
-- `PORT`: 8052 (dev) or 9052 (UAT)
-- `CONFIG_FILE`: Path to config.yaml
-- `CATALOG_FILE`: Path to catalog.yaml
-- `TELEMETRY_DB_TYPE`: sqlite
-- `TELEMETRY_DB_PATH`: Path to telemetry.db
-
-## Telemetry
-
-Each environment has its own SQLite database for telemetry:
-
-```bash
-# Query dev telemetry
-sqlite3 dev/telemetry.db "SELECT * FROM access_log ORDER BY timestamp DESC LIMIT 10;"
-
-# Check event counts
-sqlite3 dev/telemetry.db "SELECT COUNT(*) FROM access_log;"
-
-# Top monikers
-sqlite3 dev/telemetry.db "
-  SELECT moniker, COUNT(*) as count
-  FROM access_log
-  GROUP BY moniker
-  ORDER BY count DESC
-  LIMIT 10;
-"
+uat/
+├── config.yaml           # UAT config
+├── catalog.yaml          # UAT catalog
+└── telemetry.db          # UAT telemetry database
 ```
 
-## Testing Telemetry
+**Key config options:**
 
-```bash
-# Start dev environment
-python bootstrap.py dev
+```yaml
+# config.yaml
+project_name: "Open Moniker"
 
-# Generate some traffic
-curl http://localhost:8054/resolve/test/path@latest
-curl http://localhost:8054/describe/test/path
-curl http://localhost:8054/list/test
+# Telemetry (via environment variables)
+TELEMETRY_DB_TYPE: sqlite
+TELEMETRY_DB_PATH: ./dev/telemetry.db
 
-# Check telemetry in dashboard
-open http://localhost:8052/dashboard
-
-# Or query directly
-sqlite3 dev/telemetry.db "SELECT * FROM access_log;"
+# For production (PostgreSQL)
+TELEMETRY_DB_TYPE: postgres
+TELEMETRY_DB_HOST: localhost
+TELEMETRY_DB_PORT: 5432
+TELEMETRY_DB_NAME: moniker_telemetry
+TELEMETRY_DB_USER: telemetry
+TELEMETRY_DB_PASSWORD: secret
 ```
 
-## Load Testing
+---
 
+## URLs
+
+### Python App (8050)
+- **Landing Page:** http://localhost:8050/
+- **Live Telemetry:** http://localhost:8050/telemetry
+- **Config UI:** http://localhost:8050/config/ui
+- **Catalog Browser:** http://localhost:8050/ui
+- **Dashboard:** http://localhost:8050/dashboard/ui
+- **Swagger Docs:** http://localhost:8050/docs
+- **Health:** http://localhost:8050/health
+
+### Java Resolver (8054)
+- **Health:** http://localhost:8054/health
+- **Resolve:** http://localhost:8054/resolve/commodities/crypto@latest
+- **Catalog:** http://localhost:8054/catalog
+
+### Go Resolver (8053)
+- **Health:** http://localhost:8053/health
+- **Resolve:** http://localhost:8053/resolve/commodities/crypto@latest
+
+---
+
+## Testing
+
+**Manual curl tests:**
 ```bash
-# Install hey if not already
-go install github.com/rakyll/hey@latest
+# Test Python app
+curl http://localhost:8050/health
 
-# Generate load (30 seconds, 50 concurrent)
-hey -z 30s -c 50 http://localhost:8054/resolve/test/path@latest
+# Test Java resolver
+curl http://localhost:8054/health
+curl http://localhost:8054/resolve/commodities/crypto@latest
 
-# Watch dashboard for real-time RPS/latency updates
-open http://localhost:8052/dashboard
+# Test Go resolver (if running)
+curl http://localhost:8053/health
 ```
+
+**Load testing:**
+```bash
+# Generate sustained traffic to populate telemetry
+python3 ../../tests/load_tester.py --duration 60 --rps 20
+
+# Watch telemetry dashboard update in real-time
+open http://localhost:8050/telemetry
+```
+
+---
 
 ## Troubleshooting
 
-### Service won't start
-
-Check the log files:
+**Services won't start:**
 ```bash
-tail -f dev-java.log
+# Check logs
 tail -f dev-python.log
+tail -f dev-java.log
+
+# Check if ports are in use
+lsof -i :8050
+lsof -i :8054
+
+# Force kill if needed
+python3 bootstrap.py stop dev
+pkill -f "uvicorn moniker_svc.main"
+pkill -f "resolver-java"
 ```
 
-### Port already in use
-
-Change ports in `bootstrap.py`:
-```python
-ENVIRONMENTS = {
-    "dev": {
-        "java_port": 8054,   # Change this
-        "python_port": 8052, # And this
-        ...
-    }
-}
-```
-
-### Maven build fails
-
+**Telemetry not showing data:**
 ```bash
-cd ../../resolver-java
-mvn clean package -DskipTests
+# Check database has records
+sqlite3 dev/telemetry.db "SELECT COUNT(*) FROM access_log;"
+
+# Check recent records
+sqlite3 dev/telemetry.db "SELECT timestamp, resolver_id, moniker FROM access_log ORDER BY id DESC LIMIT 5;"
+
+# Generate test traffic
+python3 ../../tests/load_tester.py --duration 30 --rps 10
 ```
 
-### Python dependencies missing
-
+**Config changes not taking effect:**
 ```bash
-pip install fastapi uvicorn pyyaml aiosqlite asyncpg
+# Restart services to reload config
+python3 bootstrap.py stop dev
+python3 bootstrap.py dev
 ```
 
-## Next Steps
+---
 
-1. **Customize catalogs**: Edit `dev/catalog.yaml` and `uat/catalog.yaml`
-2. **Test live dashboard**: Open http://localhost:8052/dashboard
-3. **Run load tests**: Use `hey` or `ab` to generate traffic
-4. **Monitor telemetry**: Query SQLite databases or use dashboard
+## Development Workflow
 
-## See Also
+**1. Start dev environment:**
+```bash
+python3 quick_start.py
+```
 
-- [Java Telemetry Implementation](../../resolver-java/TELEMETRY_IMPLEMENTATION.md)
-- [Dashboard Documentation](../../docs/dashboard-guide.md)
-- [Render Deployment](../render/README.md)
-- [AWS Production Deployment](../aws/README.md)
+**2. Make changes to code**
+
+**3. Restart to test:**
+```bash
+python3 quick_start.py --stop
+python3 quick_start.py
+```
+
+**4. Run side-by-side dev + UAT:**
+```bash
+python3 bootstrap.py both
+# Dev on 8050, UAT on 9050
+```
+
+---
+
+## Scripts Summary
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| **quick_start.py** | One-command start + test + verify | `python3 quick_start.py` |
+| **bootstrap.py** | Service management (start/stop) | `python3 bootstrap.py dev` |
+| **../../tests/load_tester.py** | Generate test traffic | `python3 load_tester.py --rps 20` |
+
+---
+
+## Files
+
+- `quick_start.py` - One-command start + test + verify
+- `bootstrap.py` - Service management (start/stop)
+- `dev/` - Dev environment config and data
+- `uat/` - UAT environment config and data
+- `.pids/` - PID files for running services
+- `*.log` - Service logs
