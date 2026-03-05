@@ -307,6 +307,72 @@ async def root(request: Request):
             padding-bottom: var(--sp-2);
             border-bottom: 2px solid var(--c-peacock);
         }}
+        .telemetry-section {{
+            background: var(--color-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-2);
+            padding: var(--sp-5);
+            margin-top: var(--sp-5);
+        }}
+        .telemetry-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--sp-4);
+        }}
+        .telemetry-header h3 {{
+            font-size: var(--fs-800);
+            color: var(--c-navy);
+            margin: 0;
+        }}
+        .status-indicator {{
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            font-size: var(--fs-600);
+            color: var(--color-muted);
+        }}
+        .status-dot {{
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--c-gray);
+        }}
+        .status-dot.connected {{ background: var(--c-green); }}
+        .telemetry-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--sp-4);
+        }}
+        .telemetry-card {{
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-1);
+            padding: var(--sp-4);
+        }}
+        .telemetry-card .label {{
+            font-size: var(--fs-500);
+            color: var(--color-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--sp-1);
+        }}
+        .telemetry-card .value {{
+            font-size: var(--fs-900);
+            font-weight: var(--fw-bold);
+            color: var(--c-navy);
+        }}
+        .telemetry-card .subvalue {{
+            font-size: var(--fs-600);
+            color: var(--color-muted);
+            margin-top: var(--sp-1);
+        }}
+        .no-data {{
+            text-align: center;
+            color: var(--color-muted);
+            padding: var(--sp-5);
+            font-style: italic;
+        }}
         footer {{
             text-align: center;
             padding: var(--sp-5);
@@ -357,6 +423,20 @@ async def root(request: Request):
             </div>
         </div>
 
+        <h3 class="section-title">Live Telemetry</h3>
+        <div class="telemetry-section">
+            <div class="telemetry-header">
+                <h3>Resolver Metrics (Last 10s)</h3>
+                <div class="status-indicator">
+                    <span class="status-dot" id="ws-status"></span>
+                    <span id="ws-status-text">Connecting...</span>
+                </div>
+            </div>
+            <div id="telemetry-content" class="no-data">
+                Waiting for telemetry data...
+            </div>
+        </div>
+
         <h3 class="section-title">API Documentation</h3>
         <div class="grid">
             <div class="card docs">
@@ -394,6 +474,81 @@ async def root(request: Request):
     <footer>
         <p>&copy; 2024 {project_name}. All rights reserved.</p>
     </footer>
+
+    <script>
+        // WebSocket connection for live telemetry
+        const wsUrl = `ws://${{window.location.host}}/dashboard/live`;
+        let ws = null;
+        let reconnectTimer = null;
+
+        function connectWebSocket() {{
+            try {{
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = () => {{
+                    console.log('WebSocket connected');
+                    document.getElementById('ws-status').classList.add('connected');
+                    document.getElementById('ws-status-text').textContent = 'Connected';
+                }};
+
+                ws.onmessage = (event) => {{
+                    const data = JSON.parse(event.data);
+                    updateTelemetry(data.resolvers || []);
+                }};
+
+                ws.onerror = (error) => {{
+                    console.error('WebSocket error:', error);
+                }};
+
+                ws.onclose = () => {{
+                    console.log('WebSocket closed, reconnecting...');
+                    document.getElementById('ws-status').classList.remove('connected');
+                    document.getElementById('ws-status-text').textContent = 'Reconnecting...';
+                    reconnectTimer = setTimeout(connectWebSocket, 2000);
+                }};
+            }} catch (error) {{
+                console.error('Failed to connect WebSocket:', error);
+                reconnectTimer = setTimeout(connectWebSocket, 2000);
+            }}
+        }}
+
+        function updateTelemetry(resolvers) {{
+            const container = document.getElementById('telemetry-content');
+
+            if (!resolvers || resolvers.length === 0) {{
+                container.className = 'no-data';
+                container.textContent = 'No telemetry data available. Generate some traffic to see live metrics.';
+                return;
+            }}
+
+            container.className = 'telemetry-grid';
+            container.innerHTML = resolvers.map(r => `
+                <div class="telemetry-card">
+                    <div class="label">${{r.resolver_id}}</div>
+                    <div class="value">${{r.rps.toFixed(1)}} req/s</div>
+                    <div class="subvalue">
+                        Latency: ${{r.avg_latency_ms.toFixed(1)}}ms avg, ${{r.p95_latency_ms.toFixed(1)}}ms p95
+                    </div>
+                    <div class="subvalue">
+                        Errors: <span style="color: ${{r.errors > 0 ? 'var(--c-red)' : 'var(--c-green)'}}">${{r.errors}}</span>
+                    </div>
+                </div>
+            `).join('');
+        }}
+
+        // Connect on page load
+        connectWebSocket();
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {{
+            if (ws) {{
+                ws.close();
+            }}
+            if (reconnectTimer) {{
+                clearTimeout(reconnectTimer);
+            }}
+        }});
+    </script>
 </body>
 </html>
 """
