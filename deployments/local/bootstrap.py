@@ -150,25 +150,31 @@ class Environment:
                     return False
 
             # Prepare environment variables
-            # Spring Boot converts MONIKER_TELEMETRY_ENABLED to moniker.telemetry.enabled
+            # Note: application.yaml uses ${CONFIG_FILE} not ${MONIKER_CONFIG_FILE}
             env = os.environ.copy()
             env.update({
                 "SERVER_PORT": str(self.config["java_port"]),
-                "MONIKER_CONFIG_FILE": str(self.config_dir / "config.yaml"),
-                "MONIKER_CATALOG_FILE": str(self.config_dir / "catalog.yaml"),
+                "CONFIG_FILE": str(self.config_dir / "config.yaml"),
+                "CATALOG_FILE": str(self.config_dir / "catalog.yaml"),
+                # Spring Boot property for @ConditionalOnProperty
                 "MONIKER_TELEMETRY_ENABLED": "true",
-                "MONIKER_TELEMETRY_SINKTYPE": "sqlite",  # Spring Boot needs no hyphens in env vars
-                "MONIKER_TELEMETRY_SINKCONFIG_DBPATH": str(self.db_path),
-                "MONIKER_RESOLVERNAME": self.config["resolver_name"],
-                "MONIKER_REGION": "local",
-                "MONIKER_AZ": "local",
+                # Resolver identity
+                "RESOLVER_NAME": self.config["resolver_name"],
+                "AWS_REGION": "local",
+                "AWS_AZ": "local",
             })
 
-            # Start Java process (env vars are picked up by Spring Boot automatically)
+            # Start Java process with system properties for config
             log_file = SCRIPT_DIR / f"{self.name}-java.log"
             with open(log_file, "w") as log:
                 process = subprocess.Popen(
-                    ["java", "-jar", str(jar_file)],
+                    [
+                        "java",
+                        f"-Dmoniker.config-file={self.config_dir / 'config.yaml'}",
+                        f"-Dmoniker.telemetry.enabled=true",
+                        "-jar",
+                        str(jar_file)
+                    ],
                     cwd=JAVA_RESOLVER,
                     env=env,
                     stdout=log,
