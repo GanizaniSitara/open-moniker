@@ -79,3 +79,13 @@ PORTAL_INTEGRATION_INSTRUCTIONS.md
 
 # Local Claude Code documentation
 CLAUDE.md
+
+# Go
+resolver-go/bin/
+resolver-go/coverage.out
+resolver-go/coverage.html
+*.test
+*.exe
+*.dll
+*.so
+*.dylib

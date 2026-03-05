@@ -1,0 +1,47 @@
+benchmarks:
+  display_name: Benchmarks
+  description: Benchmark indices, constituents, and returns
+  ownership:
+    accountable_owner: indices-governance@firm.com
+    data_specialist: quant-research@firm.com
+    support_channel: '#benchmarks'
+
+benchmarks.constituents:
+  display_name: Benchmark Constituents
+  description: Index membership and weights
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: BENCHMARKS
+      schema: CONSTITUENTS
+      query: "SELECT benchmark_id, security_id, weight, sector, country FROM BENCHMARK_CONSTITUENTS WHERE benchmark_id = '{segments[0]}' AND as_of_date = TO_DATE('{segments[1]}', 'YYYYMMDD')"
+
+benchmarks.returns:
+  display_name: Benchmark Returns
+  description: Daily, MTD, YTD returns for benchmarks
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: BENCHMARKS
+      schema: RETURNS
+      query: "SELECT benchmark_id, as_of_date, return_1d, return_mtd, return_ytd FROM BENCHMARK_RETURNS WHERE benchmark_id = '{segments[0]}'"
+
+prices:
+  display_name: Market Prices
+  description: Real-time and historical pricing data
+
+prices.equity:
+  display_name: Equity Prices
+  description: Stock prices and market data
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: MARKET_DATA_WH
+      database: PRICES
+      schema: EQUITY
+      query: "SELECT ticker, price_date, open, high, low, close, volume FROM EQUITY_PRICES WHERE ticker = '{segments[0]}' AND price_date = TO_DATE('{segments[1]}', 'YYYYMMDD')"
