@@ -1,19 +1,71 @@
 services:
-  # Java Resolver - High-performance data plane
+  # Python Admin Service - Port 8050 (Management + Resolution + Dashboard)
+  - type: web
+    name: moniker-admin
+    runtime: python
+    region: oregon
+    plan: starter
+    branch: feature/java-resolver-implementation
+    rootDir: .
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: |
+      cd /opt/render/project/src && \
+      PYTHONPATH=/opt/render/project/src \
+      uvicorn moniker_svc.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHONPATH
+        value: /opt/render/project/src
+      - key: CONFIG_FILE
+        value: /opt/render/project/src/sample_config.yaml
+      - key: CATALOG_FILE
+        value: /opt/render/project/src/sample_catalog.yaml
+      - key: TELEMETRY_DB_TYPE
+        value: postgres
+      - key: TELEMETRY_DB_HOST
+        fromDatabase:
+          name: moniker-telemetry
+          property: host
+      - key: TELEMETRY_DB_PORT
+        fromDatabase:
+          name: moniker-telemetry
+          property: port
+      - key: TELEMETRY_DB_NAME
+        fromDatabase:
+          name: moniker-telemetry
+          property: database
+      - key: TELEMETRY_DB_USER
+        fromDatabase:
+          name: moniker-telemetry
+          property: user
+      - key: TELEMETRY_DB_PASSWORD
+        fromDatabase:
+          name: moniker-telemetry
+          property: password
+      - key: PROJECT_NAME
+        value: Open Moniker (Render)
+    healthCheckPath: /health
+
+  # Java Resolver Service - High Performance
   - type: web
     name: moniker-resolver-java
     runtime: docker
+    region: oregon
+    plan: starter
+    branch: feature/java-resolver-implementation
+    rootDir: .
     dockerfilePath: ./deployments/render/Dockerfile.java
     dockerContext: .
     envVars:
-      - key: PORT
-        value: 8054
+      - key: SERVER_PORT
+        value: "8054"
       - key: CONFIG_FILE
-        value: /app/config.yaml
+        value: /app/sample_config.yaml
       - key: CATALOG_FILE
-        value: /app/catalog.yaml
-      - key: TELEMETRY_ENABLED
-        value: true
+        value: /app/sample_catalog.yaml
+      - key: MONIKER_TELEMETRY_ENABLED
+        value: "true"
       - key: TELEMETRY_SINK_TYPE
         value: postgres
       - key: TELEMETRY_DB_HOST
@@ -37,54 +89,18 @@ services:
           name: moniker-telemetry
           property: password
       - key: RESOLVER_NAME
-        value: render-resolver
+        value: render-java-1
       - key: AWS_REGION
-        value: render
+        value: us-west-2
       - key: AWS_AZ
-        value: render-cloud
-    healthCheckPath: /health
-
-  # Python Management - Control plane
-  - type: web
-    name: moniker-admin
-    runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn moniker_svc.management_app:app --host 0.0.0.0 --port $PORT
-    envVars:
-      - key: PYTHONPATH
-        value: src
-      - key: PORT
-        value: 8052
-      - key: CONFIG_FILE
-        value: ./config.yaml
-      - key: CATALOG_FILE
-        value: ./catalog.yaml
-      - key: TELEMETRY_DB_TYPE
-        value: postgres
-      - key: TELEMETRY_DB_HOST
-        fromDatabase:
-          name: moniker-telemetry
-          property: host
-      - key: TELEMETRY_DB_PORT
-        fromDatabase:
-          name: moniker-telemetry
-          property: port
-      - key: TELEMETRY_DB_NAME
-        fromDatabase:
-          name: moniker-telemetry
-          property: database
-      - key: TELEMETRY_DB_USER
-        fromDatabase:
-          name: moniker-telemetry
-          property: user
-      - key: TELEMETRY_DB_PASSWORD
-        fromDatabase:
-          name: moniker-telemetry
-          property: password
+        value: render
     healthCheckPath: /health
 
 databases:
+  # PostgreSQL for telemetry
   - name: moniker-telemetry
     databaseName: moniker_telemetry
     user: moniker
+    region: oregon
     plan: starter
+    ipAllowList: []

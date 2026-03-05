@@ -1,147 +1,99 @@
 # Render.com Deployment
 
-Simple cloud deployment for demos and testing.
-
-## Architecture
-
-- **Java Resolver**: Docker container on Render
-- **Python Admin**: Python service on Render
-- **PostgreSQL**: Managed database on Render
-
-## Prerequisites
-
-1. Render account: https://render.com
-2. Render CLI (optional): `brew install render`
-3. GitHub repository connected to Render
+Complete deployment setup for Render.com with automated scripts.
 
 ## Quick Deploy
 
-### Option 1: Blueprint (Recommended)
-
-1. Fork this repository to your GitHub
-2. Go to https://render.com/deploy
-3. Connect your GitHub repository
-4. Render will detect `render.yaml` and create all services
-5. Wait 5-10 minutes for deployment
-
-### Option 2: Manual Setup
-
 ```bash
 cd deployments/render
-
-# 1. Create services via Render dashboard
-# 2. Run bootstrap script for schema
-./bootstrap.sh
-
-# 3. Deploy with Render CLI
-render deploy
+python3 deploy.py
 ```
 
-## Configuration
+This will automatically:
+1. Create PostgreSQL database
+2. Create Python admin service
+3. Create Java resolver service
+4. Configure all environment variables
+5. Trigger deployments
 
-### Environment Variables
+## Services
 
-All configured in `render.yaml`:
-- `TELEMETRY_ENABLED=true`
-- `TELEMETRY_SINK_TYPE=postgres`
-- Database credentials auto-injected from Render
+### Python Admin (Port 8050)
+- **URL**: `https://moniker-admin-[random].onrender.com`
+- **Endpoints**: `/health`, `/resolve/*`, `/catalog`, `/docs`
+- **Features**: Admin UI, resolution, dashboard, telemetry
 
-### Database Schema
+### Java Resolver (Port 8054)
+- **URL**: `https://moniker-resolver-java-[random].onrender.com`
+- **Endpoints**: `/health`, `/resolve/*`, `/catalog`, `/list/*`
+- **Features**: High-performance resolution, telemetry
 
-Run after database is created:
-
-```bash
-# Get database URL from Render dashboard
-render databases list
-
-# Run migrations
-psql $DATABASE_URL < /tmp/schema.sql
-```
-
-## Accessing Services
-
-After deployment:
-
-- **Java Resolver**: `https://moniker-resolver-java.onrender.com`
-  - Health: `/health`
-  - Resolve: `/resolve/risk.greeks`
-  - Catalog: `/catalog`
-
-- **Python Admin**: `https://moniker-admin.onrender.com`
-  - Dashboard: `/dashboard`
-  - Config UI: `/config/ui`
-  - API Docs: `/docs`
+### PostgreSQL Database
+- **Name**: `moniker-telemetry`
+- **Plan**: Starter (256MB)
+- **Purpose**: Shared telemetry storage
 
 ## Testing
 
+Once services are deployed and healthy:
+
 ```bash
-# Health checks
-curl https://moniker-resolver-java.onrender.com/health
-curl https://moniker-admin.onrender.com/health
-
-# Test resolution
-curl https://moniker-resolver-java.onrender.com/resolve/risk.greeks
-
-# View dashboard
-open https://moniker-admin.onrender.com/dashboard
+python3 test_render.py \
+  https://moniker-admin-xyz.onrender.com \
+  https://moniker-resolver-java-xyz.onrender.com
 ```
 
-## Costs
+This runs 10 comprehensive tests including:
+- Health checks
+- Parent node resolution
+- Leaf node resolution
+- Catalog endpoints
+- Load testing (50 requests)
 
-**Free Tier:**
-- 2 web services (750 hours/month each)
-- PostgreSQL Starter: $7/month
-- **Total: ~$7/month**
+## Manual Deployment
 
-**Paid Tier (Starter):**
-- Java Resolver: $7/month
-- Python Admin: $7/month
-- PostgreSQL: $7/month
-- **Total: ~$21/month**
+If you prefer using Render dashboard:
+
+1. Create PostgreSQL database manually
+2. Create Python service from GitHub repo
+3. Create Java service with Docker runtime
+4. Set environment variables as shown in `render.yaml`
+
+## Cost Estimate
+
+- Python service: $7/month (Starter)
+- Java service: $7/month (Starter)
+- PostgreSQL: $7/month (Starter, 256MB)
+- **Total**: $21/month
 
 ## Monitoring
 
-- Logs: Render dashboard > Service > Logs
-- Metrics: Render dashboard > Service > Metrics
-- Database: Render dashboard > Database > Metrics
+- Dashboard: https://dashboard.render.com/
+- Python logs: View in Render dashboard → moniker-admin → Logs
+- Java logs: View in Render dashboard → moniker-resolver-java → Logs
+- Database: Connect via connection string in dashboard
 
 ## Troubleshooting
 
-### Services won't start
+### Service won't start
+- Check build logs in Render dashboard
+- Verify environment variables are set
+- Check that sample_config.yaml and sample_catalog.yaml exist in repo
 
-Check logs in Render dashboard:
-```bash
-render logs -s moniker-resolver-java
-render logs -s moniker-admin
-```
+### Health check failing
+- Services need 2-3 minutes to start
+- Java service takes longer (Maven build)
+- Check logs for errors
 
-### Database connection fails
+### Database connection issues
+- Ensure database is created first
+- Verify environment variables reference correct database
+- Check IP allowlist is empty (allow all)
 
-Verify environment variables are set:
-```bash
-render env:get -s moniker-resolver-java | grep TELEMETRY_DB
-```
+## Files
 
-### Telemetry not working
-
-1. Check database schema exists
-2. Verify TELEMETRY_ENABLED=true
-3. Check logs for errors
-
-## Scaling
-
-In Render dashboard:
-- Java Resolver: Increase instances (1 → 3)
-- Python Admin: Keep at 1 (low traffic)
-- Database: Upgrade plan (Starter → Standard)
-
-## CI/CD
-
-Render auto-deploys on git push to main:
-- Detects changes in `resolver-java/` → rebuilds Java
-- Detects changes in `src/` → redeploys Python
-- Zero-downtime deployments
-
-## Next Steps
-
-For production deployment, see [AWS Documentation](../aws/README.md).
+- `render.yaml` - Infrastructure as code blueprint
+- `Dockerfile.java` - Java service container
+- `deploy.py` - Automated deployment script
+- `test_render.py` - Comprehensive test suite
+- `README.md` - This file

@@ -1,34 +1,37 @@
 # Multi-stage build for Java resolver
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM maven:3.9-eclipse-temurin-21-alpine AS builder
 
 WORKDIR /build
 
-# Copy pom.xml and download dependencies (cached layer)
-COPY resolver-java/pom.xml ./
-RUN mvn dependency:go-offline -B
+# Copy resolver source
+COPY resolver-java /build/resolver-java
+COPY sample_config.yaml /build/
+COPY sample_catalog.yaml /build/
 
-# Copy source and build
-COPY resolver-java/src ./src
-RUN mvn clean package -DskipTests -B
+# Build JAR
+WORKDIR /build/resolver-java
+RUN mvn clean package -DskipTests
 
-# Runtime image
-FROM eclipse-temurin:21-jre-jammy
+# Runtime stage
+FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-# Copy JAR from build stage
-COPY --from=build /build/target/resolver-java-0.1.0.jar ./app.jar
-
-# Copy config files
-COPY config.yaml catalog.yaml domains.yaml ./
+# Copy JAR and config files
+COPY --from=builder /build/resolver-java/target/resolver-java-*.jar /app/resolver.jar
+COPY --from=builder /build/sample_config.yaml /app/
+COPY --from=builder /build/sample_catalog.yaml /app/
 
 # Expose port
 EXPOSE 8054
 
-# Run with optimized JVM flags
-ENTRYPOINT ["java", \
-    "-XX:+UseZGC", \
-    "-XX:+UseContainerSupport", \
-    "-XX:MaxRAMPercentage=75.0", \
-    "-Djava.security.egd=file:/dev/./urandom", \
-    "-jar", "app.jar"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8054/health || exit 1
+
+# Start resolver
+CMD ["java", \
+     "-Dserver.port=8054", \
+     "-Dmoniker.config-file=/app/sample_config.yaml", \
+     "-Dmoniker.telemetry.enabled=true", \
+     "-jar", "/app/resolver.jar"]
