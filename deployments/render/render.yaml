@@ -18,9 +18,9 @@ services:
       - key: PYTHONPATH
         value: /opt/render/project/src
       - key: CONFIG_FILE
-        value: /opt/render/project/src/sample_config.yaml
+        value: /opt/render/project/sample_config.yaml
       - key: CATALOG_FILE
-        value: /opt/render/project/src/sample_catalog.yaml
+        value: /opt/render/project/sample_catalog.yaml
       - key: TELEMETRY_DB_TYPE
         value: postgres
       - key: TELEMETRY_DB_HOST
