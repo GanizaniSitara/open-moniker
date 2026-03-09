@@ -64,13 +64,46 @@ pip install -e client/
 
 # 2. Start the server (uses built-in demo catalog with mock data)
 # Linux/Mac:
-PYTHONPATH="$PWD/src:$PWD/external/moniker-data/src" uvicorn moniker_svc.main:app --reload
+PYTHONPATH="$PWD/src:$PWD/external/moniker-data/src" uvicorn moniker_svc.main:app --reload --port 8050
 
 # Windows PowerShell:
-$env:PYTHONPATH="$PWD\src;$PWD\external\moniker-data\src"; uvicorn moniker_svc.main:app --reload
+$env:PYTHONPATH="$PWD\src;$PWD\external\moniker-data\src"; uvicorn moniker_svc.main:app --reload --port 8050
 
 # 3. Open the web UI
 # http://localhost:8050/ui
+```
+
+## Ports and environment configuration
+
+For the monolith, there are two supported ways to pick the listen port:
+
+| Scenario | Start command | Default listen port | How to override |
+|---|---|---:|---|
+| Local monolith via `uvicorn moniker_svc.main:app` | `uvicorn moniker_svc.main:app --reload --port 8050` | `8050` | Change the uvicorn `--port` flag |
+| Local monolith via `start.py --env prod` | `python start.py --env prod` | `8060` | Pass `--host 0.0.0.0:<port>` |
+| Local monolith via `start.py --env dev` | `python start.py --env dev` | `8061` | Pass `--host 0.0.0.0:<port>` |
+| Hosted prod (for example Render) | platform start command | platform `$PORT` | The platform injects `$PORT`; see `render.yaml` |
+
+- `uvicorn moniker_svc.main:app` uses uvicorn's own port flag; if you omit `--port`, uvicorn defaults to `8000`.
+- `start.py` only chooses the default host/port pair for `prod` vs `dev`; it does **not** switch to a different config file by itself.
+- The app config file still comes from `MONIKER_CONFIG` if that environment variable is set, otherwise `config.yaml`.
+- `config.yaml` / `sample_config.yaml` still define `server.port: 8050`, which is the config-backed default when the app is started through a config-aware entry point.
+
+To run a prod-style and dev-style monolith side by side on one machine:
+
+```bash
+# Terminal 1
+python start.py --env prod   # listens on 0.0.0.0:8060
+
+# Terminal 2
+python start.py --env dev    # listens on 0.0.0.0:8061
+```
+
+If you want each instance to use a different YAML config, set `MONIKER_CONFIG` before starting each one:
+
+```bash
+MONIKER_CONFIG=config.prod.yaml python start.py --env prod
+MONIKER_CONFIG=config.dev.yaml python start.py --env dev
 ```
 
 ## Try the API
