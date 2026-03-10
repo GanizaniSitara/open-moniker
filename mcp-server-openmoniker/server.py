@@ -58,7 +58,7 @@ logger.setLevel(logging.INFO)
 # Configuration
 # ---------------------------------------------------------------------------
 
-MCP_PORT = int(os.environ.get("MCP_PORT", "8051"))
+MCP_PORT = int(os.environ.get("MCP_PORT", "8072"))
 MCP_HOST = os.environ.get("MCP_HOST", "0.0.0.0")
 
 # Auth tokens — split by privilege level.
