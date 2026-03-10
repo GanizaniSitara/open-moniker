@@ -57,6 +57,7 @@ config.yaml
 config_zmq.yaml
 catalog.yaml
 domains.yaml
+models.yaml
 demo/demo_monikers.yaml
 
 # Database files
@@ -79,6 +80,11 @@ PORTAL_INTEGRATION_INSTRUCTIONS.md
 
 # Local Claude Code documentation
 CLAUDE.md
+
+# Next.js / Node
+node_modules/
+.next/
+tsconfig.tsbuildinfo
 
 # Go
 resolver-go/bin/
