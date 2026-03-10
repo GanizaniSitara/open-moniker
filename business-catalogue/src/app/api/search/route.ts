@@ -5,7 +5,7 @@ import { search } from "@/lib/search";
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q") || "";
   const all = request.nextUrl.searchParams.get("all");
-  const data = await getCatalogData();
+  const data = getCatalogData();
 
   // If requesting all fields (for the fields listing page)
   if (all === "fields") {

@@ -3,8 +3,8 @@ import CategoryGrid from "@/components/CategoryGrid";
 import PageTitle from "@/components/PageTitle";
 import { getCatalogData, datasetCountForDomain } from "@/lib/data-loader";
 
-export default async function CategoriesPage() {
-  const data = await getCatalogData();
+export default function CategoriesPage() {
+  const data = getCatalogData();
 
   const categories = data.domains.map((d) => ({
     domainKey: d.key,
