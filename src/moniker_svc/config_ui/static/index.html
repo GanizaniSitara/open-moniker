@@ -2080,8 +2080,8 @@
         }
 
         function collapseAllSections() {
-            document.querySelectorAll('#form-container .form-section').forEach((s, i) => {
-                if (i > 0) s.classList.add('collapsed');
+            document.querySelectorAll('#form-container .form-section').forEach(s => {
+                s.classList.add('collapsed');
             });
         }
 
