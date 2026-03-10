@@ -15,6 +15,7 @@ interface BreadcrumbItem {
 export default function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
   return (
     <Box
+      data-testid="breadcrumbs-bar"
       sx={{
         bgcolor: "#e9ecef",
         px: 3,

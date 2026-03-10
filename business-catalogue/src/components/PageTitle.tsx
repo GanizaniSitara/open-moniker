@@ -3,6 +3,7 @@ import { Box, Typography } from "@mui/material";
 export default function PageTitle({ title }: { title: string }) {
   return (
     <Box
+      data-testid="page-title-bar"
       sx={{
         bgcolor: "#e9ecef",
         px: 3,

@@ -1,11 +1,15 @@
 "use client";
-import { Box, Typography } from "@mui/material";
+import { Typography, Box, Chip } from "@mui/material";
 import Link from "next/link";
 
 interface DomainCardProps {
   domainKey: string;
   displayName: string;
   color: string;
+  notes: string;
+  dataCategory: string;
+  confidentiality: string;
+  owner: string;
   datasetCount: number;
 }
 
@@ -13,65 +17,95 @@ export default function DomainCard({
   domainKey,
   displayName,
   color,
+  notes,
+  dataCategory,
+  confidentiality,
+  owner,
   datasetCount,
 }: DomainCardProps) {
   return (
-    <Link href={`/domains/${domainKey}`} style={{ textDecoration: "none" }}>
+    <Link
+      href={`/domains/${domainKey}`}
+      style={{ textDecoration: "none", color: "inherit" }}
+    >
       <Box
         sx={{
-          position: "relative",
+          py: 1.5,
           display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: "4px",
-          p: 2.5,
-          minHeight: 120,
-          textAlign: "center",
-          cursor: "pointer",
-          transition: "background-color 0.15s",
-          "&:hover": {
-            bgcolor: "rgba(0,0,0,0.04)",
-          },
+          alignItems: "flex-start",
+          gap: 2,
+          "&:hover h6": { textDecoration: "underline" },
         }}
       >
-        {/* Count badge */}
-        <Typography
-          component="span"
-          sx={{
-            position: "absolute",
-            top: 8,
-            right: 8,
-            color: "#8c8f93",
-            fontSize: "0.7rem",
-            fontWeight: 400,
-          }}
-        >
-          {datasetCount}
-        </Typography>
-
-        {/* Color dot */}
+        {/* Color bar */}
         <Box
           sx={{
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
+            width: 4,
+            minHeight: 40,
+            alignSelf: "stretch",
             bgcolor: color,
-            mb: 1.5,
+            borderRadius: 1,
             flexShrink: 0,
+            mt: 0.3,
           }}
         />
 
-        <Typography
-          variant="body2"
-          sx={{
-            color: "#000",
-            fontWeight: 600,
-            lineHeight: 1.3,
-          }}
-        >
-          {displayName}
-        </Typography>
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Typography
+            variant="h6"
+            sx={{
+              color: "#005587",
+              fontWeight: 600,
+              fontSize: "1rem",
+              lineHeight: 1.3,
+              mb: 0.3,
+            }}
+          >
+            {displayName}
+          </Typography>
+          {notes && (
+            <Typography
+              variant="body2"
+              sx={{ color: "#53565A", lineHeight: 1.5 }}
+            >
+              {notes}
+            </Typography>
+          )}
+          <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mt: 0.5 }}>
+            {owner && (
+              <Chip
+                label={owner}
+                size="small"
+                variant="outlined"
+                sx={{ fontSize: "0.7rem" }}
+              />
+            )}
+            <Chip
+              label={dataCategory}
+              size="small"
+              variant="outlined"
+              sx={{ fontSize: "0.7rem" }}
+            />
+            <Chip
+              label={confidentiality}
+              size="small"
+              variant="outlined"
+              color={confidentiality === "confidential" ? "warning" : "default"}
+              sx={{ fontSize: "0.7rem" }}
+            />
+            {datasetCount > 0 && (
+              <Chip
+                label={`${datasetCount} datasets`}
+                size="small"
+                sx={{
+                  bgcolor: "#789D4A",
+                  color: "white",
+                  fontSize: "0.7rem",
+                }}
+              />
+            )}
+          </Box>
+        </Box>
       </Box>
     </Link>
   );

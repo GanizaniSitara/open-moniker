@@ -1,4 +1,4 @@
-import { Container, Typography } from "@mui/material";
+import { Container } from "@mui/material";
 import DomainGrid from "@/components/DomainGrid";
 import PageTitle from "@/components/PageTitle";
 import { getCatalogData, datasetCountForDomain } from "@/lib/data-loader";
@@ -14,15 +14,13 @@ export default function DomainsPage() {
     dataCategory: d.data_category,
     datasetCount: datasetCountForDomain(data, d.key),
     confidentiality: d.confidentiality,
+    owner: d.owner,
   }));
 
   return (
     <>
       <PageTitle title="Domains" />
-      <Container maxWidth="lg" sx={{ py: 3 }}>
-        <Typography variant="h4" sx={{ mb: 2, color: "#022D5E" }}>
-          Domains
-        </Typography>
+      <Container maxWidth="xl" sx={{ py: 3 }}>
         <DomainGrid domains={domains} />
       </Container>
     </>

@@ -6,7 +6,11 @@ import {
   Chip,
   Grid2 as Grid,
   Link as MuiLink,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import SchemaTable from "@/components/SchemaTable";
 import RelatedModels from "@/components/RelatedModels";
@@ -91,74 +95,6 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                   Schema ({dataset.schema.columns.length} columns)
                 </Typography>
                 <SchemaTable columns={dataset.schema.columns} />
-                {dataset.schema.semantic_tags &&
-                  dataset.schema.semantic_tags.length > 0 && (
-                    <Box
-                      sx={{
-                        mt: 1.5,
-                        display: "flex",
-                        gap: 0.5,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      {dataset.schema.semantic_tags.map((tag) => (
-                        <Chip
-                          key={tag}
-                          label={tag}
-                          size="small"
-                          variant="outlined"
-                        />
-                      ))}
-                    </Box>
-                  )}
-                {dataset.schema.use_cases &&
-                  dataset.schema.use_cases.length > 0 && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="subtitle2" color="text.secondary">
-                        Use Cases
-                      </Typography>
-                      <ul style={{ margin: "4px 0", paddingLeft: 20 }}>
-                        {dataset.schema.use_cases.map((uc, i) => (
-                          <li key={i}>
-                            <Typography variant="body2">{uc}</Typography>
-                          </li>
-                        ))}
-                      </ul>
-                    </Box>
-                  )}
-              </Box>
-            )}
-
-            {/* Source binding */}
-            {dataset.source_binding && sanitizedConfig && (
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h5" sx={{ mb: 2, color: "#022D5E" }}>
-                  Source Configuration
-                </Typography>
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  <Typography
-                    variant="subtitle2"
-                    color="text.secondary"
-                    sx={{ mb: 1 }}
-                  >
-                    Type: {dataset.source_binding.type.toUpperCase()}
-                  </Typography>
-                  <Box
-                    component="pre"
-                    sx={{
-                      fontSize: "0.8rem",
-                      fontFamily: "monospace",
-                      bgcolor: "#f8f9fa",
-                      p: 2,
-                      borderRadius: 1,
-                      overflow: "auto",
-                      maxHeight: 300,
-                      m: 0,
-                    }}
-                  >
-                    {JSON.stringify(sanitizedConfig, null, 2)}
-                  </Box>
-                </Paper>
               </Box>
             )}
 
@@ -172,42 +108,87 @@ export default async function DatasetDetailPage({ params }: PageProps) {
               </Box>
             )}
 
-            {/* Access policy */}
-            {dataset.access_policy && (
+            {/* Technical details — collapsed by default */}
+            {(dataset.source_binding || dataset.access_policy) && (
               <Box sx={{ mb: 4 }}>
                 <Typography variant="h5" sx={{ mb: 2, color: "#022D5E" }}>
-                  Access Policy
+                  Technical Details
                 </Typography>
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  {dataset.access_policy.min_filters != null && (
-                    <Typography variant="body2" sx={{ mb: 0.5 }}>
-                      Minimum filters required:{" "}
-                      {dataset.access_policy.min_filters}
-                    </Typography>
-                  )}
-                  {dataset.access_policy.max_rows_warn != null && (
-                    <Typography variant="body2" sx={{ mb: 0.5 }}>
-                      Row warning threshold:{" "}
-                      {dataset.access_policy.max_rows_warn.toLocaleString()}
-                    </Typography>
-                  )}
-                  {dataset.access_policy.denial_message && (
-                    <Box
-                      component="pre"
-                      sx={{
-                        fontSize: "0.8rem",
-                        fontFamily: "monospace",
-                        bgcolor: "#fff8e1",
-                        p: 1.5,
-                        borderRadius: 1,
-                        whiteSpace: "pre-wrap",
-                        mt: 1,
-                      }}
-                    >
-                      {dataset.access_policy.denial_message}
-                    </Box>
-                  )}
-                </Paper>
+
+                {dataset.source_binding && sanitizedConfig && (
+                  <Accordion
+                    disableGutters
+                    variant="outlined"
+                    sx={{ "&:before": { display: "none" } }}
+                  >
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography variant="subtitle2">
+                        Source Configuration — {dataset.source_binding.type.toUpperCase()}
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Box
+                        component="pre"
+                        sx={{
+                          fontSize: "0.8rem",
+                          fontFamily: "monospace",
+                          bgcolor: "#f8f9fa",
+                          p: 2,
+                          borderRadius: 1,
+                          overflow: "auto",
+                          maxHeight: 300,
+                          m: 0,
+                        }}
+                      >
+                        {JSON.stringify(sanitizedConfig, null, 2)}
+                      </Box>
+                    </AccordionDetails>
+                  </Accordion>
+                )}
+
+                {dataset.access_policy && (
+                  <Accordion
+                    disableGutters
+                    variant="outlined"
+                    sx={{ "&:before": { display: "none" } }}
+                  >
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography variant="subtitle2">
+                        Access Policy
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      {dataset.access_policy.min_filters != null && (
+                        <Typography variant="body2" sx={{ mb: 0.5 }}>
+                          Minimum filters required:{" "}
+                          {dataset.access_policy.min_filters}
+                        </Typography>
+                      )}
+                      {dataset.access_policy.max_rows_warn != null && (
+                        <Typography variant="body2" sx={{ mb: 0.5 }}>
+                          Row warning threshold:{" "}
+                          {dataset.access_policy.max_rows_warn.toLocaleString()}
+                        </Typography>
+                      )}
+                      {dataset.access_policy.denial_message && (
+                        <Box
+                          component="pre"
+                          sx={{
+                            fontSize: "0.8rem",
+                            fontFamily: "monospace",
+                            bgcolor: "#fff8e1",
+                            p: 1.5,
+                            borderRadius: 1,
+                            whiteSpace: "pre-wrap",
+                            mt: 1,
+                          }}
+                        >
+                          {dataset.access_policy.denial_message}
+                        </Box>
+                      )}
+                    </AccordionDetails>
+                  </Accordion>
+                )}
               </Box>
             )}
           </Grid>
@@ -303,7 +284,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
 
             {/* Domain */}
             {domain && (
-              <Paper variant="outlined" sx={{ p: 2 }}>
+              <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
                 <Typography
                   variant="subtitle1"
                   sx={{ mb: 1.5, fontWeight: 600, fontSize: "0.9rem" }}
@@ -319,10 +300,65 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                       bgcolor: domain.color,
                     }}
                   />
-                  <Typography variant="body2">{domain.display_name}</Typography>
+                  <MuiLink
+                    href={`/domains/${domain.key}`}
+                    variant="body2"
+                    sx={{ color: "#005587" }}
+                  >
+                    {domain.display_name}
+                  </MuiLink>
                 </Box>
               </Paper>
             )}
+
+            {/* Tags */}
+            {((dataset.semantic_tags && dataset.semantic_tags.length > 0) ||
+              (dataset.schema?.semantic_tags &&
+                dataset.schema.semantic_tags.length > 0)) && (
+              <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{ mb: 1.5, fontWeight: 600, fontSize: "0.9rem" }}
+                >
+                  Tags
+                </Typography>
+                <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                  {[
+                    ...(dataset.semantic_tags || []),
+                    ...(dataset.schema?.semantic_tags || []),
+                  ]
+                    .filter((v, i, a) => a.indexOf(v) === i)
+                    .map((tag) => (
+                      <Chip
+                        key={tag}
+                        label={tag}
+                        size="small"
+                        variant="outlined"
+                      />
+                    ))}
+                </Box>
+              </Paper>
+            )}
+
+            {/* Use Cases */}
+            {dataset.schema?.use_cases &&
+              dataset.schema.use_cases.length > 0 && (
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Typography
+                    variant="subtitle1"
+                    sx={{ mb: 1.5, fontWeight: 600, fontSize: "0.9rem" }}
+                  >
+                    Use Cases
+                  </Typography>
+                  <ul style={{ margin: 0, paddingLeft: 20 }}>
+                    {dataset.schema.use_cases.map((uc, i) => (
+                      <li key={i}>
+                        <Typography variant="body2">{uc}</Typography>
+                      </li>
+                    ))}
+                  </ul>
+                </Paper>
+              )}
           </Grid>
         </Grid>
       </Container>
