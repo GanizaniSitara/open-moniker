@@ -20,7 +20,7 @@ export default function CatalogBrowser() {
   const [, setDomains] = useState<Domain[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [filters, setFilters] = useState<Record<string, Set<string>>>({
-    Category: new Set(),
+    Domain: new Set(),
     Fields: new Set(),
   });
 
@@ -64,7 +64,7 @@ export default function CatalogBrowser() {
 
     return [
       {
-        label: "Category",
+        label: "Domain",
         options: [...categoryCounts.entries()]
           .sort((a, b) => b[1] - a[1])
           .map(([v, c]) => ({ value: v, label: v, count: c })),
@@ -82,9 +82,9 @@ export default function CatalogBrowser() {
   const displayedDatasets = useMemo(() => {
     let result = searchFiltered;
 
-    if (filters.Category.size > 0) {
+    if (filters.Domain.size > 0) {
       result = result.filter((ds) =>
-        filters.Category.has(ds.domainDisplayName || "Other")
+        filters.Domain.has(ds.domainDisplayName || "Other")
       );
     }
     if (filters.Fields.size > 0) {
@@ -121,7 +121,7 @@ export default function CatalogBrowser() {
           onChange={handleFilterChange}
           onClear={() =>
             setFilters({
-              Category: new Set(),
+              Domain: new Set(),
               Fields: new Set(),
             })
           }

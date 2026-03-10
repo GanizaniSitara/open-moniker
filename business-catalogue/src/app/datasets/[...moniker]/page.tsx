@@ -44,7 +44,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
             ? [
                 {
                   label: domain.display_name,
-                  href: `/categories/${domain.key}`,
+                  href: `/domains/${domain.key}`,
                 },
               ]
             : []),
@@ -308,7 +308,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                   variant="subtitle1"
                   sx={{ mb: 1.5, fontWeight: 600, fontSize: "0.9rem" }}
                 >
-                  Category
+                  Domain
                 </Typography>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <Box

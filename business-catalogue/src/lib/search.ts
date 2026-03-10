@@ -36,7 +36,7 @@ export function search(data: CatalogData, query: string): SearchResult[] {
         key: domain.key,
         display_name: domain.display_name,
         description: domain.notes,
-        url: `/categories/${domain.key}`,
+        url: `/domains/${domain.key}`,
       });
     }
   }

@@ -1,12 +1,12 @@
 import { Container, Typography } from "@mui/material";
-import CategoryGrid from "@/components/CategoryGrid";
+import DomainGrid from "@/components/DomainGrid";
 import PageTitle from "@/components/PageTitle";
 import { getCatalogData, datasetCountForDomain } from "@/lib/data-loader";
 
-export default function CategoriesPage() {
+export default function DomainsPage() {
   const data = getCatalogData();
 
-  const categories = data.domains.map((d) => ({
+  const domains = data.domains.map((d) => ({
     domainKey: d.key,
     displayName: d.display_name,
     notes: d.notes,
@@ -18,12 +18,12 @@ export default function CategoriesPage() {
 
   return (
     <>
-      <PageTitle title="Categories" />
+      <PageTitle title="Domains" />
       <Container maxWidth="lg" sx={{ py: 3 }}>
         <Typography variant="h4" sx={{ mb: 2, color: "#022D5E" }}>
-          Categories
+          Domains
         </Typography>
-        <CategoryGrid categories={categories} />
+        <DomainGrid domains={domains} />
       </Container>
     </>
   );

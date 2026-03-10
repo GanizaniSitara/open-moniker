@@ -12,7 +12,7 @@ import { usePathname } from "next/navigation";
 
 const NAV_LINKS = [
   { label: "Datasets", href: "/" },
-  { label: "Categories", href: "/categories" },
+  { label: "Domains", href: "/domains" },
   { label: "Fields", href: "/fields" },
 ];
 

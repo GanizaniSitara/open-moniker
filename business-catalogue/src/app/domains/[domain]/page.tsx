@@ -14,7 +14,7 @@ interface PageProps {
   params: Promise<{ domain: string }>;
 }
 
-export default async function CategoryDetailPage({ params }: PageProps) {
+export default async function DomainDetailPage({ params }: PageProps) {
   const { domain: domainKey } = await params;
   const data = getCatalogData();
   const domain = data.domainByKey.get(domainKey);
@@ -30,7 +30,7 @@ export default async function CategoryDetailPage({ params }: PageProps) {
     <>
       <Breadcrumbs
         items={[
-          { label: "Categories", href: "/categories" },
+          { label: "Domains", href: "/domains" },
           { label: domain.display_name },
         ]}
       />

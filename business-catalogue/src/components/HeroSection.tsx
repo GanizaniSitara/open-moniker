@@ -22,7 +22,7 @@ export default function HeroSection() {
             variant="body1"
             sx={{ mb: 2.5, color: "#53565A", lineHeight: 1.6 }}
           >
-            Discover and explore the firm&apos;s data assets across categories,
+            Discover and explore the firm&apos;s data assets across domains,
             datasets, and business fields.
           </Typography>
           <Link

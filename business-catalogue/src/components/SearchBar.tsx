@@ -28,7 +28,7 @@ interface SearchBarProps {
 }
 
 export default function SearchBar({
-  placeholder = "Search datasets, categories, fields...",
+  placeholder = "Search datasets, domains, fields...",
   fullWidth = false,
   size = "medium",
 }: SearchBarProps) {
