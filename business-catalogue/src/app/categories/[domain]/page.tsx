@@ -16,7 +16,7 @@ interface PageProps {
 
 export default async function CategoryDetailPage({ params }: PageProps) {
   const { domain: domainKey } = await params;
-  const data = getCatalogData();
+  const data = await getCatalogData();
   const domain = data.domainByKey.get(domainKey);
 
   if (!domain) notFound();

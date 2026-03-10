@@ -18,7 +18,7 @@ interface PageProps {
 export default async function FieldDetailPage({ params }: PageProps) {
   const { model: modelSegments } = await params;
   const key = modelSegments.join("/");
-  const data = getCatalogData();
+  const data = await getCatalogData();
   const model = data.modelByKey.get(key);
 
   if (!model) notFound();

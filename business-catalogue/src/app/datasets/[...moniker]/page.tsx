@@ -12,8 +12,9 @@ import SchemaTable from "@/components/SchemaTable";
 import RelatedModels from "@/components/RelatedModels";
 import SourceBadge from "@/components/SourceBadge";
 import { getCatalogData } from "@/lib/data-loader";
-import { sanitizeConfig } from "@/lib/sanitize";
+import { fetchDescribe } from "@/lib/api-client";
 import { notFound } from "next/navigation";
+import type { Model } from "@/lib/types";
 
 interface PageProps {
   params: Promise<{ moniker: string[] }>;
@@ -22,18 +23,45 @@ interface PageProps {
 export default async function DatasetDetailPage({ params }: PageProps) {
   const { moniker } = await params;
   const key = moniker.join("/");
-  const data = getCatalogData();
-  const dataset = data.datasetByKey.get(key);
 
-  if (!dataset) notFound();
+  // Fetch describe (rich metadata) and catalog data (domain + cross-refs) in parallel
+  const [describeData, catalogData] = await Promise.all([
+    fetchDescribe(key).catch(() => null),
+    getCatalogData(),
+  ]);
 
-  const domain = dataset.domainKey
-    ? data.domainByKey.get(dataset.domainKey)
+  if (!describeData) notFound();
+
+  // Domain from catalog data
+  const dataset = catalogData.datasetByKey.get(key);
+  const domain = dataset?.domainKey
+    ? catalogData.domainByKey.get(dataset.domainKey)
     : null;
-  const relatedModels = data.modelsForDataset.get(key) || [];
-  const sanitizedConfig = dataset.source_binding?.config
-    ? sanitizeConfig(dataset.source_binding.config)
-    : null;
+
+  // Related models: prefer describe response, fall back to cross-ref
+  const describeModels: Model[] = (describeData.models || []).map((m) => ({
+    key: m.path,
+    display_name: m.display_name,
+    description: m.description,
+    formula: m.formula || undefined,
+    unit: m.unit || undefined,
+    isContainer: false,
+  }));
+  const relatedModels =
+    describeModels.length > 0
+      ? describeModels
+      : catalogData.modelsForDataset.get(key) || [];
+
+  // Ownership from describe
+  const ownership = describeData.ownership as {
+    accountable_owner?: string;
+    data_specialist?: string;
+    support_channel?: string;
+    adop?: string;
+    ads?: string;
+    adal?: string;
+  };
+  const hasOwnership = ownership && Object.values(ownership).some((v) => v);
 
   return (
     <>
@@ -48,7 +76,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                 },
               ]
             : []),
-          { label: dataset.display_name },
+          { label: describeData.display_name || key },
         ]}
       />
       <Container maxWidth="lg" sx={{ py: 3 }}>
@@ -58,12 +86,12 @@ export default async function DatasetDetailPage({ params }: PageProps) {
             sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}
           >
             <Typography variant="h4" sx={{ color: "#022D5E" }}>
-              {dataset.display_name}
+              {describeData.display_name || key}
             </Typography>
-            {dataset.source_binding && (
-              <SourceBadge type={dataset.source_binding.type} />
+            {describeData.source_type && (
+              <SourceBadge type={describeData.source_type} />
             )}
-            {dataset.isContainer && (
+            {!describeData.has_source_binding && (
               <Chip label="Container" size="small" variant="outlined" />
             )}
           </Box>
@@ -72,11 +100,11 @@ export default async function DatasetDetailPage({ params }: PageProps) {
             color="text.secondary"
             sx={{ fontFamily: "monospace" }}
           >
-            {dataset.key}
+            {describeData.path}
           </Typography>
-          {dataset.description && (
+          {describeData.description && (
             <Typography variant="body1" sx={{ mt: 1, color: "#53565A" }}>
-              {dataset.description}
+              {describeData.description}
             </Typography>
           )}
         </Box>
@@ -85,82 +113,50 @@ export default async function DatasetDetailPage({ params }: PageProps) {
           {/* Left column: main content */}
           <Grid size={{ xs: 12, md: 8 }}>
             {/* Schema */}
-            {dataset.schema?.columns && dataset.schema.columns.length > 0 && (
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h5" sx={{ mb: 2, color: "#022D5E" }}>
-                  Schema ({dataset.schema.columns.length} columns)
-                </Typography>
-                <SchemaTable columns={dataset.schema.columns} />
-                {dataset.schema.semantic_tags &&
-                  dataset.schema.semantic_tags.length > 0 && (
-                    <Box
-                      sx={{
-                        mt: 1.5,
-                        display: "flex",
-                        gap: 0.5,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      {dataset.schema.semantic_tags.map((tag) => (
-                        <Chip
-                          key={tag}
-                          label={tag}
-                          size="small"
-                          variant="outlined"
-                        />
-                      ))}
-                    </Box>
-                  )}
-                {dataset.schema.use_cases &&
-                  dataset.schema.use_cases.length > 0 && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="subtitle2" color="text.secondary">
-                        Use Cases
-                      </Typography>
-                      <ul style={{ margin: "4px 0", paddingLeft: 20 }}>
-                        {dataset.schema.use_cases.map((uc, i) => (
-                          <li key={i}>
-                            <Typography variant="body2">{uc}</Typography>
-                          </li>
-                        ))}
-                      </ul>
-                    </Box>
-                  )}
-              </Box>
-            )}
-
-            {/* Source binding */}
-            {dataset.source_binding && sanitizedConfig && (
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h5" sx={{ mb: 2, color: "#022D5E" }}>
-                  Source Configuration
-                </Typography>
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  <Typography
-                    variant="subtitle2"
-                    color="text.secondary"
-                    sx={{ mb: 1 }}
-                  >
-                    Type: {dataset.source_binding.type.toUpperCase()}
+            {describeData.schema?.columns &&
+              describeData.schema.columns.length > 0 && (
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h5" sx={{ mb: 2, color: "#022D5E" }}>
+                    Schema ({describeData.schema.columns.length} columns)
                   </Typography>
-                  <Box
-                    component="pre"
-                    sx={{
-                      fontSize: "0.8rem",
-                      fontFamily: "monospace",
-                      bgcolor: "#f8f9fa",
-                      p: 2,
-                      borderRadius: 1,
-                      overflow: "auto",
-                      maxHeight: 300,
-                      m: 0,
-                    }}
-                  >
-                    {JSON.stringify(sanitizedConfig, null, 2)}
-                  </Box>
-                </Paper>
-              </Box>
-            )}
+                  <SchemaTable columns={describeData.schema.columns} />
+                  {describeData.schema.semantic_tags &&
+                    describeData.schema.semantic_tags.length > 0 && (
+                      <Box
+                        sx={{
+                          mt: 1.5,
+                          display: "flex",
+                          gap: 0.5,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {describeData.schema.semantic_tags.map((tag) => (
+                          <Chip
+                            key={tag}
+                            label={tag}
+                            size="small"
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  {describeData.schema.use_cases &&
+                    describeData.schema.use_cases.length > 0 && (
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Use Cases
+                        </Typography>
+                        <ul style={{ margin: "4px 0", paddingLeft: 20 }}>
+                          {describeData.schema.use_cases.map((uc, i) => (
+                            <li key={i}>
+                              <Typography variant="body2">{uc}</Typography>
+                            </li>
+                          ))}
+                        </ul>
+                      </Box>
+                    )}
+                </Box>
+              )}
 
             {/* Related models */}
             {relatedModels.length > 0 && (
@@ -171,51 +167,12 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                 <RelatedModels models={relatedModels} />
               </Box>
             )}
-
-            {/* Access policy */}
-            {dataset.access_policy && (
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h5" sx={{ mb: 2, color: "#022D5E" }}>
-                  Access Policy
-                </Typography>
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  {dataset.access_policy.min_filters != null && (
-                    <Typography variant="body2" sx={{ mb: 0.5 }}>
-                      Minimum filters required:{" "}
-                      {dataset.access_policy.min_filters}
-                    </Typography>
-                  )}
-                  {dataset.access_policy.max_rows_warn != null && (
-                    <Typography variant="body2" sx={{ mb: 0.5 }}>
-                      Row warning threshold:{" "}
-                      {dataset.access_policy.max_rows_warn.toLocaleString()}
-                    </Typography>
-                  )}
-                  {dataset.access_policy.denial_message && (
-                    <Box
-                      component="pre"
-                      sx={{
-                        fontSize: "0.8rem",
-                        fontFamily: "monospace",
-                        bgcolor: "#fff8e1",
-                        p: 1.5,
-                        borderRadius: 1,
-                        whiteSpace: "pre-wrap",
-                        mt: 1,
-                      }}
-                    >
-                      {dataset.access_policy.denial_message}
-                    </Box>
-                  )}
-                </Paper>
-              </Box>
-            )}
           </Grid>
 
           {/* Right column: metadata sidebar */}
           <Grid size={{ xs: 12, md: 4 }}>
             {/* Ownership */}
-            {dataset.ownership && (
+            {hasOwnership && (
               <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
                 <Typography
                   variant="subtitle1"
@@ -223,32 +180,32 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                 >
                   Ownership
                 </Typography>
-                {dataset.ownership.accountable_owner && (
+                {ownership.accountable_owner && (
                   <MetaRow
                     label="Owner"
-                    value={dataset.ownership.accountable_owner}
+                    value={ownership.accountable_owner}
                   />
                 )}
-                {dataset.ownership.data_specialist && (
+                {ownership.data_specialist && (
                   <MetaRow
                     label="Data Specialist"
-                    value={dataset.ownership.data_specialist}
+                    value={ownership.data_specialist}
                   />
                 )}
-                {dataset.ownership.support_channel && (
+                {ownership.support_channel && (
                   <MetaRow
                     label="Support"
-                    value={dataset.ownership.support_channel}
+                    value={ownership.support_channel}
                   />
                 )}
-                {dataset.ownership.adop && (
-                  <MetaRow label="ADOP" value={dataset.ownership.adop} />
+                {ownership.adop && (
+                  <MetaRow label="ADOP" value={ownership.adop} />
                 )}
-                {dataset.ownership.ads && (
-                  <MetaRow label="ADS" value={dataset.ownership.ads} />
+                {ownership.ads && (
+                  <MetaRow label="ADS" value={ownership.ads} />
                 )}
-                {dataset.ownership.adal && (
-                  <MetaRow label="ADAL" value={dataset.ownership.adal} />
+                {ownership.adal && (
+                  <MetaRow label="ADAL" value={ownership.adal} />
                 )}
               </Paper>
             )}
@@ -262,13 +219,13 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                 Classification
               </Typography>
               <Chip
-                label={dataset.classification || "internal"}
+                label={describeData.classification || "internal"}
                 size="small"
                 variant="outlined"
                 color={
-                  dataset.classification === "confidential"
+                  describeData.classification === "confidential"
                     ? "warning"
-                    : dataset.classification === "restricted"
+                    : describeData.classification === "restricted"
                     ? "error"
                     : "default"
                 }
@@ -276,7 +233,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
             </Paper>
 
             {/* Documentation */}
-            {dataset.documentation && (
+            {describeData.documentation && (
               <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
                 <Typography
                   variant="subtitle1"
@@ -284,8 +241,8 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                 >
                   Documentation
                 </Typography>
-                {Object.entries(dataset.documentation)
-                  .filter(([k, v]) => typeof v === "string")
+                {Object.entries(describeData.documentation)
+                  .filter(([, v]) => typeof v === "string" && v)
                   .map(([k, v]) => (
                     <Box key={k} sx={{ mb: 0.5 }}>
                       <MuiLink
