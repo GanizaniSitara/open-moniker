@@ -11,7 +11,15 @@ import {
   Typography,
 } from "@mui/material";
 import KeyIcon from "@mui/icons-material/Key";
-import type { Column } from "@/lib/types";
+
+interface Column {
+  name: string;
+  type: string;
+  description?: string;
+  semantic_type?: string;
+  primary_key?: boolean;
+  foreign_key?: string;
+}
 
 export default function SchemaTable({ columns }: { columns: Column[] }) {
   return (

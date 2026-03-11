@@ -43,15 +43,25 @@ test.describe("Layout stability across nav items", () => {
     const fieldsBar = await getContentTop(page);
     expect(fieldsBar, "Fields page should have a title bar").toBeTruthy();
 
-    // All three bars should have the same position and dimensions (no vertical or horizontal shift)
+    // Visit Vendors page
+    await page.click('a[href="/vendors"]');
+    await page.waitForLoadState("networkidle");
+    const vendorsBar = await getContentTop(page);
+    expect(vendorsBar, "Vendors page should have a title bar").toBeTruthy();
+
+    // All four bars should have the same position and dimensions (no vertical or horizontal shift)
     expect(datasetsBar!.x).toBeCloseTo(domainsBar!.x, 0);
     expect(datasetsBar!.x).toBeCloseTo(fieldsBar!.x, 0);
+    expect(datasetsBar!.x).toBeCloseTo(vendorsBar!.x, 0);
     expect(datasetsBar!.y).toBeCloseTo(domainsBar!.y, 0);
     expect(datasetsBar!.y).toBeCloseTo(fieldsBar!.y, 0);
+    expect(datasetsBar!.y).toBeCloseTo(vendorsBar!.y, 0);
     expect(datasetsBar!.width).toBeCloseTo(domainsBar!.width, 0);
     expect(datasetsBar!.width).toBeCloseTo(fieldsBar!.width, 0);
+    expect(datasetsBar!.width).toBeCloseTo(vendorsBar!.width, 0);
     expect(datasetsBar!.height).toBeCloseTo(domainsBar!.height, 0);
     expect(datasetsBar!.height).toBeCloseTo(fieldsBar!.height, 0);
+    expect(datasetsBar!.height).toBeCloseTo(vendorsBar!.height, 0);
   });
 
   test("navigating to /datasets also has title bar", async ({ page }) => {

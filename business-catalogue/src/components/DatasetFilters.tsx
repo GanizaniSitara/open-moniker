@@ -14,7 +14,7 @@ interface DatasetFiltersProps {
   onClear: () => void;
 }
 
-const COLLAPSED_LIMIT = 5;
+const COLLAPSED_LIMIT = 25;
 
 export default function DatasetFilters({
   sections,

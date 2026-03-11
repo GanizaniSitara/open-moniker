@@ -54,7 +54,10 @@ from .models import routes as model_routes
 from .models import ModelRegistry, load_models_from_yaml
 from .requests import routes as request_routes
 from .requests import RequestRegistry, load_requests_from_yaml
-from .dashboard import routes as dashboard_routes
+try:
+    from .dashboard import routes as dashboard_routes
+except ImportError:
+    dashboard_routes = None  # type: ignore
 
 
 logger = logging.getLogger(__name__)
@@ -972,11 +975,12 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Request & approval workflow enabled")
 
-    dashboard_routes.configure(
-        catalog_registry=catalog,
-        request_registry=_request_registry,
-    )
-    logger.info("Dashboard enabled")
+    if dashboard_routes:
+        dashboard_routes.configure(
+            catalog_registry=catalog,
+            request_registry=_request_registry,
+        )
+        logger.info("Dashboard enabled")
 
     _redis_cache, _cache_manager, _cache_refresh_task = await bs.setup_redis_and_cache_manager(
         config, catalog, _adapter_registry,
@@ -1072,7 +1076,8 @@ app.include_router(config_ui_routes.router)
 app.include_router(domain_routes.router)
 app.include_router(model_routes.router)
 app.include_router(request_routes.router)
-app.include_router(dashboard_routes.router)
+if dashboard_routes:
+    app.include_router(dashboard_routes.router)
 # resolver_router is mounted AFTER all @resolver_router.xxx() decorators are processed
 # (see the app.include_router(resolver_router) call after the ui() handler below)
 

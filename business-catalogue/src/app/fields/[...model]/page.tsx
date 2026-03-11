@@ -8,7 +8,7 @@ import {
 } from "@mui/material";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import AppearsInTable from "@/components/AppearsInTable";
-import { getCatalogData } from "@/lib/data-loader";
+import { fetchModel, fetchNodes, toSlashPath } from "@/lib/api-client";
 import { notFound } from "next/navigation";
 
 interface PageProps {
@@ -17,24 +17,80 @@ interface PageProps {
 
 export default async function FieldDetailPage({ params }: PageProps) {
   const { model: modelSegments } = await params;
-  const key = modelSegments.join("/");
-  const data = getCatalogData();
-  const model = data.modelByKey.get(key);
+  const path = modelSegments.join("/");
 
-  if (!model) notFound();
+  let modelRes;
+  try {
+    modelRes = await fetchModel(path);
+  } catch {
+    notFound();
+  }
 
-  const appearsIn = data.datasetsForModel.get(key) || [];
+  const model = modelRes.model;
 
-  const parentKey = key.split("/").slice(0, -1).join("/");
-  const parent = parentKey ? data.modelByKey.get(parentKey) : null;
+  // Find parent container for breadcrumbs
+  const parentPath = path.split("/").slice(0, -1).join("/");
+  let parentName: string | null = null;
+  if (parentPath) {
+    try {
+      const parentRes = await fetchModel(parentPath);
+      parentName = parentRes.model.display_name;
+    } catch {
+      // Parent may not exist as a model
+    }
+  }
+
+  // Resolve appears_in patterns to actual datasets
+  const isContainer = model.appears_in.length === 0;
+  let appearsInEntries: {
+    datasetKey: string;
+    displayName: string;
+    sourceType?: string;
+    columnName?: string;
+    notes?: string;
+  }[] = [];
+
+  if (model.appears_in.length > 0) {
+    try {
+      const nodesRes = await fetchNodes();
+      const nodeByPath = new Map(nodesRes.nodes.map((n) => [n.path, n]));
+
+      for (const link of model.appears_in) {
+        // Match pattern against node paths
+        const pattern = link.moniker_pattern;
+        for (const node of nodesRes.nodes) {
+          if (!node.is_leaf) continue;
+          if (patternMatches(pattern, node.path)) {
+            appearsInEntries.push({
+              datasetKey: toSlashPath(node.path),
+              displayName: node.display_name,
+              sourceType: node.source_binding?.type,
+              columnName: link.column_name || undefined,
+              notes: link.notes || undefined,
+            });
+          }
+        }
+      }
+
+      // Deduplicate by dataset key
+      const seen = new Set<string>();
+      appearsInEntries = appearsInEntries.filter((e) => {
+        if (seen.has(e.datasetKey)) return false;
+        seen.add(e.datasetKey);
+        return true;
+      });
+    } catch {
+      // Node lookup is optional
+    }
+  }
 
   return (
     <>
       <Breadcrumbs
         items={[
           { label: "Fields", href: "/fields" },
-          ...(parent
-            ? [{ label: parent.display_name, href: `/fields/${parent.key}` }]
+          ...(parentName
+            ? [{ label: parentName, href: `/fields/${parentPath}` }]
             : []),
           { label: model.display_name },
         ]}
@@ -50,7 +106,7 @@ export default async function FieldDetailPage({ params }: PageProps) {
             color="text.secondary"
             sx={{ fontFamily: "monospace", mb: 1 }}
           >
-            {model.key}
+            {model.path}
           </Typography>
           {model.description && (
             <Typography variant="body1" sx={{ mb: 2, color: "#53565A" }}>
@@ -186,13 +242,13 @@ export default async function FieldDetailPage({ params }: PageProps) {
         {/* Appears in */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h5" sx={{ mb: 2, color: "#022D5E" }}>
-            Appears In ({appearsIn.length} datasets)
+            Appears In ({appearsInEntries.length} datasets)
           </Typography>
-          {appearsIn.length > 0 ? (
-            <AppearsInTable entries={appearsIn} />
+          {appearsInEntries.length > 0 ? (
+            <AppearsInTable entries={appearsInEntries} />
           ) : (
             <Typography variant="body2" color="text.secondary">
-              {model.isContainer
+              {isContainer
                 ? "This is a container grouping. Browse the individual fields below."
                 : "No matching datasets found for the appears_in patterns."}
             </Typography>
@@ -229,4 +285,14 @@ export default async function FieldDetailPage({ params }: PageProps) {
       </Container>
     </>
   );
+}
+
+/** Simple glob-style pattern matcher (supports * wildcard) */
+function patternMatches(pattern: string, path: string): boolean {
+  if (pattern === path) return true;
+  if (!pattern.includes("*")) return false;
+  const regex = new RegExp(
+    "^" + pattern.replace(/\*/g, "[^/]*") + "$"
+  );
+  return regex.test(path);
 }

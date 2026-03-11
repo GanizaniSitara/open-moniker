@@ -1,7 +1,10 @@
 "use client";
 import { Typography, Box } from "@mui/material";
 import Link from "next/link";
-import type { Column } from "@/lib/types";
+interface Column {
+  name: string;
+  type: string;
+}
 
 interface DatasetCardProps {
   datasetKey: string;

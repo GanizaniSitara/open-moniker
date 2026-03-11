@@ -22,7 +22,7 @@ try:
     import gssapi
     from gssapi.raw import ChannelBindings
     GSSAPI_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     gssapi = None  # type: ignore
     ChannelBindings = None  # type: ignore
     GSSAPI_AVAILABLE = False

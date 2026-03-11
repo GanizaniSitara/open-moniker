@@ -10,18 +10,25 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import DatasetCard from "@/components/DatasetCard";
 import DatasetFilters from "@/components/DatasetFilters";
-import type { Dataset, Domain } from "@/lib/types";
+interface BrowseDataset {
+  key: string;
+  display_name: string;
+  description?: string;
+  domainDisplayName?: string;
+  domainColor?: string;
+  isContainer: boolean;
+  classification?: string;
+  source_binding?: { type: string };
+  schema: null;
+}
 
 export default function CatalogBrowser() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [datasets, setDatasets] = useState<
-    (Dataset & { domainDisplayName?: string; domainColor?: string })[]
-  >([]);
-  const [, setDomains] = useState<Domain[]>([]);
+  const [datasets, setDatasets] = useState<BrowseDataset[]>([]);
+  const [, setDomains] = useState<{ key: string; display_name: string; color: string }[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [filters, setFilters] = useState<Record<string, Set<string>>>({
     Domain: new Set(),
-    Fields: new Set(),
   });
 
   useEffect(() => {
@@ -52,26 +59,16 @@ export default function CatalogBrowser() {
   // Step 2: compute facet counts from search-filtered results
   const filterSections = useMemo(() => {
     const categoryCounts = new Map<string, number>();
-    const fieldCounts = new Map<string, number>();
 
     for (const ds of searchFiltered) {
       const cat = ds.domainDisplayName || "Other";
       categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
-      for (const col of ds.schema?.columns || []) {
-        fieldCounts.set(col.name, (fieldCounts.get(col.name) || 0) + 1);
-      }
     }
 
     return [
       {
         label: "Domain",
         options: [...categoryCounts.entries()]
-          .sort((a, b) => b[1] - a[1])
-          .map(([v, c]) => ({ value: v, label: v, count: c })),
-      },
-      {
-        label: "Fields",
-        options: [...fieldCounts.entries()]
           .sort((a, b) => b[1] - a[1])
           .map(([v, c]) => ({ value: v, label: v, count: c })),
       },
@@ -87,12 +84,6 @@ export default function CatalogBrowser() {
         filters.Domain.has(ds.domainDisplayName || "Other")
       );
     }
-    if (filters.Fields.size > 0) {
-      result = result.filter((ds) =>
-        ds.schema?.columns?.some((col) => filters.Fields.has(col.name))
-      );
-    }
-
     result.sort((a, b) => a.display_name.localeCompare(b.display_name));
     return result;
   }, [searchFiltered, filters]);
@@ -122,7 +113,6 @@ export default function CatalogBrowser() {
           onClear={() =>
             setFilters({
               Domain: new Set(),
-              Fields: new Set(),
             })
           }
         />
@@ -161,10 +151,10 @@ export default function CatalogBrowser() {
               sourceType={ds.source_binding?.type}
               domainDisplayName={ds.domainDisplayName}
               domainColor={ds.domainColor}
-              columnCount={ds.schema?.columns?.length || 0}
+              columnCount={0}
               classification={ds.classification}
               isContainer={ds.isContainer}
-              columns={ds.schema?.columns || []}
+              columns={[]}
             />
           ))}
         </Box>

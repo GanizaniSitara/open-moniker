@@ -10,10 +10,17 @@ import {
   Typography,
 } from "@mui/material";
 import Link from "next/link";
-import type { Model } from "@/lib/types";
+interface RelatedModel {
+  path?: string;
+  key?: string;
+  display_name: string;
+  description?: string;
+  formula?: string | null;
+  unit?: string | null;
+}
 
 interface RelatedModelsProps {
-  models: Model[];
+  models: RelatedModel[];
 }
 
 export default function RelatedModels({ models }: RelatedModelsProps) {
@@ -32,10 +39,10 @@ export default function RelatedModels({ models }: RelatedModelsProps) {
         </TableHead>
         <TableBody>
           {models.map((m) => (
-            <TableRow key={m.key}>
+            <TableRow key={m.path || m.key}>
               <TableCell>
                 <Link
-                  href={`/fields/${m.key}`}
+                  href={`/fields/${m.path || m.key}`}
                   style={{ textDecoration: "none" }}
                 >
                   <Typography

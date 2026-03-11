@@ -15,7 +15,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import SchemaTable from "@/components/SchemaTable";
 import RelatedModels from "@/components/RelatedModels";
 import SourceBadge from "@/components/SourceBadge";
-import { getCatalogData } from "@/lib/data-loader";
+import { fetchDescribe, fetchDomains, fetchNode, toDotPath } from "@/lib/api-client";
 import { sanitizeConfig } from "@/lib/sanitize";
 import { notFound } from "next/navigation";
 
@@ -25,19 +25,44 @@ interface PageProps {
 
 export default async function DatasetDetailPage({ params }: PageProps) {
   const { moniker } = await params;
-  const key = moniker.join("/");
-  const data = getCatalogData();
-  const dataset = data.datasetByKey.get(key);
+  const urlPath = moniker.join("/");
+  const monikerPath = toDotPath(urlPath);
 
-  if (!dataset) notFound();
+  let desc;
+  let nodeRes;
+  try {
+    [desc, nodeRes] = await Promise.all([
+      fetchDescribe(monikerPath),
+      fetchNode(monikerPath),
+    ]);
+  } catch {
+    notFound();
+  }
 
-  const domain = dataset.domainKey
-    ? data.domainByKey.get(dataset.domainKey)
+  // Look up domain info
+  let domain = null;
+  if (nodeRes.node.domain) {
+    try {
+      const domainsRes = await fetchDomains();
+      domain = domainsRes.domains.find((d) => d.name === nodeRes.node.domain) || null;
+    } catch {
+      // Domain lookup is optional
+    }
+  }
+
+  const isContainer = !desc.has_source_binding;
+  const sourceType = desc.source_type;
+  const sanitizedConfig = nodeRes.node.source_binding?.config
+    ? sanitizeConfig(nodeRes.node.source_binding.config)
     : null;
-  const relatedModels = data.modelsForDataset.get(key) || [];
-  const sanitizedConfig = dataset.source_binding?.config
-    ? sanitizeConfig(dataset.source_binding.config)
-    : null;
+  const columns = desc.schema?.columns || [];
+  const models = desc.models || [];
+  const ownership = desc.ownership;
+  const tags = [
+    ...(desc.tags || []),
+    ...(desc.schema?.semantic_tags || []),
+  ].filter((v, i, a) => a.indexOf(v) === i);
+  const useCases = desc.schema?.use_cases || [];
 
   return (
     <>
@@ -48,11 +73,11 @@ export default async function DatasetDetailPage({ params }: PageProps) {
             ? [
                 {
                   label: domain.display_name,
-                  href: `/domains/${domain.key}`,
+                  href: `/domains/${domain.name}`,
                 },
               ]
             : []),
-          { label: dataset.display_name },
+          { label: desc.display_name || monikerPath },
         ]}
       />
       <Container maxWidth="lg" sx={{ py: 3 }}>
@@ -62,12 +87,10 @@ export default async function DatasetDetailPage({ params }: PageProps) {
             sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}
           >
             <Typography variant="h4" sx={{ color: "#022D5E" }}>
-              {dataset.display_name}
+              {desc.display_name || monikerPath}
             </Typography>
-            {dataset.source_binding && (
-              <SourceBadge type={dataset.source_binding.type} />
-            )}
-            {dataset.isContainer && (
+            {sourceType && <SourceBadge type={sourceType} />}
+            {isContainer && (
               <Chip label="Container" size="small" variant="outlined" />
             )}
           </Box>
@@ -76,11 +99,11 @@ export default async function DatasetDetailPage({ params }: PageProps) {
             color="text.secondary"
             sx={{ fontFamily: "monospace" }}
           >
-            {dataset.key}
+            {monikerPath}
           </Typography>
-          {dataset.description && (
+          {desc.description && (
             <Typography variant="body1" sx={{ mt: 1, color: "#53565A" }}>
-              {dataset.description}
+              {desc.description}
             </Typography>
           )}
         </Box>
@@ -89,33 +112,42 @@ export default async function DatasetDetailPage({ params }: PageProps) {
           {/* Left column: main content */}
           <Grid size={{ xs: 12, md: 8 }}>
             {/* Schema */}
-            {dataset.schema?.columns && dataset.schema.columns.length > 0 && (
+            {columns.length > 0 && (
               <Box sx={{ mb: 4 }}>
                 <Typography variant="h5" sx={{ mb: 2, color: "#022D5E" }}>
-                  Schema ({dataset.schema.columns.length} columns)
+                  Schema ({columns.length} columns)
                 </Typography>
-                <SchemaTable columns={dataset.schema.columns} />
+                <SchemaTable
+                  columns={columns.map((c) => ({
+                    name: c.name,
+                    type: c.type,
+                    description: c.description,
+                    semantic_type: c.semantic_type || undefined,
+                    primary_key: c.primary_key,
+                    foreign_key: c.foreign_key || undefined,
+                  }))}
+                />
               </Box>
             )}
 
             {/* Related models */}
-            {relatedModels.length > 0 && (
+            {models.length > 0 && (
               <Box sx={{ mb: 4 }}>
                 <Typography variant="h5" sx={{ mb: 2, color: "#022D5E" }}>
-                  Related Business Models ({relatedModels.length})
+                  Related Business Models ({models.length})
                 </Typography>
-                <RelatedModels models={relatedModels} />
+                <RelatedModels models={models} />
               </Box>
             )}
 
             {/* Technical details — collapsed by default */}
-            {(dataset.source_binding || dataset.access_policy) && (
+            {(sourceType || desc.access_policy) && (
               <Box sx={{ mb: 4 }}>
                 <Typography variant="h5" sx={{ mb: 2, color: "#022D5E" }}>
                   Technical Details
                 </Typography>
 
-                {dataset.source_binding && sanitizedConfig && (
+                {sourceType && sanitizedConfig && (
                   <Accordion
                     disableGutters
                     variant="outlined"
@@ -123,7 +155,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                   >
                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                       <Typography variant="subtitle2">
-                        Source Configuration — {dataset.source_binding.type.toUpperCase()}
+                        Source Configuration — {sourceType.toUpperCase()}
                       </Typography>
                     </AccordionSummary>
                     <AccordionDetails>
@@ -146,7 +178,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                   </Accordion>
                 )}
 
-                {dataset.access_policy && (
+                {desc.access_policy && (
                   <Accordion
                     disableGutters
                     variant="outlined"
@@ -158,19 +190,19 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                       </Typography>
                     </AccordionSummary>
                     <AccordionDetails>
-                      {dataset.access_policy.min_filters != null && (
+                      {desc.access_policy.min_filters != null && (
                         <Typography variant="body2" sx={{ mb: 0.5 }}>
                           Minimum filters required:{" "}
-                          {dataset.access_policy.min_filters}
+                          {desc.access_policy.min_filters}
                         </Typography>
                       )}
-                      {dataset.access_policy.max_rows_warn != null && (
+                      {desc.access_policy.max_rows_warn != null && (
                         <Typography variant="body2" sx={{ mb: 0.5 }}>
                           Row warning threshold:{" "}
-                          {dataset.access_policy.max_rows_warn.toLocaleString()}
+                          {desc.access_policy.max_rows_warn.toLocaleString()}
                         </Typography>
                       )}
-                      {dataset.access_policy.denial_message && (
+                      {desc.access_policy.denial_message && (
                         <Box
                           component="pre"
                           sx={{
@@ -183,7 +215,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                             mt: 1,
                           }}
                         >
-                          {dataset.access_policy.denial_message}
+                          {desc.access_policy.denial_message}
                         </Box>
                       )}
                     </AccordionDetails>
@@ -196,7 +228,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
           {/* Right column: metadata sidebar */}
           <Grid size={{ xs: 12, md: 4 }}>
             {/* Ownership */}
-            {dataset.ownership && (
+            {ownership && (
               <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
                 <Typography
                   variant="subtitle1"
@@ -204,32 +236,26 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                 >
                   Ownership
                 </Typography>
-                {dataset.ownership.accountable_owner && (
-                  <MetaRow
-                    label="Owner"
-                    value={dataset.ownership.accountable_owner}
-                  />
+                {ownership.accountable_owner && (
+                  <MetaRow label="Owner" value={ownership.accountable_owner} />
                 )}
-                {dataset.ownership.data_specialist && (
+                {ownership.data_specialist && (
                   <MetaRow
                     label="Data Specialist"
-                    value={dataset.ownership.data_specialist}
+                    value={ownership.data_specialist}
                   />
                 )}
-                {dataset.ownership.support_channel && (
-                  <MetaRow
-                    label="Support"
-                    value={dataset.ownership.support_channel}
-                  />
+                {ownership.support_channel && (
+                  <MetaRow label="Support" value={ownership.support_channel} />
                 )}
-                {dataset.ownership.adop && (
-                  <MetaRow label="ADOP" value={dataset.ownership.adop} />
+                {ownership.adop && (
+                  <MetaRow label="ADOP" value={ownership.adop} />
                 )}
-                {dataset.ownership.ads && (
-                  <MetaRow label="ADS" value={dataset.ownership.ads} />
+                {ownership.ads && (
+                  <MetaRow label="ADS" value={ownership.ads} />
                 )}
-                {dataset.ownership.adal && (
-                  <MetaRow label="ADAL" value={dataset.ownership.adal} />
+                {ownership.adal && (
+                  <MetaRow label="ADAL" value={ownership.adal} />
                 )}
               </Paper>
             )}
@@ -243,13 +269,13 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                 Classification
               </Typography>
               <Chip
-                label={dataset.classification || "internal"}
+                label={desc.classification || "internal"}
                 size="small"
                 variant="outlined"
                 color={
-                  dataset.classification === "confidential"
+                  desc.classification === "confidential"
                     ? "warning"
-                    : dataset.classification === "restricted"
+                    : desc.classification === "restricted"
                     ? "error"
                     : "default"
                 }
@@ -257,7 +283,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
             </Paper>
 
             {/* Documentation */}
-            {dataset.documentation && (
+            {desc.documentation && (
               <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
                 <Typography
                   variant="subtitle1"
@@ -265,8 +291,10 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                 >
                   Documentation
                 </Typography>
-                {Object.entries(dataset.documentation)
-                  .filter(([k, v]) => typeof v === "string")
+                {Object.entries(desc.documentation)
+                  .filter(
+                    ([k, v]) => typeof v === "string" && k !== "additional"
+                  )
                   .map(([k, v]) => (
                     <Box key={k} sx={{ mb: 0.5 }}>
                       <MuiLink
@@ -301,7 +329,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                     }}
                   />
                   <MuiLink
-                    href={`/domains/${domain.key}`}
+                    href={`/domains/${domain.name}`}
                     variant="body2"
                     sx={{ color: "#005587" }}
                   >
@@ -312,9 +340,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
             )}
 
             {/* Tags */}
-            {((dataset.semantic_tags && dataset.semantic_tags.length > 0) ||
-              (dataset.schema?.semantic_tags &&
-                dataset.schema.semantic_tags.length > 0)) && (
+            {tags.length > 0 && (
               <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
                 <Typography
                   variant="subtitle1"
@@ -323,42 +349,36 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                   Tags
                 </Typography>
                 <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
-                  {[
-                    ...(dataset.semantic_tags || []),
-                    ...(dataset.schema?.semantic_tags || []),
-                  ]
-                    .filter((v, i, a) => a.indexOf(v) === i)
-                    .map((tag) => (
-                      <Chip
-                        key={tag}
-                        label={tag}
-                        size="small"
-                        variant="outlined"
-                      />
-                    ))}
+                  {tags.map((tag) => (
+                    <Chip
+                      key={tag}
+                      label={tag}
+                      size="small"
+                      variant="outlined"
+                    />
+                  ))}
                 </Box>
               </Paper>
             )}
 
             {/* Use Cases */}
-            {dataset.schema?.use_cases &&
-              dataset.schema.use_cases.length > 0 && (
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  <Typography
-                    variant="subtitle1"
-                    sx={{ mb: 1.5, fontWeight: 600, fontSize: "0.9rem" }}
-                  >
-                    Use Cases
-                  </Typography>
-                  <ul style={{ margin: 0, paddingLeft: 20 }}>
-                    {dataset.schema.use_cases.map((uc, i) => (
-                      <li key={i}>
-                        <Typography variant="body2">{uc}</Typography>
-                      </li>
-                    ))}
-                  </ul>
-                </Paper>
-              )}
+            {useCases.length > 0 && (
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{ mb: 1.5, fontWeight: 600, fontSize: "0.9rem" }}
+                >
+                  Use Cases
+                </Typography>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {useCases.map((uc, i) => (
+                    <li key={i}>
+                      <Typography variant="body2">{uc}</Typography>
+                    </li>
+                  ))}
+                </ul>
+              </Paper>
+            )}
           </Grid>
         </Grid>
       </Container>

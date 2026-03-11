@@ -13,7 +13,13 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { useRouter } from "next/navigation";
-import type { SearchResult } from "@/lib/types";
+interface SearchResult {
+  type: string;
+  key: string;
+  display_name: string;
+  description?: string;
+  url: string;
+}
 
 const TYPE_COLORS: Record<string, string> = {
   domain: "#00897B",

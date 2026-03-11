@@ -11,10 +11,11 @@ import {
   Chip,
 } from "@mui/material";
 import Link from "next/link";
-import type { Dataset } from "@/lib/types";
 
 interface AppearsInEntry {
-  dataset: Dataset;
+  datasetKey: string;
+  displayName: string;
+  sourceType?: string;
   columnName?: string;
   notes?: string;
 }
@@ -39,10 +40,10 @@ export default function AppearsInTable({
         </TableHead>
         <TableBody>
           {entries.map((e) => (
-            <TableRow key={e.dataset.key}>
+            <TableRow key={e.datasetKey}>
               <TableCell>
                 <Link
-                  href={`/datasets/${e.dataset.key}`}
+                  href={`/datasets/${e.datasetKey}`}
                   style={{ textDecoration: "none" }}
                 >
                   <Typography
@@ -53,11 +54,11 @@ export default function AppearsInTable({
                       "&:hover": { textDecoration: "underline" },
                     }}
                   >
-                    {e.dataset.display_name}
+                    {e.displayName}
                   </Typography>
                 </Link>
                 <Typography variant="caption" display="block" color="text.secondary">
-                  {e.dataset.key}
+                  {e.datasetKey}
                 </Typography>
               </TableCell>
               <TableCell>
@@ -70,9 +71,9 @@ export default function AppearsInTable({
                 )}
               </TableCell>
               <TableCell>
-                {e.dataset.source_binding && (
+                {e.sourceType && (
                   <Chip
-                    label={e.dataset.source_binding.type.toUpperCase()}
+                    label={e.sourceType.toUpperCase()}
                     size="small"
                     variant="outlined"
                   />

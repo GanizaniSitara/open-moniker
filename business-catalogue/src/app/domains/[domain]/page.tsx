@@ -7,7 +7,7 @@ import {
 } from "@mui/material";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import DatasetCard from "@/components/DatasetCard";
-import { getCatalogData } from "@/lib/data-loader";
+import { fetchDomain, fetchNodes, toSlashPath } from "@/lib/api-client";
 import { notFound } from "next/navigation";
 
 interface PageProps {
@@ -16,15 +16,22 @@ interface PageProps {
 
 export default async function DomainDetailPage({ params }: PageProps) {
   const { domain: domainKey } = await params;
-  const data = getCatalogData();
-  const domain = data.domainByKey.get(domainKey);
 
-  if (!domain) notFound();
+  let domainRes;
+  try {
+    domainRes = await fetchDomain(domainKey);
+  } catch {
+    notFound();
+  }
 
-  const datasets = (data.datasetsByDomain.get(domainKey) || []).sort((a, b) =>
-    a.display_name.localeCompare(b.display_name)
-  );
-  const leafDatasets = datasets.filter((d) => !d.isContainer);
+  const domain = domainRes.domain;
+
+  // Fetch all nodes, filter to this domain's datasets
+  const nodesRes = await fetchNodes();
+  const datasets = nodesRes.nodes
+    .filter((n) => n.path === domainKey || n.path.startsWith(domainKey + ".") || n.path.startsWith(domainKey + "/"))
+    .sort((a, b) => a.display_name.localeCompare(b.display_name));
+  const leafDatasets = datasets.filter((d) => d.is_leaf);
 
   return (
     <>
@@ -110,17 +117,17 @@ export default async function DomainDetailPage({ params }: PageProps) {
         <Box>
           {datasets.map((ds) => (
             <DatasetCard
-              key={ds.key}
-              datasetKey={ds.key}
+              key={ds.path}
+              datasetKey={toSlashPath(ds.path)}
               displayName={ds.display_name}
               description={ds.description}
               sourceType={ds.source_binding?.type}
               domainDisplayName={domain.display_name}
               domainColor={domain.color}
-              columnCount={ds.schema?.columns?.length || 0}
+              columnCount={0}
               classification={ds.classification}
-              isContainer={ds.isContainer}
-              columns={ds.schema?.columns || []}
+              isContainer={!ds.is_leaf}
+              columns={[]}
             />
           ))}
         </Box>

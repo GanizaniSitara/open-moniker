@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { label: "Datasets", href: "/" },
   { label: "Domains", href: "/domains" },
   { label: "Fields", href: "/fields" },
+  { label: "Vendors", href: "/vendors" },
 ];
 
 export default function AppHeader() {
