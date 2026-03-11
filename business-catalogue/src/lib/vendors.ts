@@ -22,7 +22,9 @@ let _cache: Vendor[] | null = null;
 export function getVendors(): Vendor[] {
   if (!_cache) {
     const repoRoot = path.resolve(process.cwd(), "..");
-    const filePath = path.join(repoRoot, "vendors.yaml");
+    const primary = path.join(repoRoot, "vendors.yaml");
+    const sample = path.join(repoRoot, "sample_vendors.yaml");
+    const filePath = fs.existsSync(primary) ? primary : sample;
     const raw = yaml.load(fs.readFileSync(filePath, "utf-8")) as Record<
       string,
       { name: string; description: string; category: string; website?: string }

@@ -58,6 +58,7 @@ config_zmq.yaml
 catalog.yaml
 domains.yaml
 models.yaml
+vendors.yaml
 demo/demo_monikers.yaml
 
 # Database files
