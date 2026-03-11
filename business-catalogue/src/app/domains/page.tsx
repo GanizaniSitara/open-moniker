@@ -9,12 +9,12 @@ export default async function DomainsPage() {
     fetchNodes(),
   ]);
 
-  // Count leaf datasets per domain (prefix matching)
+  // Count leaf datasets per domain (resolved_domain > domain > prefix matching)
   const domainKeys = domainsRes.domains.map((d) => d.name);
   const datasetCounts = new Map<string, number>();
   for (const node of nodesRes.nodes) {
     if (!node.is_leaf) continue;
-    const dk = domainKeys.find(
+    const dk = node.resolved_domain || node.domain || domainKeys.find(
       (k) => node.path === k || node.path.startsWith(k + ".") || node.path.startsWith(k + "/")
     );
     if (dk) {

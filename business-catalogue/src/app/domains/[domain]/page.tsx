@@ -26,10 +26,16 @@ export default async function DomainDetailPage({ params }: PageProps) {
 
   const domain = domainRes.domain;
 
-  // Fetch all nodes, filter to this domain's datasets
+  // Fetch all nodes, filter to this domain's datasets (prefix match + explicit domain mapping)
   const nodesRes = await fetchNodes();
   const datasets = nodesRes.nodes
-    .filter((n) => n.path === domainKey || n.path.startsWith(domainKey + ".") || n.path.startsWith(domainKey + "/"))
+    .filter((n) =>
+      n.resolved_domain === domainKey ||
+      n.domain === domainKey ||
+      n.path === domainKey ||
+      n.path.startsWith(domainKey + ".") ||
+      n.path.startsWith(domainKey + "/")
+    )
     .sort((a, b) => a.display_name.localeCompare(b.display_name));
   const leafDatasets = datasets.filter((d) => d.is_leaf);
 

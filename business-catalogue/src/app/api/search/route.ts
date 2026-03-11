@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       const datasets = nodesRes.nodes.map((node) => {
         // Domain is either set on the node or inferred by prefix matching
         const domainKey =
-          node.domain || domainKeys.find((dk) => node.path === dk || node.path.startsWith(dk + ".") || node.path.startsWith(dk + "/")) || null;
+          node.resolved_domain || node.domain || domainKeys.find((dk) => node.path === dk || node.path.startsWith(dk + ".") || node.path.startsWith(dk + "/")) || null;
         const domain = domainKey ? domainByName.get(domainKey) : null;
         return {
           key: toSlashPath(node.path),

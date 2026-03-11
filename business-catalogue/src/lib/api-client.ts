@@ -85,6 +85,7 @@ export interface ApiNode {
   display_name: string;
   description: string;
   domain: string | null;
+  resolved_domain: string | null;
   vendor: string | null;
   ownership: ApiOwnership | null;
   source_binding: ApiSourceBinding | null;

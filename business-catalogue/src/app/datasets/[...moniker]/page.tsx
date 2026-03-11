@@ -39,12 +39,13 @@ export default async function DatasetDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Look up domain info
+  // Look up domain info (prefer resolved_domain which includes inheritance)
   let domain = null;
-  if (nodeRes.node.domain) {
+  const domainKey = nodeRes.node.resolved_domain || nodeRes.node.domain;
+  if (domainKey) {
     try {
       const domainsRes = await fetchDomains();
-      domain = domainsRes.domains.find((d) => d.name === nodeRes.node.domain) || null;
+      domain = domainsRes.domains.find((d) => d.name === domainKey) || null;
     } catch {
       // Domain lookup is optional
     }
