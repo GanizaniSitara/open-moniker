@@ -203,7 +203,7 @@
         }
         .node.selected .node-badge { background: rgba(255,255,255,0.2); color: white; }
 
-        /* Domain badge for top-level nodes */
+        /* Domain badge */
         .domain-badge {
             font-size: var(--fs-400);
             padding: 1px 5px;
@@ -1140,7 +1140,7 @@
         let selectedPath = null;
         let originalNode = null;
 
-        // Domain state (for checking if top-level nodes have domain mappings)
+        // Domain state (for domain badge rendering and category filtering)
         let domainsData = [];  // Full domain objects sorted by category, then name
         let activeCategory = null;  // Active category filter
 
@@ -1251,12 +1251,12 @@
                 ? MonikerUtils.getDomainsInCategory(domainsData, category)
                 : null;
 
-            // Filter top-level tree nodes
+            // Filter tree nodes by effective domain
             document.querySelectorAll('#tree > ul > li').forEach(li => {
                 const path = li.dataset.path;
                 if (!path) return;
 
-                // Find the node data and get domain using shared utility
+                // Find the node data and get effective domain using shared utility
                 const node = nodes.find(n => n.path === path);
                 const nodeDomain = MonikerUtils.getDomain(node, path);
 
@@ -1440,19 +1440,18 @@
                     const isSelected = data._path === selectedPath;
                     const hasSource = node && node.source_binding;
 
-                    // Check domain mapping for top-level nodes
-                    // Domain is explicitly set on the node, not derived from path
+                    // Check domain mapping — use resolved_domain (includes inheritance)
                     const isTopLevelNode = !data._path.includes('/');
-                    const nodeDomain = node?.domain || null;
-                    const domainInfo = nodeDomain ? domainsData.find(d => d.name === nodeDomain) : null;
-                    const hasDomain = isTopLevelNode && domainInfo;
+                    const effectiveDomain = node?.resolved_domain || node?.domain || null;
+                    const domainInfo = effectiveDomain ? domainsData.find(d => d.name === effectiveDomain) : null;
+                    const hasDomain = !!domainInfo;
                     const missingDomain = isTopLevelNode && !hasDomain;
 
                     // Build badges
                     let badges = '';
-                    if (isTopLevelNode && hasDomain) {
-                        const badgeLabel = domainInfo.short_code || nodeDomain;
-                        badges += `<span class="domain-badge" title="Domain: ${nodeDomain}">${badgeLabel}</span>`;
+                    if (hasDomain) {
+                        const badgeLabel = domainInfo.short_code || effectiveDomain;
+                        badges += `<span class="domain-badge" title="Domain: ${effectiveDomain}">${badgeLabel}</span>`;
                     }
                     if (hasSource) {
                         badges += `<span class="node-badge">${node.source_binding.type}</span>`;
@@ -1657,14 +1656,10 @@
         // Domain Functions
         // =============================================================================
 
-        function renderDomainInfo(path, currentDomain) {
-            // Only show for top-level nodes (no / in path)
-            if (path.includes('/')) {
-                return '';
-            }
-
+        function renderDomainInfo(path, currentDomain, resolvedDomain) {
             // Build domain options grouped by category (domainsData is pre-sorted by category, then name)
             const hasDomain = currentDomain && domainsData.some(d => d.name === currentDomain);
+            const hasInherited = !currentDomain && resolvedDomain && domainsData.some(d => d.name === resolvedDomain);
 
             // Group domains by category for optgroup display
             let optionsHtml = '<option value="">-- None --</option>';
@@ -1687,13 +1682,16 @@
                 optionsHtml += '</optgroup>';
             }
 
+            const statusClass = hasDomain ? 'domain-exists' : (hasInherited ? 'domain-exists' : 'domain-missing');
+            const statusText = hasDomain ? 'Configured' : (hasInherited ? `Inherited: ${resolvedDomain}` : 'Not mapped');
+
             return `
-                <div class="domain-info ${hasDomain ? 'domain-exists' : 'domain-missing'}">
+                <div class="domain-info ${statusClass}">
                     <span class="domain-info-label">Domain:</span>
                     <select id="node_domain" class="domain-select" style="min-width: 150px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border);">
                         ${optionsHtml}
                     </select>
-                    <span class="domain-info-status">${hasDomain ? 'Configured' : 'Not mapped'}</span>
+                    <span class="domain-info-status">${statusText}</span>
                     <a href="/domains/ui" class="btn btn-sm btn-secondary" target="_blank">Manage Domains</a>
                 </div>
             `;
@@ -1713,7 +1711,7 @@
             container.innerHTML = `
                 <div class="path-display">moniker://${node.path}</div>
 
-                ${renderDomainInfo(node.path, node.domain)}
+                ${renderDomainInfo(node.path, node.domain, node.resolved_domain)}
 
                 ${node.status === 'pending_review' ? `
                 <div style="background:rgba(242,169,0,0.1);border:1px solid rgba(242,169,0,0.3);border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:13px">
@@ -2080,8 +2078,8 @@
         }
 
         function collapseAllSections() {
-            document.querySelectorAll('#form-container .form-section').forEach((s, i) => {
-                if (i > 0) s.classList.add('collapsed');
+            document.querySelectorAll('#form-container .form-section').forEach(s => {
+                s.classList.add('collapsed');
             });
         }
 
@@ -2251,7 +2249,7 @@
                 tags: collectTags(),
             };
 
-            // Domain (for top-level nodes)
+            // Domain (can be set on any node)
             const domainSelect = document.getElementById('node_domain');
             if (domainSelect) {
                 data.domain = domainSelect.value || null;

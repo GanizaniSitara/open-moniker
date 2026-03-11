@@ -208,7 +208,8 @@ class CatalogRegistry:
 
             # Fall back to domain ownership for fields not set in catalog
             if domain_registry:
-                domain = domain_registry.get_domain_for_path(path_str)
+                resolved_domain_name = self.resolve_domain_with_fallback(path_str, domain_registry)
+                domain = domain_registry.get(resolved_domain_name) if resolved_domain_name else None
                 if domain:
                     domain_source = f"domain:{domain.name}"
                     # Map domain fields to ownership fields
@@ -274,6 +275,58 @@ class CatalogRegistry:
                     return (node.source_binding, ancestor)
 
             return None
+
+    def resolve_domain(self, path: str | MonikerPath) -> str | None:
+        """Resolve the effective domain for a path by walking up the hierarchy.
+
+        Returns the first explicit `domain` found on the node itself or its
+        closest ancestor. Returns None if no node in the chain has a domain set.
+        """
+        path_str = str(path) if isinstance(path, MonikerPath) else path
+        with self._lock:
+            # Check the node itself first
+            node = self._nodes.get(path_str)
+            if node and node.domain:
+                return node.domain
+            # Walk from closest ancestor up to root
+            for p in reversed(self._ancestor_paths(path_str)):
+                node = self._nodes.get(p)
+                if node and node.domain:
+                    return node.domain
+        return None
+
+    def resolve_domain_with_fallback(
+        self,
+        path: str | MonikerPath,
+        domain_registry: "DomainRegistry | None" = None,
+    ) -> str | None:
+        """Resolve effective domain with optional legacy first-segment fallback.
+
+        Resolution order:
+        1. Walk up the ``/``-separated hierarchy for an explicit ``domain`` field.
+        2. Try ``get_domain_for_path`` (first ``/``-segment lookup in domain registry).
+        3. Try dot-prefix: for ``portfolios.attribution`` try ``portfolios`` in the
+           domain registry, since ``.`` is used as a visual grouping separator.
+        """
+        resolved_domain_name = self.resolve_domain(path)
+        if resolved_domain_name:
+            return resolved_domain_name
+
+        if domain_registry:
+            path_str = str(path) if isinstance(path, MonikerPath) else path
+            # Try first /-segment (e.g. "risk" from "risk/cvar/portfolio")
+            domain = domain_registry.get_domain_for_path(path_str)
+            if domain:
+                return domain.name
+            # Try dot-prefix (e.g. "portfolios" from "portfolios.attribution")
+            first_segment = path_str.split("/")[0]
+            if "." in first_segment:
+                prefix = first_segment.split(".")[0]
+                domain = domain_registry.get(prefix)
+                if domain:
+                    return domain.name
+
+        return None
 
     def all_paths(self) -> list[str]:
         """Get all registered paths."""

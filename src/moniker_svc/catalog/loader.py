@@ -246,6 +246,7 @@ class CatalogLoader:
             asset_class=data.get("asset_class", ""),
             update_frequency=data.get("update_frequency", ""),
             domain=data.get("domain"),
+            vendor=data.get("vendor"),
             ownership=ownership,
             source_binding=source_binding,
             data_quality=data_quality,

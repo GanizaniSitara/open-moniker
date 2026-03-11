@@ -96,7 +96,11 @@ def _get_catalog() -> CatalogRegistry:
 # Helper Functions
 # =============================================================================
 
-def _node_to_model(node: CatalogNode) -> CatalogNodeModel:
+def _node_to_model(
+    node: CatalogNode,
+    catalog_registry: CatalogRegistry | None = None,
+    domain_registry: "DomainRegistry | None" = None,
+) -> CatalogNodeModel:
     """Convert CatalogNode to Pydantic model."""
     ownership = None
     if node.ownership and not node.ownership.is_empty():
@@ -123,11 +127,22 @@ def _node_to_model(node: CatalogNode) -> CatalogNodeModel:
             read_only=node.source_binding.read_only,
         )
 
+    resolved_domain = None
+    if catalog_registry:
+        resolved_domain = catalog_registry.resolve_domain_with_fallback(node.path, domain_registry)
+    elif domain_registry:
+        domain = domain_registry.get_domain_for_path(node.path)
+        resolved_domain = domain.name if domain else node.domain
+    else:
+        resolved_domain = node.domain
+
     return CatalogNodeModel(
         path=node.path,
         display_name=node.display_name,
         description=node.description,
         domain=node.domain,
+        resolved_domain=resolved_domain,
+        vendor=node.vendor,
         ownership=ownership,
         source_binding=source_binding,
         classification=node.classification,
@@ -239,7 +254,7 @@ async def list_nodes():
     nodes = catalog.all_nodes()
 
     return NodeListResponse(
-        nodes=[_node_to_model(n) for n in sorted(nodes, key=lambda x: x.path)],
+        nodes=[_node_to_model(n, catalog, _domain_registry) for n in sorted(nodes, key=lambda x: x.path)],
         total=len(nodes),
     )
 
@@ -302,7 +317,7 @@ async def get_node(path: str):
     resolved = catalog.resolve_ownership(path, _domain_registry)
 
     return NodeWithOwnershipModel(
-        node=_node_to_model(node),
+        node=_node_to_model(node, catalog, _domain_registry),
         resolved_ownership=ResolvedOwnershipModel(
             accountable_owner=resolved.accountable_owner,
             accountable_owner_source=resolved.accountable_owner_source,
@@ -346,7 +361,7 @@ async def create_node(request: CreateNodeRequest):
 
     logger.info(f"Created node: {request.path}")
 
-    return _node_to_model(node)
+    return _node_to_model(node, catalog, _domain_registry)
 
 
 @router.put("/nodes/{path:path}", response_model=CatalogNodeModel)
@@ -368,7 +383,7 @@ async def update_node(path: str, request: UpdateNodeRequest):
 
     logger.info(f"Updated node: {path}")
 
-    return _node_to_model(node)
+    return _node_to_model(node, catalog, _domain_registry)
 
 
 @router.delete("/nodes/{path:path}", response_model=DeleteResponse)

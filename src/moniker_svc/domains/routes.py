@@ -81,14 +81,23 @@ def _domain_to_model(domain: Domain) -> DomainModel:
 
 
 def _get_moniker_paths_for_domain(domain_name: str) -> list[str]:
-    """Get moniker paths under a domain."""
+    """Get moniker paths under a domain, including inherited and cross-domain nodes."""
     if _catalog_registry is None:
         return []
 
     try:
+        paths: set[str] = set()
         # Get children of the domain root
         children = _catalog_registry.children_paths(domain_name)
-        return sorted(children) if children else []
+        if children:
+            paths.update(children)
+        # Include nodes whose effective domain resolves to this domain
+        for node in _catalog_registry.all_nodes():
+            if node.domain == domain_name:
+                paths.add(node.path)
+            elif _catalog_registry.resolve_domain(node.path) == domain_name:
+                paths.add(node.path)
+        return sorted(paths)
     except Exception:
         return []
 
