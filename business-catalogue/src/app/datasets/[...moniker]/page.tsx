@@ -17,7 +17,7 @@ import RelatedModels from "@/components/RelatedModels";
 import SourceBadge from "@/components/SourceBadge";
 import { fetchDescribe, fetchDomains, fetchNode, toDotPath } from "@/lib/api-client";
 import { sanitizeConfig } from "@/lib/sanitize";
-import { VENDORS } from "@/lib/vendors";
+import { getVendors } from "@/lib/vendors";
 import { notFound } from "next/navigation";
 
 interface PageProps {
@@ -54,7 +54,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
 
   const isContainer = !desc.has_source_binding;
   const sourceType = desc.source_type;
-  const vendor = desc.vendor ? VENDORS.find((v) => v.key === desc.vendor) : null;
+  const vendor = desc.vendor ? getVendors().find((v) => v.key === desc.vendor) : null;
   const sanitizedConfig = nodeRes.node.source_binding?.config
     ? sanitizeConfig(nodeRes.node.source_binding.config)
     : null;

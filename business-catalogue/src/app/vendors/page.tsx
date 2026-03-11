@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Container,
   Box,
@@ -11,23 +11,30 @@ import SearchIcon from "@mui/icons-material/Search";
 import PageTitle from "@/components/PageTitle";
 import DatasetFilters from "@/components/DatasetFilters";
 import VendorCard from "@/components/VendorCard";
-import { VENDORS } from "@/lib/vendors";
+import type { Vendor } from "@/lib/vendors";
 
 export default function VendorsPage() {
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Record<string, Set<string>>>({
     Category: new Set(),
   });
 
+  useEffect(() => {
+    fetch("/api/vendors")
+      .then((r) => r.json())
+      .then((d) => setVendors(d.vendors || []));
+  }, []);
+
   const searchFiltered = useMemo(() => {
-    if (!search) return VENDORS;
+    if (!search) return vendors;
     const q = search.toLowerCase();
-    return VENDORS.filter(
+    return vendors.filter(
       (v) =>
         v.name.toLowerCase().includes(q) ||
         v.description.toLowerCase().includes(q)
     );
-  }, [search]);
+  }, [search, vendors]);
 
   const filterSections = useMemo(() => {
     const categoryCounts = new Map<string, number>();

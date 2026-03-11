@@ -12,7 +12,7 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import DatasetCard from "@/components/DatasetCard";
 import DatasetFilters from "@/components/DatasetFilters";
-import { VENDORS } from "@/lib/vendors";
+import type { Vendor } from "@/lib/vendors";
 interface BrowseDataset {
   key: string;
   display_name: string;
@@ -32,24 +32,27 @@ export default function CatalogBrowser() {
   const [searchQuery, setSearchQuery] = useState("");
   const [datasets, setDatasets] = useState<BrowseDataset[]>([]);
   const [, setDomains] = useState<{ key: string; display_name: string; color: string }[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [filters, setFilters] = useState<Record<string, Set<string>>>({
     Domain: new Set(),
   });
 
-  const vendorName = vendorParam
-    ? VENDORS.find((v) => v.key === vendorParam)?.name || vendorParam
-    : null;
-
   useEffect(() => {
-    fetch("/api/search?q=&all=datasets")
-      .then((r) => r.json())
-      .then((d) => {
-        setDatasets(d.datasets || []);
-        setDomains(d.domains || []);
-        setLoaded(true);
-      });
+    Promise.all([
+      fetch("/api/search?q=&all=datasets").then((r) => r.json()),
+      fetch("/api/vendors").then((r) => r.json()),
+    ]).then(([d, v]) => {
+      setDatasets(d.datasets || []);
+      setDomains(d.domains || []);
+      setVendors(v.vendors || []);
+      setLoaded(true);
+    });
   }, []);
+
+  const vendorName = vendorParam
+    ? vendors.find((v) => v.key === vendorParam)?.name || vendorParam
+    : null;
 
   // Step 1: filter by search text and vendor param
   const searchFiltered = useMemo(() => {
