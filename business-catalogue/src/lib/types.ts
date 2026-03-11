@@ -78,6 +78,7 @@ export interface Dataset {
   classification?: string;
   access_policy?: AccessPolicy;
   semantic_tags?: string[];
+  vendor?: string;
   // Computed fields
   domainKey?: string;
   isContainer: boolean;
@@ -107,6 +108,7 @@ export interface Model {
   data_type?: string;
   documentation_url?: string;
   methodology_url?: string;
+  wiki_link?: string;
   ownership?: ModelOwnership;
   appears_in?: MonikerLink[];
   semantic_tags?: string[];

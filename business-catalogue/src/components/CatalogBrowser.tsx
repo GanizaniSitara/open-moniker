@@ -1,15 +1,18 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Container,
   Typography,
   Box,
   TextField,
   InputAdornment,
+  Chip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import DatasetCard from "@/components/DatasetCard";
 import DatasetFilters from "@/components/DatasetFilters";
+import { VENDORS } from "@/lib/vendors";
 interface BrowseDataset {
   key: string;
   display_name: string;
@@ -18,11 +21,14 @@ interface BrowseDataset {
   domainColor?: string;
   isContainer: boolean;
   classification?: string;
+  vendor?: string;
   source_binding?: { type: string };
   schema: null;
 }
 
 export default function CatalogBrowser() {
+  const searchParams = useSearchParams();
+  const vendorParam = searchParams.get("vendor");
   const [searchQuery, setSearchQuery] = useState("");
   const [datasets, setDatasets] = useState<BrowseDataset[]>([]);
   const [, setDomains] = useState<{ key: string; display_name: string; color: string }[]>([]);
@@ -30,6 +36,10 @@ export default function CatalogBrowser() {
   const [filters, setFilters] = useState<Record<string, Set<string>>>({
     Domain: new Set(),
   });
+
+  const vendorName = vendorParam
+    ? VENDORS.find((v) => v.key === vendorParam)?.name || vendorParam
+    : null;
 
   useEffect(() => {
     fetch("/api/search?q=&all=datasets")
@@ -41,9 +51,12 @@ export default function CatalogBrowser() {
       });
   }, []);
 
-  // Step 1: filter by search text
+  // Step 1: filter by search text and vendor param
   const searchFiltered = useMemo(() => {
     let result = datasets.filter((ds) => !ds.isContainer);
+    if (vendorParam) {
+      result = result.filter((ds) => ds.vendor === vendorParam);
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -54,7 +67,7 @@ export default function CatalogBrowser() {
       );
     }
     return result;
-  }, [datasets, searchQuery]);
+  }, [datasets, searchQuery, vendorParam]);
 
   // Step 2: compute facet counts from search-filtered results
   const filterSections = useMemo(() => {
@@ -137,6 +150,23 @@ export default function CatalogBrowser() {
               },
             }}
           />
+
+          {vendorName && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                Filtered by vendor:
+              </Typography>
+              <Chip
+                label={vendorName}
+                size="small"
+                onDelete={() => {
+                  window.history.replaceState(null, "", "/datasets");
+                  window.location.reload();
+                }}
+                sx={{ fontWeight: 600 }}
+              />
+            </Box>
+          )}
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {loaded ? `${displayedDatasets.length} datasets` : "Loading..."}

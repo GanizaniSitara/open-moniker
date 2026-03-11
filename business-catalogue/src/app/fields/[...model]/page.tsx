@@ -204,7 +204,7 @@ export default async function FieldDetailPage({ params }: PageProps) {
         )}
 
         {/* Documentation links */}
-        {(model.documentation_url || model.methodology_url) && (
+        {(model.documentation_url || model.methodology_url || model.wiki_link) && (
           <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
             <Typography
               variant="subtitle1"
@@ -225,7 +225,7 @@ export default async function FieldDetailPage({ params }: PageProps) {
               </Box>
             )}
             {model.methodology_url && (
-              <Box>
+              <Box sx={{ mb: 0.5 }}>
                 <MuiLink
                   href={model.methodology_url}
                   target="_blank"
@@ -233,6 +233,18 @@ export default async function FieldDetailPage({ params }: PageProps) {
                   sx={{ color: "#005587" }}
                 >
                   Methodology
+                </MuiLink>
+              </Box>
+            )}
+            {model.wiki_link && (
+              <Box>
+                <MuiLink
+                  href={model.wiki_link}
+                  target="_blank"
+                  variant="body2"
+                  sx={{ color: "#005587" }}
+                >
+                  Wiki
                 </MuiLink>
               </Box>
             )}

@@ -103,6 +103,7 @@ class Model:
     ownership: ModelOwnership = field(default_factory=ModelOwnership)
     documentation_url: str | None = None
     methodology_url: str | None = None
+    wiki_link: str | None = None
 
     # Moniker relationships (explicit only, no auto-discovery)
     appears_in: tuple[MonikerLink, ...] = ()
@@ -137,6 +138,8 @@ class Model:
             result["documentation_url"] = self.documentation_url
         if self.methodology_url:
             result["methodology_url"] = self.methodology_url
+        if self.wiki_link:
+            result["wiki_link"] = self.wiki_link
 
         if self.appears_in:
             result["appears_in"] = [link.to_dict() for link in self.appears_in]
@@ -187,6 +190,7 @@ class Model:
             ownership=ownership,
             documentation_url=data.get("documentation_url"),
             methodology_url=data.get("methodology_url"),
+            wiki_link=data.get("wiki_link"),
             appears_in=appears_in,
             semantic_tags=semantic_tags,
             tags=tags,

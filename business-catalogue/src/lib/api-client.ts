@@ -85,6 +85,7 @@ export interface ApiNode {
   display_name: string;
   description: string;
   domain: string | null;
+  vendor: string | null;
   ownership: ApiOwnership | null;
   source_binding: ApiSourceBinding | null;
   classification: string;
@@ -186,6 +187,7 @@ export interface DescribeResponse {
   ownership: ResolvedOwnership;
   has_source_binding: boolean;
   source_type: string | null;
+  vendor: string | null;
   classification: string | null;
   tags: string[];
   schema: ApiSchema | null;
@@ -222,6 +224,7 @@ export interface ApiModel {
   ownership?: ApiModelOwnership | null;
   documentation_url?: string | null;
   methodology_url?: string | null;
+  wiki_link?: string | null;
   appears_in: ApiMonikerLink[];
   semantic_tags: string[];
   tags: string[];

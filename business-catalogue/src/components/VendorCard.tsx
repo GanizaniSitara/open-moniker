@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Typography, Box, Chip } from "@mui/material";
 import Image from "next/image";
+import Link from "next/link";
 
 const SVG_VENDORS = new Set(["factset", "intex"]);
 
@@ -36,8 +37,10 @@ export default function VendorCard({
         position: "relative",
       }}
     >
-      {/* Vendor logo */}
+      {/* Vendor logo — links to external website if available */}
       <Box
+        component={website ? "a" : "div"}
+        {...(website ? { href: website, target: "_blank", rel: "noopener noreferrer" } : {})}
         sx={{
           width: 56,
           height: 56,
@@ -50,6 +53,10 @@ export default function VendorCard({
           flexShrink: 0,
           overflow: "hidden",
           mt: 0.3,
+          cursor: website ? "pointer" : "default",
+          textDecoration: "none",
+          transition: "box-shadow 0.15s",
+          "&:hover": website ? { boxShadow: "0 0 0 2px rgba(0,85,135,0.3)" } : {},
         }}
       >
         {imgError ? (
@@ -70,7 +77,7 @@ export default function VendorCard({
 
       {/* Name, description, category */}
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.3 }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 0.3 }}>
           <Typography
             variant="h6"
             sx={{
@@ -80,26 +87,21 @@ export default function VendorCard({
               lineHeight: 1.3,
             }}
           >
-            {website ? (
-              <a
-                href={website}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "inherit", textDecoration: "none" }}
-                onMouseOver={(e) =>
-                  (e.currentTarget.style.textDecoration = "underline")
-                }
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.textDecoration = "none")
-                }
-              >
-                {name}
-              </a>
-            ) : (
-              name
-            )}
+            <Link
+              href={`/datasets?vendor=${vendorKey}`}
+              style={{ color: "inherit", textDecoration: "none" }}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.textDecoration = "underline")
+              }
+              onMouseOut={(e) =>
+                (e.currentTarget.style.textDecoration = "none")
+              }
+            >
+              {name}
+            </Link>
           </Typography>
-          {/* Dataset count pill badge */}
+          <Box sx={{ flexGrow: 1 }} />
+          {/* Dataset count pill badge — right-aligned */}
           <Chip
             label={`${datasetCount} datasets`}
             size="small"
@@ -109,6 +111,7 @@ export default function VendorCard({
               fontWeight: 600,
               fontSize: "0.7rem",
               height: 22,
+              flexShrink: 0,
             }}
           />
         </Box>

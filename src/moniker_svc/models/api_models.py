@@ -81,6 +81,7 @@ class BusinessModelModel(BaseModel):
     ownership: ModelOwnershipModel | None = Field(None, description="Ownership info")
     documentation_url: str | None = Field(None, description="Link to documentation")
     methodology_url: str | None = Field(None, description="Link to methodology docs")
+    wiki_link: str | None = Field(None, description="Link to wiki page")
 
     # Relationships
     appears_in: list[MonikerLinkModel] = Field(default_factory=list, description="Where this model appears")
@@ -112,6 +113,7 @@ class ModelSummaryModel(BaseModel):
     unit: str | None = Field(None, description="Unit of measure")
     formula: str | None = Field(None, description="Formula")
     documentation_url: str | None = Field(None, description="Documentation link")
+    wiki_link: str | None = Field(None, description="Link to wiki page")
 
 
 class CreateModelRequest(BaseModel):
@@ -138,6 +140,7 @@ class CreateModelRequest(BaseModel):
     ownership: ModelOwnershipModel | None = Field(None, description="Ownership info")
     documentation_url: str | None = Field(None, description="Documentation link")
     methodology_url: str | None = Field(None, description="Methodology link")
+    wiki_link: str | None = Field(None, description="Link to wiki page")
     appears_in: list[MonikerLinkModel] = Field(default_factory=list, description="Moniker appearances")
     semantic_tags: list[str] = Field(default_factory=list, description="Semantic tags")
     tags: list[str] = Field(default_factory=list, description="Generic tags")
@@ -163,6 +166,7 @@ class UpdateModelRequest(BaseModel):
     ownership: ModelOwnershipModel | None = Field(None, description="Ownership")
     documentation_url: str | None = Field(None, description="Documentation link")
     methodology_url: str | None = Field(None, description="Methodology link")
+    wiki_link: str | None = Field(None, description="Link to wiki page")
     appears_in: list[MonikerLinkModel] | None = Field(None, description="Appearances")
     semantic_tags: list[str] | None = Field(None, description="Semantic tags")
     tags: list[str] | None = Field(None, description="Tags")

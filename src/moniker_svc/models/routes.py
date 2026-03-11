@@ -97,6 +97,7 @@ def _model_to_api(model: Model) -> BusinessModelModel:
         ownership=ownership,
         documentation_url=model.documentation_url,
         methodology_url=model.methodology_url,
+        wiki_link=model.wiki_link,
         appears_in=appears_in,
         semantic_tags=list(model.semantic_tags),
         tags=list(model.tags),
@@ -112,6 +113,7 @@ def _model_to_summary(model: Model) -> ModelSummaryModel:
         unit=model.unit,
         formula=model.formula,
         documentation_url=model.documentation_url,
+        wiki_link=model.wiki_link,
     )
 
 
@@ -154,6 +156,7 @@ def _api_to_model(path: str, request: CreateModelRequest | UpdateModelRequest, e
             ownership=ownership,
             documentation_url=request.documentation_url if request.documentation_url is not None else existing.documentation_url,
             methodology_url=request.methodology_url if request.methodology_url is not None else existing.methodology_url,
+            wiki_link=request.wiki_link if request.wiki_link is not None else existing.wiki_link,
             appears_in=appears_in,
             semantic_tags=tuple(request.semantic_tags) if request.semantic_tags is not None else existing.semantic_tags,
             tags=frozenset(request.tags) if request.tags is not None else existing.tags,
@@ -170,6 +173,7 @@ def _api_to_model(path: str, request: CreateModelRequest | UpdateModelRequest, e
         ownership=ownership,
         documentation_url=request.documentation_url if hasattr(request, "documentation_url") else None,
         methodology_url=request.methodology_url if hasattr(request, "methodology_url") else None,
+        wiki_link=request.wiki_link if hasattr(request, "wiki_link") else None,
         appears_in=appears_in,
         semantic_tags=tuple(request.semantic_tags) if request.semantic_tags else (),
         tags=frozenset(request.tags) if request.tags else frozenset(),

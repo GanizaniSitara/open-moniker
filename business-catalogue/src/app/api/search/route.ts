@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
           domainColor: domain?.color,
           isContainer: !node.is_leaf,
           classification: node.classification,
+          vendor: node.vendor || undefined,
           source_binding: node.source_binding
             ? { type: node.source_binding.type }
             : undefined,

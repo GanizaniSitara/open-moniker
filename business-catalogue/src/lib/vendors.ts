@@ -171,6 +171,17 @@ export const VENDORS: Vendor[] = [
     datasetCount: 2,
   },
 
+  // Open-source market data
+  {
+    key: "yfinance",
+    name: "Yahoo Finance",
+    description:
+      "Open-source market data via yfinance Python library. Covers equities, ETFs, futures, and index data with historical OHLCV and fundamentals.",
+    category: "Market Data",
+    datasetCount: 6,
+    website: "https://finance.yahoo.com",
+  },
+
   // Reference data
   {
     key: "cusip-global",

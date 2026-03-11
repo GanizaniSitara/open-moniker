@@ -85,6 +85,7 @@ function parseDatasets(
       classification: v.classification as string | undefined,
       access_policy: accessPolicy,
       semantic_tags: v.semantic_tags as string[] | undefined,
+      vendor: v.vendor as string | undefined,
       domainKey: catalogKeyToDomain(key, domainKeys) || undefined,
       isContainer: !sourceBinding,
     };
@@ -106,6 +107,7 @@ function parseModels(raw: Record<string, unknown>): Model[] {
       data_type: v.data_type as string | undefined,
       documentation_url: v.documentation_url as string | undefined,
       methodology_url: v.methodology_url as string | undefined,
+      wiki_link: v.wiki_link as string | undefined,
       ownership,
       appears_in: appearsIn,
       semantic_tags: v.semantic_tags as string[] | undefined,
