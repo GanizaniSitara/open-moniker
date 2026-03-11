@@ -118,6 +118,9 @@ class DescribeResponse(BaseModel):
     ownership: dict[str, Any]
     has_source_binding: bool = False
     source_type: str | None = None
+    vendor: str | None = None
+    domain: str | None = None
+    resolved_domain: str | None = None
     classification: str | None = None
     tags: list[str] = []
 
@@ -131,6 +134,9 @@ class DescribeResponse(BaseModel):
 
     # Documentation links (Confluence, runbooks, etc.)
     documentation: dict[str, Any] | None = None
+
+    # Access policy
+    access_policy: dict[str, Any] | None = None
 
     # Business models that appear in this moniker
     models: list[ModelSummary] | None = None
@@ -287,6 +293,8 @@ class TreeNodeResponse(BaseModel):
     has_source_binding: bool = False
     description: str | None = None
     domain: str | None = None
+    resolved_domain: str | None = None
+    vendor: str | None = None
 
 
 # Enable self-referencing in TreeNodeResponse
@@ -1101,12 +1109,21 @@ async def not_found_error_handler(request: Request, exc: NotFoundError):
         for prefix in ["/resolve/", "/describe/", "/list/", "/lineage/", "/fetch/", "/metadata/", "/tree/"]:
             if path.startswith(prefix):
                 moniker_path = path[len(prefix):]
-                # Get first segment (before / or .)
-                first_segment = moniker_path.split("/")[0]
-                if _domain_registry and first_segment:
-                    domain = _domain_registry.get(first_segment)
+                # Resolve effective domain via hierarchy then registry fallback
+                domain_name = None
+                if _service and _service.catalog:
+                    domain_name = _service.catalog.resolve_domain_with_fallback(moniker_path, _domain_registry)
+                if not domain_name:
+                    # Fallback: extract first segment for registry lookup
+                    first_segment = moniker_path.split("/")[0]
+                    if _domain_registry and first_segment:
+                        d = _domain_registry.get(first_segment)
+                        if d:
+                            domain_name = d.name
+                if domain_name and _domain_registry:
+                    domain = _domain_registry.get(domain_name)
                     if domain:
-                        content["domain"] = first_segment
+                        content["domain"] = domain_name
                         if domain.wiki_link:
                             content["documentation"] = domain.wiki_link
                         if domain.help_channel:
@@ -1431,6 +1448,9 @@ async def describe_moniker(
         },
         has_source_binding=result.has_source_binding,
         source_type=result.source_type,
+        vendor=result.node.vendor if result.node else None,
+        domain=result.node.domain if result.node else None,
+        resolved_domain=_service.catalog.resolve_domain_with_fallback(path, _domain_registry) if _domain_registry else (result.node.domain if result.node else None),
         classification=result.node.classification if result.node else None,
         tags=list(result.node.tags) if result.node else [],
         data_quality=data_quality,
@@ -1438,6 +1458,11 @@ async def describe_moniker(
         freshness=freshness,
         schema=schema,
         documentation=documentation,
+        access_policy={
+            "min_filters": ap.min_filters,
+            "max_rows_warn": ap.max_rows_warn,
+            "denial_message": ap.denial_message,
+        } if (ap := (result.node.access_policy if result.node else None)) else None,
         models=models_list,
     )
 
@@ -2270,6 +2295,8 @@ async def get_tree(
             has_source_binding=has_source_binding,
             description=node.description,
             domain=node.domain,
+            resolved_domain=_service.catalog.resolve_domain_with_fallback(node_path, _domain_registry),
+            vendor=node.vendor,
         )
 
     tree = build_tree_node(path)
@@ -2346,6 +2373,8 @@ async def get_tree_root(
             has_source_binding=has_source_binding,
             description=node.description,
             domain=node.domain,
+            resolved_domain=_service.catalog.resolve_domain_with_fallback(node_path, _domain_registry),
+            vendor=node.vendor,
         )
 
     # Get root-level nodes (sorted alphabetically)

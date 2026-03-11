@@ -346,3 +346,106 @@ class TestDomainRegistryCRUD:
         assert "risk" in names
         assert "indices" in names
         assert "reference" in names
+
+
+@pytest.mark.integration
+class TestResolveDomain:
+    """Test resolve_domain (ancestor walk) and resolve_domain_with_fallback."""
+
+    @pytest.fixture
+    def catalog_with_hierarchy(self, domain_registry):
+        """Build a catalog with nested nodes and domain overrides at various depths."""
+        reg = CatalogRegistry()
+
+        # Top-level: 'portfolios' with domain 'risk'
+        reg.register(CatalogNode(
+            path="portfolios",
+            display_name="Portfolios",
+            domain="risk",
+        ))
+        # Child: inherits domain from parent
+        reg.register(CatalogNode(
+            path="portfolios/exposures",
+            display_name="Exposures",
+        ))
+        # Grandchild: overrides domain
+        reg.register(CatalogNode(
+            path="portfolios/exposures/fx",
+            display_name="FX Exposure",
+            domain="reference",
+        ))
+        # Great-grandchild: should inherit the override
+        reg.register(CatalogNode(
+            path="portfolios/exposures/fx/spot",
+            display_name="FX Spot Exposure",
+        ))
+        # Node with no domain ancestry at all
+        reg.register(CatalogNode(
+            path="unowned",
+            display_name="Unowned",
+        ))
+        # Leaf under unowned
+        reg.register(CatalogNode(
+            path="unowned/data",
+            display_name="Unowned Data",
+        ))
+
+        return reg
+
+    def test_resolve_domain_explicit(self, catalog_with_hierarchy):
+        """Node with explicit domain should resolve to it."""
+        assert catalog_with_hierarchy.resolve_domain("portfolios") == "risk"
+
+    def test_resolve_domain_inherited_from_parent(self, catalog_with_hierarchy):
+        """Child inherits domain from parent."""
+        assert catalog_with_hierarchy.resolve_domain("portfolios/exposures") == "risk"
+
+    def test_resolve_domain_override_at_depth(self, catalog_with_hierarchy):
+        """Child can override parent's domain."""
+        assert catalog_with_hierarchy.resolve_domain("portfolios/exposures/fx") == "reference"
+
+    def test_resolve_domain_inherited_override(self, catalog_with_hierarchy):
+        """Grandchild inherits the overridden domain, not the root domain."""
+        assert catalog_with_hierarchy.resolve_domain("portfolios/exposures/fx/spot") == "reference"
+
+    def test_resolve_domain_no_domain_in_chain(self, catalog_with_hierarchy):
+        """Node with no domain in its ancestry returns None."""
+        assert catalog_with_hierarchy.resolve_domain("unowned") is None
+        assert catalog_with_hierarchy.resolve_domain("unowned/data") is None
+
+    def test_resolve_domain_unknown_path(self, catalog_with_hierarchy):
+        """Unknown path returns None."""
+        assert catalog_with_hierarchy.resolve_domain("nonexistent/path") is None
+
+    def test_resolve_domain_with_fallback_uses_hierarchy_first(
+        self, catalog_with_hierarchy, domain_registry
+    ):
+        """Fallback method should prefer hierarchy resolution."""
+        result = catalog_with_hierarchy.resolve_domain_with_fallback(
+            "portfolios/exposures", domain_registry
+        )
+        assert result == "risk"
+
+    def test_resolve_domain_with_fallback_uses_registry(
+        self, catalog_with_hierarchy, domain_registry
+    ):
+        """When hierarchy returns None, fall back to domain registry first-segment lookup."""
+        # 'risk' is a registered domain, so 'risk/some_child' should resolve via registry
+        reg = CatalogRegistry()
+        reg.register(CatalogNode(path="risk/some_child", display_name="Child"))
+        result = reg.resolve_domain_with_fallback("risk/some_child", domain_registry)
+        assert result == "risk"
+
+    def test_resolve_domain_with_fallback_no_match(
+        self, catalog_with_hierarchy, domain_registry
+    ):
+        """Returns None when neither hierarchy nor registry matches."""
+        result = catalog_with_hierarchy.resolve_domain_with_fallback(
+            "unowned/data", domain_registry
+        )
+        assert result is None
+
+    def test_resolve_domain_with_fallback_no_registry(self, catalog_with_hierarchy):
+        """Without a registry, only hierarchy resolution is used."""
+        assert catalog_with_hierarchy.resolve_domain_with_fallback("portfolios/exposures") == "risk"
+        assert catalog_with_hierarchy.resolve_domain_with_fallback("unowned/data") is None

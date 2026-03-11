@@ -4,14 +4,15 @@
 
 const MonikerUtils = {
     /**
-     * Extract domain from a moniker path.
-     * Domain is explicitly set on the node, or derived from the first path segment.
-     * @param {Object|null} node - Node object with optional domain property
-     * @param {string} path - The moniker path (e.g., "analytics.risk/var")
-     * @returns {string} The domain name (e.g., "analytics")
+     * Extract effective domain from a node.
+     * Prefers resolved_domain (which includes ancestor inheritance), then explicit
+     * domain, then falls back to the first path segment.
+     * @param {Object|null} node - Node object with optional domain/resolved_domain
+     * @param {string} path - The moniker path (e.g., "analytics/risk/var")
+     * @returns {string} The domain name
      */
     getDomain(node, path) {
-        return node?.domain || path.split(/[./]/)[0];
+        return node?.resolved_domain || node?.domain || path.split(/[./]/)[0];
     },
 
     /**

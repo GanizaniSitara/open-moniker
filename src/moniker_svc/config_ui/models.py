@@ -179,6 +179,8 @@ class CatalogNodeModel(BaseModel):
     display_name: str = ""
     description: str = ""
     domain: str | None = None
+    resolved_domain: str | None = None
+    vendor: str | None = None
     ownership: OwnershipModel | None = None
     source_binding: SourceBindingModel | None = None
     data_quality: DataQualityModel | None = None

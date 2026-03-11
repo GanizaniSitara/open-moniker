@@ -303,8 +303,11 @@ class CatalogNode:
     # Update frequency (daily, weekly, monthly, quarterly)
     update_frequency: str = ""
 
-    # Domain mapping (for top-level nodes - maps to domain registry)
+    # Domain mapping (can be set on any node in the hierarchy)
     domain: str | None = None
+
+    # Third-party data vendor (e.g. bloomberg, refinitiv, fred)
+    vendor: str | None = None
 
     # Ownership (inherits from ancestors if not set)
     ownership: Ownership = field(default_factory=Ownership)
