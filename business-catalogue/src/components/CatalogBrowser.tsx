@@ -181,6 +181,7 @@ export default function CatalogBrowser() {
               sourceType={ds.source_binding?.type}
               domainDisplayName={ds.domainDisplayName}
               domainColor={ds.domainColor}
+              vendor={ds.vendor}
               columnCount={0}
               classification={ds.classification}
               isContainer={ds.isContainer}

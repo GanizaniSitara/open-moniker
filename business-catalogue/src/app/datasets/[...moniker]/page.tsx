@@ -17,6 +17,7 @@ import RelatedModels from "@/components/RelatedModels";
 import SourceBadge from "@/components/SourceBadge";
 import { fetchDescribe, fetchDomains, fetchNode, toDotPath } from "@/lib/api-client";
 import { sanitizeConfig } from "@/lib/sanitize";
+import { VENDORS } from "@/lib/vendors";
 import { notFound } from "next/navigation";
 
 interface PageProps {
@@ -32,7 +33,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
   let nodeRes;
   try {
     [desc, nodeRes] = await Promise.all([
-      fetchDescribe(monikerPath),
+      fetchDescribe(urlPath),
       fetchNode(monikerPath),
     ]);
   } catch {
@@ -53,6 +54,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
 
   const isContainer = !desc.has_source_binding;
   const sourceType = desc.source_type;
+  const vendor = desc.vendor ? VENDORS.find((v) => v.key === desc.vendor) : null;
   const sanitizedConfig = nodeRes.node.source_binding?.config
     ? sanitizeConfig(nodeRes.node.source_binding.config)
     : null;
@@ -337,6 +339,33 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                     {domain.display_name}
                   </MuiLink>
                 </Box>
+              </Paper>
+            )}
+
+            {/* Vendor */}
+            {(vendor || desc.vendor) && (
+              <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{ mb: 1.5, fontWeight: 600, fontSize: "0.9rem" }}
+                >
+                  Vendor
+                </Typography>
+                <MuiLink
+                  href={`/datasets?vendor=${desc.vendor}`}
+                  variant="body2"
+                  sx={{ color: "#005587" }}
+                >
+                  {vendor?.name || desc.vendor}
+                </MuiLink>
+                {vendor?.category && (
+                  <Chip
+                    label={vendor.category}
+                    size="small"
+                    variant="outlined"
+                    sx={{ ml: 1, fontSize: "0.7rem" }}
+                  />
+                )}
               </Paper>
             )}
 

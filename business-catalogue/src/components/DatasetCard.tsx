@@ -1,5 +1,5 @@
 "use client";
-import { Typography, Box } from "@mui/material";
+import { Typography, Box, Chip } from "@mui/material";
 import Link from "next/link";
 interface Column {
   name: string;
@@ -13,6 +13,7 @@ interface DatasetCardProps {
   sourceType?: string;
   domainDisplayName?: string;
   domainColor?: string;
+  vendor?: string;
   columnCount: number;
   classification?: string;
   isContainer: boolean;
@@ -23,6 +24,9 @@ export default function DatasetCard({
   datasetKey,
   displayName,
   description,
+  domainDisplayName,
+  domainColor,
+  vendor,
   isContainer,
   columns,
 }: DatasetCardProps) {
@@ -38,18 +42,47 @@ export default function DatasetCard({
           "&:hover h6": { textDecoration: "underline" },
         }}
       >
-        <Typography
-          variant="h6"
-          sx={{
-            color: "#005587",
-            fontWeight: 600,
-            fontSize: "1rem",
-            lineHeight: 1.3,
-            mb: 0.3,
-          }}
-        >
-          {displayName}
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 0.3 }}>
+          <Typography
+            variant="h6"
+            sx={{
+              color: "#005587",
+              fontWeight: 600,
+              fontSize: "1rem",
+              lineHeight: 1.3,
+            }}
+          >
+            {displayName}
+          </Typography>
+          <Box sx={{ flexGrow: 1 }} />
+          {domainDisplayName && (
+            <Chip
+              label={domainDisplayName}
+              size="small"
+              sx={{
+                bgcolor: domainColor || "#789D4A",
+                color: "white",
+                fontWeight: 600,
+                fontSize: "0.7rem",
+                height: 22,
+                flexShrink: 0,
+                mr: vendor ? 0.5 : 0,
+              }}
+            />
+          )}
+          {vendor && (
+            <Chip
+              label={vendor}
+              size="small"
+              variant="outlined"
+              sx={{
+                fontSize: "0.7rem",
+                height: 22,
+                flexShrink: 0,
+              }}
+            />
+          )}
+        </Box>
         {description && (
           <Typography
             variant="body2"
