@@ -1,7 +1,12 @@
 "use client";
+import { useState } from "react";
 import { Typography, Box, Chip } from "@mui/material";
+import Image from "next/image";
+
+const SVG_VENDORS = new Set(["factset", "intex"]);
 
 interface VendorCardProps {
+  vendorKey: string;
   name: string;
   description: string;
   category: string;
@@ -10,12 +15,16 @@ interface VendorCardProps {
 }
 
 export default function VendorCard({
+  vendorKey,
   name,
   description,
   category,
   datasetCount,
   website,
 }: VendorCardProps) {
+  const ext = SVG_VENDORS.has(vendorKey) ? "svg" : "png";
+  const [imgError, setImgError] = useState(false);
+
   return (
     <Box
       sx={{
@@ -24,58 +33,85 @@ export default function VendorCard({
         py: 2,
         borderBottom: "1px solid rgba(0,0,0,0.08)",
         "&:last-child": { borderBottom: "none" },
+        position: "relative",
       }}
     >
-      {/* Dataset count badge */}
+      {/* Vendor logo */}
       <Box
         sx={{
           width: 56,
           height: 56,
           borderRadius: "8px",
-          bgcolor: "#022D5E",
-          color: "white",
+          border: "1px solid rgba(0,0,0,0.08)",
+          bgcolor: "white",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           flexShrink: 0,
+          overflow: "hidden",
           mt: 0.3,
         }}
       >
-        <Typography sx={{ fontWeight: 700, fontSize: "1.25rem" }}>
-          {datasetCount}
-        </Typography>
+        {imgError ? (
+          <Typography sx={{ fontWeight: 700, fontSize: "1rem", color: "#022D5E" }}>
+            {name.slice(0, 2).toUpperCase()}
+          </Typography>
+        ) : (
+          <Image
+            src={`/assets/${vendorKey}.${ext}`}
+            alt={`${name} logo`}
+            width={40}
+            height={40}
+            style={{ objectFit: "contain" }}
+            onError={() => setImgError(true)}
+          />
+        )}
       </Box>
 
-      <Box sx={{ minWidth: 0 }}>
-        <Typography
-          variant="h6"
-          sx={{
-            color: "#005587",
-            fontWeight: 600,
-            fontSize: "1rem",
-            lineHeight: 1.3,
-            mb: 0.3,
-          }}
-        >
-          {website ? (
-            <a
-              href={website}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "inherit", textDecoration: "none" }}
-              onMouseOver={(e) =>
-                (e.currentTarget.style.textDecoration = "underline")
-              }
-              onMouseOut={(e) =>
-                (e.currentTarget.style.textDecoration = "none")
-              }
-            >
-              {name}
-            </a>
-          ) : (
-            name
-          )}
-        </Typography>
+      {/* Name, description, category */}
+      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.3 }}>
+          <Typography
+            variant="h6"
+            sx={{
+              color: "#005587",
+              fontWeight: 600,
+              fontSize: "1rem",
+              lineHeight: 1.3,
+            }}
+          >
+            {website ? (
+              <a
+                href={website}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "inherit", textDecoration: "none" }}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.textDecoration = "underline")
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.textDecoration = "none")
+                }
+              >
+                {name}
+              </a>
+            ) : (
+              name
+            )}
+          </Typography>
+          {/* Dataset count pill badge */}
+          <Chip
+            label={`${datasetCount} datasets`}
+            size="small"
+            sx={{
+              bgcolor: "#022D5E",
+              color: "white",
+              fontWeight: 600,
+              fontSize: "0.7rem",
+              height: 22,
+            }}
+          />
+        </Box>
         <Typography
           variant="body2"
           sx={{ color: "#53565A", lineHeight: 1.5, mb: 0.5 }}

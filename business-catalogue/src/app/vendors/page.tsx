@@ -104,6 +104,7 @@ export default function VendorsPage() {
             {displayed.map((v) => (
               <VendorCard
                 key={v.key}
+                vendorKey={v.key}
                 name={v.name}
                 description={v.description}
                 category={v.category}
