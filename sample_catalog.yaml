@@ -1,5 +1,7 @@
 benchmarks:
   display_name: Benchmarks
+  domain: benchmarks
+  vendor: msci
   description: Benchmark indices, constituents, and returns
   ownership:
     accountable_owner: indices-governance@firm.com
@@ -11,6 +13,7 @@ benchmarks:
     data_dictionary: https://confluence.firm.com/display/DATA/Benchmark+Data+Dictionary
 benchmarks.constituents:
   display_name: Benchmark Constituents
+  domain: benchmarks
   description: Index membership and weights
   source_binding:
     type: snowflake
@@ -26,6 +29,7 @@ benchmarks.constituents:
 # Example of a cached query - expensive Snowflake query that runs in background
 benchmarks.constituents_all:
   display_name: All Benchmark Constituents (Cached)
+  domain: benchmarks
   description: |
     Complete benchmark constituents with all indices - this is a slow 10-minute query
     that is cached in Redis and refreshed in the background every 10 minutes.
@@ -47,11 +51,13 @@ benchmarks.constituents_all:
       refresh_on_startup: true    # Pre-warm cache on service start
 benchmarks.corporate:
   display_name: Corporate Bond Indices
+  domain: benchmarks
   description: Investment grade and high yield corporate bond indices
   ownership:
     data_specialist: credit-research@firm.com
 benchmarks.corporate/ig:
   display_name: Investment Grade Corporate
+  domain: benchmarks
   source_binding:
     type: snowflake
     config:
@@ -68,6 +74,7 @@ benchmarks.corporate/ig:
         '
 benchmarks.returns:
   display_name: Benchmark Returns
+  domain: benchmarks
   description: Daily, MTD, YTD returns for benchmarks
   source_binding:
     type: snowflake
@@ -85,9 +92,11 @@ benchmarks.returns:
         '
 benchmarks.sovereign:
   display_name: Sovereign Bond Indices
+  domain: benchmarks
   description: Government bond indices by region and currency
 benchmarks.sovereign/developed:
   display_name: Developed Markets Sovereign
+  domain: benchmarks
   description: DM government bond benchmarks
   source_binding:
     type: snowflake
@@ -101,6 +110,7 @@ benchmarks.sovereign/developed:
         \  AND as_of_date = {version_date}\n"
 commodities:
   display_name: Commodities
+  domain: commodities
   description: Commodity futures, spot prices, and derivatives
   ownership:
     accountable_owner: commodities-desk@firm.com
@@ -111,6 +121,8 @@ commodities:
     data_dictionary: https://confluence.firm.com/display/DATA/Commodities+Data+Dictionary
 commodities.crypto:
   display_name: Digital Assets
+  domain: commodities
+  vendor: refinitiv
   description: Cryptocurrency spot and derivatives
   ownership:
     data_specialist: digital-assets@firm.com
@@ -123,6 +135,8 @@ commodities.crypto:
       auth_type: api_key
 commodities.energy:
   display_name: Energy Commodities
+  domain: commodities
+  vendor: bloomberg
   description: Crude oil, natural gas, and refined products
   source_binding:
     type: rest
@@ -160,6 +174,8 @@ commodities.energy:
     - futures
 commodities.metals:
   display_name: Precious & Industrial Metals
+  domain: commodities
+  vendor: bloomberg
   description: Gold, silver, copper, and other metals
   source_binding:
     type: rest
@@ -170,6 +186,8 @@ commodities.metals:
       auth_type: api_key
 fixed.income:
   display_name: Fixed Income
+  domain: fixed_income
+  vendor: bloomberg
   description: Government bonds, corporates, and structured products
   ownership:
     accountable_owner: fixed-income-governance@firm.com
@@ -182,9 +200,11 @@ fixed.income:
     data_dictionary: https://confluence.firm.com/display/FI/Bond+Data+Dictionary
 fixed.income/govies:
   display_name: Government Bonds
+  vendor: bloomberg
   description: Sovereign debt securities and yields
 fixed.income/govies/sovereign:
   display_name: International Sovereign Bonds
+  vendor: bloomberg
   description: Non-US government bonds (Bunds, Gilts, JGBs, etc.)
   source_binding:
     type: snowflake
@@ -199,6 +219,7 @@ fixed.income/govies/sovereign:
         ORDER BY asof_date DESC, country, tenor\n"
 fixed.income/govies/treasury:
   display_name: US Treasury Securities
+  vendor: fred
   description: US Treasury bills, notes, and bonds with yields and pricing
   source_binding:
     type: snowflake
@@ -246,6 +267,7 @@ fixed.income/govies/treasury:
     - Benchmark against risk-free rate
 fixed.income/mbs:
   display_name: Mortgage-Backed Securities
+  vendor: black-knight
   description: Agency MBS pool data and prepayment analytics
   ownership:
     data_specialist: mbs-research@firm.com
@@ -253,6 +275,7 @@ fixed.income/mbs:
   classification: confidential
 fixed.income/mbs/pools:
   display_name: MBS Pool Data
+  vendor: intex
   description: Agency MBS pool characteristics and analytics
   source_binding:
     type: excel
@@ -295,6 +318,7 @@ fixed.income/mbs/pools:
     - fixed-income
 fixed.income/mbs/prepay:
   display_name: Prepayment Projections
+  vendor: corelogic
   description: MBS prepayment model outputs
   source_binding:
     type: excel
@@ -305,6 +329,7 @@ fixed.income/mbs/prepay:
       header_row: 1
 flows:
   display_name: Fund Flows
+  domain: flows
   description: Subscriptions, redemptions, and AUM
   ownership:
     accountable_owner: transfer-agency@firm.com
@@ -313,6 +338,8 @@ flows:
   classification: confidential
 flows.aum:
   display_name: Assets Under Management
+  domain: flows
+  vendor: factset
   description: Daily AUM by fund and strategy
   source_binding:
     type: snowflake
@@ -330,6 +357,8 @@ flows.aum:
         '
 flows.redemptions:
   display_name: Redemptions
+  domain: flows
+  vendor: factset
   description: Money out of funds
   source_binding:
     type: snowflake
@@ -347,6 +376,8 @@ flows.redemptions:
         '
 flows.subscriptions:
   display_name: Subscriptions
+  domain: flows
+  vendor: factset
   description: New money into funds
   source_binding:
     type: snowflake
@@ -364,6 +395,7 @@ flows.subscriptions:
         '
 nav:
   display_name: NAV
+  domain: nav
   description: Net Asset Value and fund accounting
   ownership:
     accountable_owner: fund-accounting@firm.com
@@ -372,6 +404,8 @@ nav:
   classification: confidential
 nav.estimated:
   display_name: Estimated NAV
+  domain: nav
+  vendor: factset
   description: Intraday estimated NAV
   source_binding:
     type: rest
@@ -382,6 +416,8 @@ nav.estimated:
       auth_type: bearer
 nav.official:
   display_name: Official NAV
+  domain: nav
+  vendor: factset
   description: End of day official NAV per share
   source_binding:
     type: snowflake
@@ -395,6 +431,7 @@ nav.official:
         \ = 'ALL' OR as_of_date = TO_DATE('{segments[1]}', 'YYYYMMDD'))\n"
 portfolios:
   display_name: Portfolios
+  domain: portfolios
   description: Portfolio master, holdings, performance, and attribution
   ownership:
     accountable_owner: portfolio-ops@firm.com
@@ -408,6 +445,8 @@ portfolios:
   classification: confidential
 portfolios.attribution:
   display_name: Performance Attribution
+  domain: portfolios
+  vendor: factset
   description: Return attribution by factor, sector, security
   source_binding:
     type: snowflake
@@ -422,6 +461,8 @@ portfolios.attribution:
         \ 'YYYYMMDD')\n"
 portfolios.exposures:
   display_name: Exposure Analysis
+  domain: portfolios
+  vendor: bloomberg
   description: Portfolio exposure breakdown by dimension
   source_binding:
     type: snowflake
@@ -435,6 +476,8 @@ portfolios.exposures:
         \  AND portfolio_id = '{segments[0]}'\n"
 portfolios.holdings:
   display_name: Portfolio Holdings
+  domain: portfolios
+  vendor: refinitiv
   description: End of day positions by portfolio and date
   source_binding:
     type: snowflake
@@ -448,6 +491,8 @@ portfolios.holdings:
         \ 'YYYYMMDD')\n  AND portfolio_id = '{segments[0]}'\n"
 portfolios.performance:
   display_name: Portfolio Performance
+  domain: portfolios
+  vendor: factset
   description: Returns, TWR, attribution by portfolio
   source_binding:
     type: snowflake
@@ -462,6 +507,7 @@ portfolios.performance:
         \ 'YYYYMMDD'))\n"
 prices:
   display_name: Prices
+  domain: prices
   description: Real-time and historical security prices
   ownership:
     accountable_owner: market-data-governance@firm.com
@@ -474,6 +520,8 @@ prices:
     data_dictionary: https://confluence.firm.com/display/MKTDATA/Price+Fields+Dictionary
 prices.equity:
   display_name: Equity Prices
+  domain: prices
+  vendor: refinitiv
   source_binding:
     type: snowflake
     config:
@@ -487,6 +535,8 @@ prices.equity:
         \    ELSE {version_date}\n  END\n"
 prices.fixed.income:
   display_name: Fixed Income Prices
+  domain: prices
+  vendor: ice
   source_binding:
     type: snowflake
     config:
@@ -504,6 +554,8 @@ prices.fixed.income:
         '
 prices.fx:
   display_name: FX Rates
+  domain: prices
+  vendor: refinitiv
   source_binding:
     type: rest
     config:
@@ -513,6 +565,7 @@ prices.fx:
       auth_type: bearer
 rates:
   display_name: Interest Rates
+  domain: rates
   description: Interest rate curves, swaps, and money market rates
   ownership:
     accountable_owner: rates-governance@firm.com
@@ -530,6 +583,8 @@ rates:
       curve_construction: https://confluence.firm.com/display/QUANT/Yield+Curve+Methodology
 rates.curves:
   display_name: Yield Curves
+  domain: rates
+  vendor: bloomberg
   description: Constructed yield curves by currency
   source_binding:
     type: snowflake
@@ -543,6 +598,8 @@ rates.curves:
         \ 'YYYYMMDD')\n"
 rates.sofr:
   display_name: SOFR Rates
+  domain: rates
+  vendor: fred
   description: Secured Overnight Financing Rate and term SOFR
   source_binding:
     type: snowflake
@@ -582,6 +639,8 @@ rates.sofr:
     - interest-rates
 rates.swap:
   display_name: Interest Rate Swaps
+  domain: rates
+  vendor: bloomberg
   description: Par swap rates across currencies and tenors
   source_binding:
     type: snowflake
@@ -599,6 +658,7 @@ rates.swap:
         ORDER BY asof_date DESC, currency, tenor
 reference:
   display_name: Reference Data
+  domain: reference
   description: Calendars, classifications, and static reference
   ownership:
     accountable_owner: ref-data-governance@firm.com
@@ -609,9 +669,12 @@ reference:
     data_dictionary: https://confluence.firm.com/display/DATA/Reference+Data+Dictionary
 reference.calendars:
   display_name: Trading Calendars
+  domain: reference
+  vendor: refinitiv
   description: Exchange and settlement calendars
 reference.calendars/exchange:
   display_name: Exchange Calendars
+  domain: reference
   source_binding:
     type: static
     config:
@@ -620,6 +683,7 @@ reference.calendars/exchange:
       format: json
 reference.calendars/settlement:
   display_name: Settlement Calendars
+  domain: reference
   source_binding:
     type: static
     config:
@@ -628,9 +692,13 @@ reference.calendars/settlement:
       format: csv
 reference.classifications:
   display_name: Classifications
+  domain: reference
+  vendor: msci
   description: Industry, sector, and other classification schemes
 reference.classifications/gics:
   display_name: GICS Codes
+  domain: reference
+  vendor: msci
   description: Global Industry Classification Standard
   source_binding:
     type: snowflake
@@ -648,6 +716,7 @@ reference.classifications/gics:
         '
 reports:
   display_name: Reports
+  domain: reports
   description: Generated reports and regulatory filings
   ownership:
     accountable_owner: reporting-ops@firm.com
@@ -655,6 +724,7 @@ reports:
     support_channel: '#reporting'
 reports.client:
   display_name: Client Reports
+  domain: reports
   description: Client-facing reports and statements
   source_binding:
     type: static
@@ -665,6 +735,7 @@ reports.client:
   classification: confidential
 reports.daily:
   display_name: Daily Reports
+  domain: reports
   source_binding:
     type: static
     config:
@@ -673,6 +744,8 @@ reports.daily:
       format: binary
 reports.regulatory:
   display_name: Regulatory Reports
+  domain: reports
+  vendor: sp-global
   source_binding:
     type: excel
     config:
@@ -682,6 +755,7 @@ reports.regulatory:
   classification: restricted
 risk:
   display_name: Risk
+  domain: risk
   description: VaR, CVaR, stress testing, and risk measures
   ownership:
     accountable_owner: risk-governance@firm.com
@@ -697,6 +771,8 @@ risk:
   classification: confidential
 risk.cvar:
   display_name: Conditional Value at Risk
+  domain: risk
+  vendor: bloomberg
   description: CVaR tail risk measures by portfolio, currency, and security
   asset_class: risk
   ownership:
@@ -754,6 +830,8 @@ risk.cvar:
       '
 risk.greeks:
   display_name: Greeks
+  domain: risk
+  vendor: bloomberg
   description: Delta, gamma, vega, theta by portfolio
   source_binding:
     type: snowflake
@@ -767,6 +845,8 @@ risk.greeks:
         \ = TO_DATE('{segments[1]}', 'YYYYMMDD')\n"
 risk.limits:
   display_name: Risk Limits
+  domain: risk
+  vendor: moodys
   description: Limit utilization and breaches
   source_binding:
     type: snowflake
@@ -784,6 +864,8 @@ risk.limits:
         '
 risk.stress:
   display_name: Stress Testing
+  domain: risk
+  vendor: bloomberg
   description: Scenario analysis and stress test results
   source_binding:
     type: rest
@@ -794,6 +876,8 @@ risk.stress:
       auth_type: bearer
 risk.var:
   display_name: Value at Risk
+  domain: risk
+  vendor: bloomberg
   description: Daily VaR by portfolio
   source_binding:
     type: rest
@@ -804,6 +888,7 @@ risk.var:
       auth_type: bearer
 securities:
   display_name: Securities
+  domain: securities
   description: Security master lookup by any identifier
   ownership:
     accountable_owner: ref-data-governance@firm.com
@@ -814,6 +899,8 @@ securities:
     data_dictionary: https://confluence.firm.com/display/DATA/Security+Master+Dictionary
 securities/lookup:
   display_name: Security Lookup
+  domain: securities
+  vendor: cusip-global
   description: Lookup security by ISIN, CUSIP, SEDOL, or ticker
   source_binding:
     type: oracle
@@ -825,6 +912,8 @@ securities/lookup:
         \   OR ticker = '{segments[0]}'\n"
 securities/terms:
   display_name: Security Terms
+  domain: securities
+  vendor: dtcc
   description: Detailed security attributes and terms
   source_binding:
     type: opensearch
@@ -840,6 +929,8 @@ securities/terms:
 # ==========================================================================
 flows.redemptions:
   display_name: Fund Redemptions
+  domain: flows
+  vendor: factset
   description: Daily redemption transactions by fund
   source_binding:
     type: snowflake
@@ -855,6 +946,8 @@ flows.redemptions:
 
 flows.aum:
   display_name: Assets Under Management
+  domain: flows
+  vendor: factset
   description: Daily AUM by fund and strategy
   source_binding:
     type: snowflake
@@ -873,6 +966,8 @@ flows.aum:
 # ==========================================================================
 credit:
   display_name: Credit Risk
+  domain: risk
+  vendor: moodys
   description: Counterparty credit exposures, limits, and risk metrics from the Credit Risk Engine (SQL Server)
   ownership:
     accountable_owner: credit-risk-governance@firm.com
@@ -881,6 +976,8 @@ credit:
 
 credit.exposures:
   display_name: Counterparty Credit Exposures
+  domain: risk
+  vendor: sp-global
   description: Daily counterparty credit exposure snapshots for financial institutions (derivatives, loans, guarantees, trade finance) including notional, MTM, PFE, CVA, and expected loss metrics
   source_binding:
     type: mssql
@@ -999,6 +1096,8 @@ credit.exposures:
 
 credit.limits:
   display_name: Credit Limits
+  domain: risk
+  vendor: moodys
   description: Counterparty credit limits with utilization, approval, and expiry information
   source_binding:
     type: mssql
@@ -1074,6 +1173,7 @@ credit.limits:
 # ==========================================================================
 reports/regulatory:
   display_name: Regulatory Reports
+  domain: reports
   classification: restricted
   source_binding:
     type: excel
@@ -1093,6 +1193,8 @@ reports/regulatory:
 # --------------------------------------------------------------------------
 rates.treasury.yield-curve.daily:
   display_name: "US Treasury Yield Curve (Daily)"
+  domain: rates
+  vendor: fred
   description: "Constant maturity Treasury rates — full curve from 1M to 30Y"
   asset_class: rates
   ownership:
@@ -1123,6 +1225,8 @@ rates.treasury.yield-curve.daily:
 
 rates.treasury.spreads:
   display_name: "Treasury Curve Spreads"
+  domain: rates
+  vendor: fred
   description: "Key yield curve spread measures"
   asset_class: rates
   ownership:
@@ -1140,6 +1244,8 @@ rates.treasury.spreads:
 
 rates.fed-funds:
   display_name: "Federal Funds Effective Rate"
+  domain: rates
+  vendor: fred
   description: "Daily effective federal funds rate"
   asset_class: rates
   source_binding:
@@ -1157,6 +1263,8 @@ rates.fed-funds:
 # --------------------------------------------------------------------------
 credit.spreads.ig:
   display_name: "US Investment Grade Credit Spreads"
+  domain: risk
+  vendor: fred
   description: "ICE BofA US Corporate Master Option-Adjusted Spread"
   asset_class: credit
   ownership:
@@ -1176,6 +1284,8 @@ credit.spreads.ig:
 
 credit.spreads.hy:
   display_name: "US High Yield Credit Spreads"
+  domain: risk
+  vendor: fred
   description: "ICE BofA high yield OAS by rating tier"
   asset_class: credit
   source_binding:
@@ -1193,6 +1303,8 @@ credit.spreads.hy:
 
 credit.spreads.bbb:
   display_name: "US BBB Corporate Spreads"
+  domain: risk
+  vendor: fred
   description: "ICE BofA BBB US Corporate Index OAS"
   asset_class: credit
   source_binding:
@@ -1210,6 +1322,8 @@ credit.spreads.bbb:
 # --------------------------------------------------------------------------
 mortgages.rates:
   display_name: "US Mortgage Rates"
+  domain: rates
+  vendor: fred
   description: "Freddie Mac Primary Mortgage Market Survey — 30Y and 15Y fixed"
   asset_class: mortgages
   ownership:
@@ -1230,6 +1344,8 @@ mortgages.rates:
 # --------------------------------------------------------------------------
 macro.us.gdp:
   display_name: "US Real GDP"
+  domain: rates
+  vendor: haver
   description: "Real GDP, seasonally adjusted annual rate (quarterly)"
   asset_class: macro
   source_binding:
@@ -1244,6 +1360,8 @@ macro.us.gdp:
 
 macro.us.inflation:
   display_name: "US Inflation (CPI)"
+  domain: rates
+  vendor: haver
   description: "Consumer Price Index — all items and core"
   asset_class: macro
   source_binding:
@@ -1259,6 +1377,8 @@ macro.us.inflation:
 
 macro.us.inflation-expectations:
   display_name: "US Inflation Expectations"
+  domain: rates
+  vendor: haver
   description: "Market-implied and survey-based inflation expectations"
   asset_class: macro
   source_binding:
@@ -1276,6 +1396,8 @@ macro.us.inflation-expectations:
 
 macro.us.employment:
   display_name: "US Employment"
+  domain: rates
+  vendor: haver
   description: "Nonfarm payrolls, unemployment rate, initial claims"
   asset_class: macro
   source_binding:
@@ -1295,6 +1417,8 @@ macro.us.employment:
 # --------------------------------------------------------------------------
 risk.volatility.vix:
   display_name: "CBOE Volatility Index (VIX)"
+  domain: risk
+  vendor: refinitiv
   description: "Market-implied 30-day volatility from S&P 500 options"
   asset_class: risk
   source_binding:
@@ -1312,6 +1436,8 @@ risk.volatility.vix:
 # --------------------------------------------------------------------------
 fx.dollar-index:
   display_name: "US Dollar Index (Trade-Weighted)"
+  domain: prices
+  vendor: refinitiv
   description: "Broad trade-weighted US dollar index"
   asset_class: fx
   source_binding:
@@ -1329,6 +1455,8 @@ fx.dollar-index:
 # --------------------------------------------------------------------------
 equities.indices.us:
   display_name: "US Equity Indices"
+  domain: prices
+  vendor: yfinance
   description: "S&P 500 and Nasdaq Composite"
   asset_class: equities
   source_binding:
@@ -1343,6 +1471,8 @@ equities.indices.us:
 
 equities.indices.em:
   display_name: "Emerging Market Equities"
+  domain: prices
+  vendor: yfinance
   description: "MSCI EM proxied by EEM and VWO ETFs"
   asset_class: em
   source_binding:
@@ -1360,6 +1490,8 @@ equities.indices.em:
 # --------------------------------------------------------------------------
 commodities.energy.crude:
   display_name: "WTI Crude Oil"
+  domain: commodities
+  vendor: yfinance
   description: "West Texas Intermediate crude oil futures"
   asset_class: commodities
   source_binding:
@@ -1373,6 +1505,8 @@ commodities.energy.crude:
 
 commodities.metals.gold:
   display_name: "Gold"
+  domain: commodities
+  vendor: yfinance
   description: "Gold futures"
   asset_class: commodities
   source_binding:
@@ -1389,6 +1523,8 @@ commodities.metals.gold:
 # --------------------------------------------------------------------------
 em.bonds:
   display_name: "Emerging Market Bonds"
+  domain: fixed_income
+  vendor: bloomberg
   description: "EM sovereign debt proxied by EMB (USD) and EMLC (local currency) ETFs"
   asset_class: em
   source_binding:
@@ -1406,6 +1542,8 @@ em.bonds:
 # --------------------------------------------------------------------------
 bonds.etf.proxies:
   display_name: "Bond ETF Proxies"
+  domain: fixed_income
+  vendor: yfinance
   description: "Liquid ETFs used as proxies for fixed income sectors"
   asset_class: fixed.income
   source_binding:

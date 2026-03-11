@@ -51,18 +51,34 @@ export default function DomainCard({
         />
 
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Typography
-            variant="h6"
-            sx={{
-              color: "#005587",
-              fontWeight: 600,
-              fontSize: "1rem",
-              lineHeight: 1.3,
-              mb: 0.3,
-            }}
-          >
-            {displayName}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", mb: 0.3 }}>
+            <Typography
+              variant="h6"
+              sx={{
+                color: "#005587",
+                fontWeight: 600,
+                fontSize: "1rem",
+                lineHeight: 1.3,
+              }}
+            >
+              {displayName}
+            </Typography>
+            <Box sx={{ flexGrow: 1 }} />
+            {datasetCount > 0 && (
+              <Chip
+                label={`${datasetCount} datasets`}
+                size="small"
+                sx={{
+                  bgcolor: "#022D5E",
+                  color: "white",
+                  fontWeight: 600,
+                  fontSize: "0.7rem",
+                  height: 22,
+                  flexShrink: 0,
+                }}
+              />
+            )}
+          </Box>
           {notes && (
             <Typography
               variant="body2"
@@ -93,17 +109,6 @@ export default function DomainCard({
               color={confidentiality === "confidential" ? "warning" : "default"}
               sx={{ fontSize: "0.7rem" }}
             />
-            {datasetCount > 0 && (
-              <Chip
-                label={`${datasetCount} datasets`}
-                size="small"
-                sx={{
-                  bgcolor: "#789D4A",
-                  color: "white",
-                  fontSize: "0.7rem",
-                }}
-              />
-            )}
           </Box>
         </Box>
       </Box>
