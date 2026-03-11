@@ -56,7 +56,7 @@ export default function VendorsPage() {
     if (filters.Category.size > 0) {
       result = result.filter((v) => filters.Category.has(v.category));
     }
-    return result;
+    return result.sort((a, b) => a.name.localeCompare(b.name));
   }, [searchFiltered, filters]);
 
   const handleFilterChange = useCallback(
