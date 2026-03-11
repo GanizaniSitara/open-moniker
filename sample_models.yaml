@@ -8,6 +8,7 @@
 risk.analytics:
   display_name: Risk Analytics
   description: Risk measurement and analysis models
+  wiki_link: https://wiki.firm.com/display/RISK/RiskAnalytics
   ownership:
     methodology_owner: quant-research@firm.com
     support_channel: "#risk-methodology"
@@ -18,6 +19,7 @@ risk.analytics/dv01:
   formula: "dV/dy × 0.0001"
   unit: USD
   documentation_url: https://wiki.firm.com/display/RISK/DV01
+  wiki_link: https://wiki.firm.com/display/RISK/DV01+Methodology
 
   ownership:
     methodology_owner: quant-research@firm.com
@@ -64,6 +66,7 @@ risk.analytics/var:
   formula: "VaR_α = -inf{x : P(L ≤ x) ≥ α}"
   unit: USD
   documentation_url: https://wiki.firm.com/display/RISK/VaR
+  wiki_link: https://wiki.firm.com/display/RISK/VaR+Overview
 
   ownership:
     methodology_owner: quant-research@firm.com
