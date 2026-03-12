@@ -24,7 +24,7 @@ export default function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
     >
       <MuiBreadcrumbs
         separator={<NavigateNextIcon sx={{ fontSize: 16 }} />}
-        sx={{ "& .MuiBreadcrumbs-ol": { flexWrap: "nowrap" } }}
+        sx={{ "& .MuiBreadcrumbs-ol": { flexWrap: { xs: "wrap", md: "nowrap" } } }}
       >
         <Link href="/" style={{ color: "inherit", textDecoration: "none" }}>
           <Typography variant="body2" sx={{ "&:hover": { textDecoration: "underline" } }}>

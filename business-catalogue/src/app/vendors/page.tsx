@@ -6,11 +6,14 @@ import {
   TextField,
   InputAdornment,
   Typography,
+  Button,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import FilterListIcon from "@mui/icons-material/FilterList";
 import PageTitle from "@/components/PageTitle";
 import DatasetFilters from "@/components/DatasetFilters";
 import VendorCard from "@/components/VendorCard";
+import { fetchCached } from "@/lib/data-cache";
 import type { Vendor } from "@/lib/vendors";
 
 export default function VendorsPage() {
@@ -19,10 +22,10 @@ export default function VendorsPage() {
   const [filters, setFilters] = useState<Record<string, Set<string>>>({
     Category: new Set(),
   });
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/vendors")
-      .then((r) => r.json())
+    fetchCached("/api/vendors")
       .then((d) => setVendors(d.vendors || []));
   }, []);
 
@@ -82,6 +85,8 @@ export default function VendorsPage() {
             sections={filterSections}
             selected={filters}
             onChange={handleFilterChange}
+            mobileOpen={mobileFiltersOpen}
+            onMobileToggle={() => setMobileFiltersOpen(false)}
             onClear={() => setFilters({ Category: new Set() })}
             onSelectAll={(section) =>
               setFilters((prev) => ({
@@ -96,6 +101,15 @@ export default function VendorsPage() {
           />
 
           <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Button
+              startIcon={<FilterListIcon />}
+              onClick={() => setMobileFiltersOpen(true)}
+              variant="outlined"
+              size="small"
+              sx={{ display: { xs: "inline-flex", md: "none" }, mb: 1 }}
+            >
+              Filters
+            </Button>
             <TextField
               value={search}
               onChange={(e) => setSearch(e.target.value)}

@@ -10,10 +10,13 @@ import {
   TextField,
   InputAdornment,
   Chip,
+  Button,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import FilterListIcon from "@mui/icons-material/FilterList";
 import DatasetCard from "@/components/DatasetCard";
 import DatasetFilters from "@/components/DatasetFilters";
+import { fetchCached } from "@/lib/data-cache";
 import type { Vendor } from "@/lib/vendors";
 interface BrowseDataset {
   key: string;
@@ -39,11 +42,12 @@ export default function CatalogBrowser() {
   const [filters, setFilters] = useState<Record<string, Set<string>>>({
     Domain: new Set(),
   });
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/search?q=&all=datasets").then((r) => r.json()),
-      fetch("/api/vendors").then((r) => r.json()),
+      fetchCached("/api/search?q=&all=datasets"),
+      fetchCached("/api/vendors"),
     ]).then(([d, v]) => {
       setDatasets(d.datasets || []);
       setDomains(d.domains || []);
@@ -156,6 +160,8 @@ export default function CatalogBrowser() {
           sections={filterSections}
           selected={filters}
           onChange={handleFilterChange}
+          mobileOpen={mobileFiltersOpen}
+          onMobileToggle={() => setMobileFiltersOpen(false)}
           onClear={() =>
             setFilters({
               Domain: new Set(),
@@ -175,6 +181,15 @@ export default function CatalogBrowser() {
 
         {/* Dataset cards */}
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Button
+            startIcon={<FilterListIcon />}
+            onClick={() => setMobileFiltersOpen(true)}
+            variant="outlined"
+            size="small"
+            sx={{ display: { xs: "inline-flex", md: "none" }, mb: 1 }}
+          >
+            Filters
+          </Button>
           <TextField
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

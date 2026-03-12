@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import {
   AppBar,
   Toolbar,
@@ -9,16 +10,20 @@ import {
 import StorageIcon from "@mui/icons-material/Storage";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { preloadAll } from "@/lib/data-cache";
 
 const NAV_LINKS = [
   { label: "Datasets", href: "/" },
   { label: "Domains", href: "/domains" },
   { label: "Fields", href: "/fields" },
   { label: "Vendors", href: "/vendors" },
+  { label: "Monikers", href: "/monikers" },
 ];
 
 export default function AppHeader() {
   const pathname = usePathname();
+
+  useEffect(() => { preloadAll(); }, []);
 
   return (
     <AppBar position="sticky" elevation={0} sx={{ bgcolor: "#022D5E" }}>

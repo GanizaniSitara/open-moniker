@@ -278,3 +278,22 @@ interface CatalogSearchResponse {
 export async function fetchCatalogSearch(q: string): Promise<CatalogSearchResponse> {
   return apiFetch(`/catalog/search?q=${encodeURIComponent(q)}`);
 }
+
+// ── Tree (catalog hierarchy) ─────────────────────────────────────────
+
+export interface ApiTreeNode {
+  path: string;
+  name: string;
+  children: ApiTreeNode[];
+  description: string | null;
+  domain: string | null;
+  resolved_domain: string | null;
+  vendor: string | null;
+  has_source_binding: boolean;
+  source_type: string | null;
+}
+
+export async function fetchTree(depth?: number): Promise<ApiTreeNode[]> {
+  const qs = depth != null ? `?depth=${depth}` : "";
+  return apiFetch(`/tree${qs}`);
+}

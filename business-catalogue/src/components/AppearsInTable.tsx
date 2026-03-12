@@ -28,7 +28,7 @@ export default function AppearsInTable({
   if (entries.length === 0) return null;
 
   return (
-    <TableContainer component={Paper} variant="outlined">
+    <TableContainer component={Paper} variant="outlined" sx={{ overflowX: "auto" }}>
       <Table size="small">
         <TableHead>
           <TableRow sx={{ bgcolor: "#f8f9fa" }}>

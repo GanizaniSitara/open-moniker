@@ -6,10 +6,13 @@ import {
   Box,
   TextField,
   InputAdornment,
+  Button,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import FilterListIcon from "@mui/icons-material/FilterList";
 import FieldCard from "@/components/FieldCard";
 import DatasetFilters from "@/components/DatasetFilters";
+import { fetchCached } from "@/lib/data-cache";
 
 const PAGE_SIZE = 50;
 
@@ -32,10 +35,10 @@ export default function FieldBrowser() {
     Group: new Set(),
     Tags: new Set(),
   });
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/search?all=fields")
-      .then((r) => r.json())
+    fetchCached("/api/search?all=fields")
       .then((d) => {
         setFields(d.fields || []);
         setLoaded(true);
@@ -156,6 +159,8 @@ export default function FieldBrowser() {
           sections={filterSections}
           selected={filters}
           onChange={handleFilterChange}
+          mobileOpen={mobileFiltersOpen}
+          onMobileToggle={() => setMobileFiltersOpen(false)}
           onClear={() =>
             setFilters({
               Group: new Set(),
@@ -166,6 +171,15 @@ export default function FieldBrowser() {
 
         {/* Field cards */}
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Button
+            startIcon={<FilterListIcon />}
+            onClick={() => setMobileFiltersOpen(true)}
+            variant="outlined"
+            size="small"
+            sx={{ display: { xs: "inline-flex", md: "none" }, mb: 1 }}
+          >
+            Filters
+          </Button>
           <TextField
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

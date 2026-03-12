@@ -23,7 +23,7 @@ interface Column {
 
 export default function SchemaTable({ columns }: { columns: Column[] }) {
   return (
-    <TableContainer component={Paper} variant="outlined">
+    <TableContainer component={Paper} variant="outlined" sx={{ overflowX: "auto" }}>
       <Table size="small">
         <TableHead>
           <TableRow sx={{ bgcolor: "grey.50" }}>
