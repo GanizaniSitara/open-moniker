@@ -4,7 +4,7 @@ import { Typography, Box, Chip } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
 
-const SVG_VENDORS = new Set(["factset", "intex", "yfinance"]);
+const SVG_VENDORS = new Set(["factset", "intex", "maplecroft", "yfinance"]);
 
 interface VendorCardProps {
   vendorKey: string;

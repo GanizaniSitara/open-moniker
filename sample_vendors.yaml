@@ -128,6 +128,15 @@ preqin:
     infrastructure, and natural resources. Fund performance and fundraising data.
   category: Alternative Data
 
+maplecroft:
+  name: Maplecroft (Verisk)
+  description: >-
+    Global risk analytics and ESG data provider. Covers political, human rights,
+    environmental, and economic risk indices across 198 countries with
+    sub-sovereign granularity.
+  category: ESG
+  website: https://www.maplecroft.com
+
 sustainalytics:
   name: Sustainalytics (Morningstar)
   description: >-
