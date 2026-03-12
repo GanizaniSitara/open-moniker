@@ -24,7 +24,8 @@ function loadYaml(filename: string): Record<string, unknown> {
   return yaml.load(content) as Record<string, unknown>;
 }
 
-// Singleton cache
+const isDev = process.env.NODE_ENV !== "production";
+// Singleton cache (skipped in dev for hot-reload of YAML changes)
 let _data: CatalogData | null = null;
 
 export interface CatalogData {
@@ -188,7 +189,7 @@ function buildIndexes(
 }
 
 export function getCatalogData(): CatalogData {
-  if (_data) return _data;
+  if (!isDev && _data) return _data;
 
   const rawDomains = loadYaml("domains.yaml");
   const rawCatalog = loadYaml("catalog.yaml");
