@@ -16,8 +16,6 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
 import UnfoldLessIcon from "@mui/icons-material/UnfoldLess";
-import FolderIcon from "@mui/icons-material/Folder";
-import DescriptionIcon from "@mui/icons-material/Description";
 import Link from "next/link";
 import type { ApiTreeNode } from "@/lib/api-client";
 import { toSlashPath } from "@/lib/api-client";
@@ -125,14 +123,7 @@ function TreeNodeRow({
             )}
           </IconButton>
         ) : (
-          <Box sx={{ width: 32, mr: 0.5 }} />
-        )}
-
-        {/* icon */}
-        {isLeaf ? (
-          <DescriptionIcon sx={{ fontSize: 18, color: "#757575", mr: 1 }} />
-        ) : (
-          <FolderIcon sx={{ fontSize: 18, color: "#f9a825", mr: 1 }} />
+          <Box sx={{ width: 32, mr: 0.5, display: "flex", alignItems: "center", justifyContent: "center", color: "#bbb", fontSize: 14 }}>·</Box>
         )}
 
         {/* name (link for leaf nodes) */}
