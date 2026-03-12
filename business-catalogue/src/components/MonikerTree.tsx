@@ -59,14 +59,22 @@ function filterTree(nodes: ApiTreeNode[], q: string): ApiTreeNode[] {
     }));
 }
 
-/** Collect leaf-node domain and vendor counts for facet filters. */
-function collectFacets(nodes: ApiTreeNode[]): { domains: Map<string, number>; vendors: Map<string, number> } {
+/** Collect leaf-node domain and vendor counts for facet filters.
+ *  domainNames maps short codes → display names. */
+function collectFacets(nodes: ApiTreeNode[], domainNames: Map<string, string>): {
+  domains: Map<string, number>;
+  vendors: Map<string, number>;
+  domainLabelToCode: Map<string, string>;
+} {
   const domains = new Map<string, number>();
   const vendors = new Map<string, number>();
+  const domainLabelToCode = new Map<string, string>();
   function walk(n: ApiTreeNode) {
     if (n.has_source_binding) {
-      const d = n.resolved_domain || n.domain || "Other";
-      domains.set(d, (domains.get(d) || 0) + 1);
+      const code = n.resolved_domain || n.domain || "Other";
+      const label = domainNames.get(code) || code;
+      domainLabelToCode.set(label, code);
+      domains.set(label, (domains.get(label) || 0) + 1);
       if (n.vendor) {
         vendors.set(n.vendor, (vendors.get(n.vendor) || 0) + 1);
       }
@@ -74,7 +82,7 @@ function collectFacets(nodes: ApiTreeNode[]): { domains: Map<string, number>; ve
     n.children.forEach(walk);
   }
   nodes.forEach(walk);
-  return { domains, vendors };
+  return { domains, vendors, domainLabelToCode };
 }
 
 /** Check if a node or any descendant matches the facet filters. */
@@ -273,6 +281,19 @@ export default function MonikerTree() {
     Vendor: new Set(),
   });
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  // domain short-code → display name lookup (from cached datasets response)
+  const [domainNames, setDomainNames] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    // Build domain display-name map from the already-cached datasets response
+    fetchCached("/api/search?q=&all=datasets").then((d) => {
+      const map = new Map<string, string>();
+      for (const dom of d.domains || []) {
+        map.set(dom.key, dom.display_name);
+      }
+      setDomainNames(map);
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -306,7 +327,7 @@ export default function MonikerTree() {
 
   // Facet counts (computed from full tree, before filters)
   const { filterSections, facetFilteredTree } = useMemo(() => {
-    const { domains, vendors } = collectFacets(tree);
+    const { domains, vendors, domainLabelToCode } = collectFacets(tree, domainNames);
     const sections = [
       {
         label: "Domain",
@@ -321,9 +342,15 @@ export default function MonikerTree() {
           .map(([v, c]) => ({ value: v, label: v, count: c })),
       },
     ];
-    const filtered = filterTreeByFacets(tree, filters.Domain, filters.Vendor);
+    // Translate display-name selections back to short codes for tree filtering
+    const domainCodes = new Set<string>();
+    for (const label of filters.Domain) {
+      const code = domainLabelToCode.get(label);
+      if (code) domainCodes.add(code);
+    }
+    const filtered = filterTreeByFacets(tree, domainCodes, filters.Vendor);
     return { filterSections: sections, facetFilteredTree: filtered };
-  }, [tree, filters]);
+  }, [tree, filters, domainNames]);
 
   const filteredTree = useMemo(() => {
     const q = search.toLowerCase().trim();
