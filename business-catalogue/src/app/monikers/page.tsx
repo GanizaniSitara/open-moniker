@@ -6,7 +6,7 @@ import MonikerTree from "@/components/MonikerTree";
 export default function MonikersPage() {
   return (
     <>
-      <PageTitle title="Monikers" />
+      <PageTitle title="Hierarchy" />
       <Container maxWidth="xl" sx={{ py: 3 }}>
         <Suspense
           fallback={

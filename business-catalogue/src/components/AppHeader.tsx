@@ -14,10 +14,10 @@ import { preloadAll } from "@/lib/data-cache";
 
 const NAV_LINKS = [
   { label: "Datasets", href: "/" },
-  { label: "Domains", href: "/domains" },
-  { label: "Fields", href: "/fields" },
   { label: "Vendors", href: "/vendors" },
-  { label: "Monikers", href: "/monikers" },
+  { label: "Hierarchy", href: "/monikers" },
+  { label: "Fields", href: "/fields" },
+  { label: "Domains", href: "/domains" },
 ];
 
 export default function AppHeader() {
