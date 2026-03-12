@@ -16,10 +16,12 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
 import UnfoldLessIcon from "@mui/icons-material/UnfoldLess";
+import FilterListIcon from "@mui/icons-material/FilterList";
 import Link from "next/link";
 import type { ApiTreeNode } from "@/lib/api-client";
 import { toSlashPath } from "@/lib/api-client";
 import { fetchCached } from "@/lib/data-cache";
+import DatasetFilters from "@/components/DatasetFilters";
 
 /** Collect all node paths in a tree (for expand-all). */
 function collectPaths(nodes: ApiTreeNode[]): Set<string> {
@@ -54,6 +56,46 @@ function filterTree(nodes: ApiTreeNode[], q: string): ApiTreeNode[] {
     .map((n) => ({
       ...n,
       children: filterTree(n.children, q),
+    }));
+}
+
+/** Collect leaf-node domain and vendor counts for facet filters. */
+function collectFacets(nodes: ApiTreeNode[]): { domains: Map<string, number>; vendors: Map<string, number> } {
+  const domains = new Map<string, number>();
+  const vendors = new Map<string, number>();
+  function walk(n: ApiTreeNode) {
+    if (n.has_source_binding) {
+      const d = n.resolved_domain || n.domain || "Other";
+      domains.set(d, (domains.get(d) || 0) + 1);
+      if (n.vendor) {
+        vendors.set(n.vendor, (vendors.get(n.vendor) || 0) + 1);
+      }
+    }
+    n.children.forEach(walk);
+  }
+  nodes.forEach(walk);
+  return { domains, vendors };
+}
+
+/** Check if a node or any descendant matches the facet filters. */
+function matchesFacets(node: ApiTreeNode, domainSet: Set<string>, vendorSet: Set<string>): boolean {
+  if (node.has_source_binding) {
+    const d = node.resolved_domain || node.domain || "Other";
+    const domainOk = domainSet.size === 0 || domainSet.has(d);
+    const vendorOk = vendorSet.size === 0 || (node.vendor ? vendorSet.has(node.vendor) : false);
+    if (domainOk && vendorOk) return true;
+  }
+  return node.children.some((c) => matchesFacets(c, domainSet, vendorSet));
+}
+
+/** Filter tree by domain/vendor facets, keeping ancestors of matching leaves. */
+function filterTreeByFacets(nodes: ApiTreeNode[], domainSet: Set<string>, vendorSet: Set<string>): ApiTreeNode[] {
+  if (domainSet.size === 0 && vendorSet.size === 0) return nodes;
+  return nodes
+    .filter((n) => matchesFacets(n, domainSet, vendorSet))
+    .map((n) => ({
+      ...n,
+      children: filterTreeByFacets(n.children, domainSet, vendorSet),
     }));
 }
 
@@ -226,6 +268,11 @@ export default function MonikerTree() {
   const [deepLoading, setDeepLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [filters, setFilters] = useState<Record<string, Set<string>>>({
+    Domain: new Set(),
+    Vendor: new Set(),
+  });
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -257,10 +304,31 @@ export default function MonikerTree() {
 
   const allPaths = useMemo(() => collectPaths(tree), [tree]);
 
+  // Facet counts (computed from full tree, before filters)
+  const { filterSections, facetFilteredTree } = useMemo(() => {
+    const { domains, vendors } = collectFacets(tree);
+    const sections = [
+      {
+        label: "Domain",
+        options: [...domains.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([v, c]) => ({ value: v, label: v, count: c })),
+      },
+      {
+        label: "Vendor",
+        options: [...vendors.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([v, c]) => ({ value: v, label: v, count: c })),
+      },
+    ];
+    const filtered = filterTreeByFacets(tree, filters.Domain, filters.Vendor);
+    return { filterSections: sections, facetFilteredTree: filtered };
+  }, [tree, filters]);
+
   const filteredTree = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return filterTree(tree, q);
-  }, [tree, search]);
+    return filterTree(facetFilteredTree, q);
+  }, [facetFilteredTree, search]);
 
   // When searching, auto-expand all matching branches
   const effectiveExpanded = useMemo(() => {
@@ -280,6 +348,20 @@ export default function MonikerTree() {
   const expandAll = useCallback(() => setExpanded(new Set(allPaths)), [allPaths]);
   const collapseAll = useCallback(() => setExpanded(new Set()), []);
 
+  const handleFilterChange = useCallback(
+    (section: string, value: string, checked: boolean) => {
+      setFilters((prev) => {
+        const next = { ...prev };
+        const s = new Set(next[section]);
+        if (checked) s.add(value);
+        else s.delete(value);
+        next[section] = s;
+        return next;
+      });
+    },
+    []
+  );
+
   if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
@@ -289,63 +371,96 @@ export default function MonikerTree() {
   }
 
   return (
-    <Box>
-      {/* Toolbar */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2, flexWrap: "wrap" }}>
-        <TextField
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Filter monikers..."
+    <Box sx={{ display: "flex", gap: 4 }}>
+      {/* Sidebar */}
+      <DatasetFilters
+        sections={filterSections}
+        selected={filters}
+        onChange={handleFilterChange}
+        mobileOpen={mobileFiltersOpen}
+        onMobileToggle={() => setMobileFiltersOpen(false)}
+        onClear={() => setFilters({ Domain: new Set(), Vendor: new Set() })}
+        onSelectAll={(section) =>
+          setFilters((prev) => ({
+            ...prev,
+            [section]: new Set(
+              filterSections
+                .find((s) => s.label === section)
+                ?.options.map((o) => o.value) || []
+            ),
+          }))
+        }
+      />
+
+      {/* Main content */}
+      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+        <Button
+          startIcon={<FilterListIcon />}
+          onClick={() => setMobileFiltersOpen(true)}
           variant="outlined"
           size="small"
-          sx={{ width: { xs: "100%", sm: 360 } }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: "#53565A" }} />
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
-        <Button size="small" startIcon={<UnfoldMoreIcon />} onClick={expandAll}>
-          Expand all
+          sx={{ display: { xs: "inline-flex", md: "none" }, mb: 1 }}
+        >
+          Filters
         </Button>
-        <Button size="small" startIcon={<UnfoldLessIcon />} onClick={collapseAll}>
-          Collapse all
-        </Button>
-      </Box>
 
-      {/* Deep-loading progress indicator */}
-      {deepLoading && (
-        <Box sx={{ mb: 1 }}>
-          <LinearProgress sx={{ borderRadius: 1 }} />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
-            Loading full tree...
+        {/* Toolbar */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2, flexWrap: "wrap" }}>
+          <TextField
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Filter monikers..."
+            variant="outlined"
+            size="small"
+            sx={{ flexGrow: 1, maxWidth: 360 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: "#53565A" }} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+          <Button size="small" startIcon={<UnfoldMoreIcon />} onClick={expandAll}>
+            Expand all
+          </Button>
+          <Button size="small" startIcon={<UnfoldLessIcon />} onClick={collapseAll}>
+            Collapse all
+          </Button>
+        </Box>
+
+        {/* Deep-loading progress indicator */}
+        {deepLoading && (
+          <Box sx={{ mb: 1 }}>
+            <LinearProgress sx={{ borderRadius: 1 }} />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
+              Loading full tree...
+            </Typography>
+          </Box>
+        )}
+
+        {/* Tree */}
+        {filteredTree.length === 0 ? (
+          <Typography color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
+            {search ? "No monikers match your filter." : "No monikers found."}
           </Typography>
-        </Box>
-      )}
-
-      {/* Tree */}
-      {filteredTree.length === 0 ? (
-        <Typography color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
-          {search ? "No monikers match your filter." : "No monikers found."}
-        </Typography>
-      ) : (
-        <Box sx={{ fontFamily: "monospace" }}>
-          {filteredTree.map((node) => (
-            <TreeNodeRow
-              key={node.path}
-              node={node}
-              expanded={effectiveExpanded}
-              onToggle={onToggle}
-              depth={0}
-              deepLoading={deepLoading}
-            />
-          ))}
-        </Box>
-      )}
+        ) : (
+          <Box sx={{ fontFamily: "monospace" }}>
+            {filteredTree.map((node) => (
+              <TreeNodeRow
+                key={node.path}
+                node={node}
+                expanded={effectiveExpanded}
+                onToggle={onToggle}
+                depth={0}
+                deepLoading={deepLoading}
+              />
+            ))}
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 }
