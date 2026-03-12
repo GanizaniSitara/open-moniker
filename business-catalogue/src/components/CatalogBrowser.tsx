@@ -1,6 +1,8 @@
 "use client";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+
+const PAGE_SIZE = 50;
 import {
   Container,
   Typography,
@@ -104,6 +106,34 @@ export default function CatalogBrowser() {
     return result;
   }, [searchFiltered, filters]);
 
+  // Progressive rendering: show PAGE_SIZE initially, load more on scroll
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchQuery, filters, vendorParam]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => prev + PAGE_SIZE);
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [displayedDatasets]);
+
+  const visibleDatasets = useMemo(
+    () => displayedDatasets.slice(0, visibleCount),
+    [displayedDatasets, visibleCount]
+  );
+
   const handleFilterChange = useCallback(
     (section: string, value: string, checked: boolean) => {
       setFilters((prev) => {
@@ -185,7 +215,7 @@ export default function CatalogBrowser() {
             {loaded ? `${displayedDatasets.length} datasets` : "Loading..."}
           </Typography>
 
-          {displayedDatasets.map((ds) => (
+          {visibleDatasets.map((ds) => (
             <DatasetCard
               key={ds.key}
               datasetKey={ds.key}
@@ -201,6 +231,9 @@ export default function CatalogBrowser() {
               columns={[]}
             />
           ))}
+          {visibleCount < displayedDatasets.length && (
+            <div ref={sentinelRef} style={{ height: 1 }} />
+          )}
         </Box>
       </Box>
     </Container>

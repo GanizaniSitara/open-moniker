@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   Container,
   Typography,
@@ -10,6 +10,8 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import FieldCard from "@/components/FieldCard";
 import DatasetFilters from "@/components/DatasetFilters";
+
+const PAGE_SIZE = 50;
 
 interface FieldItem {
   key: string;
@@ -102,6 +104,36 @@ export default function FieldBrowser() {
     return result;
   }, [searchFiltered, filters]);
 
+  // Progressive rendering: show PAGE_SIZE initially, load more on scroll
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Reset visible count when filters/search change
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchQuery, filters]);
+
+  // IntersectionObserver to load more when sentinel enters viewport
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => prev + PAGE_SIZE);
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [displayedFields]);
+
+  const visibleFields = useMemo(
+    () => displayedFields.slice(0, visibleCount),
+    [displayedFields, visibleCount]
+  );
+
   const handleFilterChange = useCallback(
     (section: string, value: string, checked: boolean) => {
       setFilters((prev) => {
@@ -157,7 +189,7 @@ export default function FieldBrowser() {
             {loaded ? `${displayedFields.length} fields` : "Loading..."}
           </Typography>
 
-          {displayedFields.map((f) => (
+          {visibleFields.map((f) => (
             <FieldCard
               key={f.key}
               fieldKey={f.key}
@@ -169,6 +201,9 @@ export default function FieldBrowser() {
               semanticTags={f.semantic_tags}
             />
           ))}
+          {visibleCount < displayedFields.length && (
+            <div ref={sentinelRef} style={{ height: 1 }} />
+          )}
         </Box>
       </Box>
     </Container>
