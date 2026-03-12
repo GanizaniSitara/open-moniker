@@ -131,6 +131,16 @@ export default function CatalogBrowser() {
               Domain: new Set(),
             })
           }
+          onSelectAll={(section) =>
+            setFilters((prev) => ({
+              ...prev,
+              [section]: new Set(
+                filterSections
+                  .find((s) => s.label === section)
+                  ?.options.map((o) => o.value) || []
+              ),
+            }))
+          }
         />
 
         {/* Dataset cards */}

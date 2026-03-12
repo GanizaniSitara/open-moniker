@@ -83,6 +83,16 @@ export default function VendorsPage() {
             selected={filters}
             onChange={handleFilterChange}
             onClear={() => setFilters({ Category: new Set() })}
+            onSelectAll={(section) =>
+              setFilters((prev) => ({
+                ...prev,
+                [section]: new Set(
+                  filterSections
+                    .find((s) => s.label === section)
+                    ?.options.map((o) => o.value) || []
+                ),
+              }))
+            }
           />
 
           <Box sx={{ flexGrow: 1, minWidth: 0 }}>

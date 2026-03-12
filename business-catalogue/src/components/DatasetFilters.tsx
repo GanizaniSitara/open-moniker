@@ -1,6 +1,12 @@
 "use client";
 import { useState } from "react";
-import { Box, Typography, Button } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Button,
+  Checkbox,
+  FormControlLabel,
+} from "@mui/material";
 
 interface FilterSection {
   label: string;
@@ -12,6 +18,7 @@ interface DatasetFiltersProps {
   selected: Record<string, Set<string>>;
   onChange: (sectionLabel: string, value: string, checked: boolean) => void;
   onClear: () => void;
+  onSelectAll?: (sectionLabel: string) => void;
 }
 
 const COLLAPSED_LIMIT = 25;
@@ -21,27 +28,23 @@ export default function DatasetFilters({
   selected,
   onChange,
   onClear,
+  onSelectAll,
 }: DatasetFiltersProps) {
   const hasAny = Object.values(selected).some((s) => s.size > 0);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   return (
     <Box sx={{ width: 220, flexShrink: 0 }}>
-      {hasAny && (
-        <Button
-          size="small"
-          onClick={onClear}
-          sx={{ textTransform: "none", color: "#005587", mb: 1 }}
-        >
-          Clear filters
-        </Button>
-      )}
       {sections.map((section, i) => {
         const isExpanded = expanded[section.label] || false;
         const visibleOptions = isExpanded
           ? section.options
           : section.options.slice(0, COLLAPSED_LIMIT);
         const hasMore = section.options.length > COLLAPSED_LIMIT;
+        const selectedSet = selected[section.label] || new Set();
+        const allSelected =
+          section.options.length > 0 &&
+          section.options.every((opt) => selectedSet.has(opt.value));
 
         return (
           <Box key={section.label} sx={{ mb: i < sections.length - 1 ? 2 : 0 }}>
@@ -55,35 +58,71 @@ export default function DatasetFilters({
             >
               {section.label}
             </Typography>
-            {visibleOptions.map((opt) => {
-              const active = selected[section.label]?.has(opt.value) || false;
-              return (
-                <Typography
-                  key={opt.value}
-                  variant="body2"
-                  onClick={() => onChange(section.label, opt.value, !active)}
+
+            {/* Clear All */}
+            {section.options.length > 1 && (
+              <Box sx={{ display: "flex", gap: 0.5, mb: 0.5 }}>
+                <Button
+                  size="small"
+                  disabled={selectedSet.size === 0}
+                  onClick={onClear}
                   sx={{
-                    py: 0.2,
-                    cursor: "pointer",
-                    color: active ? "#005587" : "#005587",
-                    fontWeight: active ? 700 : 400,
-                    "&:hover": { textDecoration: "underline" },
+                    textTransform: "none",
+                    color: "#005587",
+                    fontSize: "0.7rem",
+                    minWidth: 0,
+                    p: "1px 4px",
                   }}
                 >
-                  <Box
-                    component="span"
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      width: "100%",
-                    }}
-                  >
-                    <span>{opt.label}</span>
-                    <span style={{ color: "#999", fontWeight: 400 }}>
-                      ({opt.count})
-                    </span>
-                  </Box>
-                </Typography>
+                  Clear all
+                </Button>
+              </Box>
+            )}
+
+            {visibleOptions.map((opt) => {
+              const active = selectedSet.has(opt.value);
+              return (
+                <FormControlLabel
+                  key={opt.value}
+                  control={
+                    <Checkbox
+                      checked={active}
+                      onChange={(_, checked) =>
+                        onChange(section.label, opt.value, checked)
+                      }
+                      size="small"
+                      sx={{
+                        p: "2px 4px 2px 0",
+                        color: "#005587",
+                        "&.Mui-checked": { color: "#005587" },
+                      }}
+                    />
+                  }
+                  label={
+                    <Box
+                      component="span"
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        width: "100%",
+                        fontSize: "0.85rem",
+                        color: "#005587",
+                        fontWeight: active ? 700 : 400,
+                      }}
+                    >
+                      <span>{opt.label}</span>
+                      <span style={{ color: "#999", fontWeight: 400, marginLeft: 8 }}>
+                        ({opt.count})
+                      </span>
+                    </Box>
+                  }
+                  sx={{
+                    ml: 0,
+                    mr: 0,
+                    width: "100%",
+                    "& .MuiFormControlLabel-label": { width: "100%" },
+                  }}
+                />
               );
             })}
             {hasMore && (
