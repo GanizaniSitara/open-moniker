@@ -27,6 +27,13 @@ class SourceType(str, Enum):
     DERIVED = "derived"      # Computed from other monikers
 
 
+class Maturity(str, Enum):
+    """Data maturity tier for catalog nodes."""
+    CATALOGUED = "catalogued"
+    GOVERNED = "governed"
+    CERTIFIED = "certified"
+
+
 class NodeStatus(str, Enum):
     """Lifecycle status for catalog nodes."""
     DRAFT = "draft"                    # Being defined, not visible to clients
@@ -331,6 +338,9 @@ class CatalogNode:
 
     # Data classification (for governance)
     classification: str = "internal"
+
+    # Data maturity tier
+    maturity: Maturity = Maturity.CATALOGUED
 
     # Arbitrary tags for searchability
     tags: frozenset[str] = field(default_factory=frozenset)

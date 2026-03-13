@@ -14,6 +14,7 @@ interface DatasetCardProps {
   domainDisplayName?: string;
   domainColor?: string;
   vendor?: string;
+  maturity?: string;
   columnCount: number;
   classification?: string;
   isContainer: boolean;
@@ -27,6 +28,7 @@ export default function DatasetCard({
   domainDisplayName,
   domainColor,
   vendor,
+  maturity,
   isContainer,
   columns,
 }: DatasetCardProps) {
@@ -79,6 +81,22 @@ export default function DatasetCard({
                 fontSize: "0.7rem",
                 height: 22,
                 flexShrink: 0,
+              }}
+            />
+          )}
+          {maturity && maturity !== "catalogued" && (
+            <Chip
+              label={maturity}
+              size="small"
+              sx={{
+                ml: 0.5,
+                fontSize: "0.7rem",
+                height: 22,
+                flexShrink: 0,
+                bgcolor: maturity === "certified" ? "#4caf50" : "#1976d2",
+                color: "white",
+                fontWeight: 600,
+                textTransform: "capitalize",
               }}
             />
           )}

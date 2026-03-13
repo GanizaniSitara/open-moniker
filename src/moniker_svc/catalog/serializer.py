@@ -74,6 +74,9 @@ class CatalogSerializer:
         if node.classification and node.classification != "internal":
             result["classification"] = node.classification
 
+        if node.maturity and node.maturity.value != "catalogued":
+            result["maturity"] = node.maturity.value
+
         if node.tags:
             result["tags"] = list(node.tags)
 

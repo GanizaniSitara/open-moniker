@@ -26,6 +26,7 @@ interface BrowseDataset {
   domainColor?: string;
   isContainer: boolean;
   classification?: string;
+  maturity?: string;
   vendor?: string;
   source_binding?: { type: string };
   schema: null;
@@ -41,6 +42,7 @@ export default function CatalogBrowser() {
   const [loaded, setLoaded] = useState(false);
   const [filters, setFilters] = useState<Record<string, Set<string>>>({
     Domain: new Set(),
+    Maturity: new Set(),
   });
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
@@ -81,10 +83,13 @@ export default function CatalogBrowser() {
   // Step 2: compute facet counts from search-filtered results
   const filterSections = useMemo(() => {
     const categoryCounts = new Map<string, number>();
+    const maturityCounts = new Map<string, number>();
 
     for (const ds of searchFiltered) {
       const cat = ds.domainDisplayName || "Other";
       categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+      const m = ds.maturity || "catalogued";
+      maturityCounts.set(m, (maturityCounts.get(m) || 0) + 1);
     }
 
     return [
@@ -93,6 +98,12 @@ export default function CatalogBrowser() {
         options: [...categoryCounts.entries()]
           .sort((a, b) => b[1] - a[1])
           .map(([v, c]) => ({ value: v, label: v, count: c })),
+      },
+      {
+        label: "Maturity",
+        options: [...maturityCounts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([v, c]) => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1), count: c })),
       },
     ];
   }, [searchFiltered]);
@@ -104,6 +115,11 @@ export default function CatalogBrowser() {
     if (filters.Domain.size > 0) {
       result = result.filter((ds) =>
         filters.Domain.has(ds.domainDisplayName || "Other")
+      );
+    }
+    if (filters.Maturity.size > 0) {
+      result = result.filter((ds) =>
+        filters.Maturity.has(ds.maturity || "catalogued")
       );
     }
     result.sort((a, b) => a.display_name.localeCompare(b.display_name));
@@ -165,6 +181,7 @@ export default function CatalogBrowser() {
           onClear={() =>
             setFilters({
               Domain: new Set(),
+              Maturity: new Set(),
             })
           }
           onSelectAll={(section) =>
@@ -240,6 +257,7 @@ export default function CatalogBrowser() {
               domainDisplayName={ds.domainDisplayName}
               domainColor={ds.domainColor}
               vendor={ds.vendor}
+              maturity={ds.maturity}
               columnCount={0}
               classification={ds.classification}
               isContainer={ds.isContainer}

@@ -90,6 +90,7 @@ export interface ApiNode {
   ownership: ApiOwnership | null;
   source_binding: ApiSourceBinding | null;
   classification: string;
+  maturity: string;
   tags: string[];
   is_leaf: boolean;
   status: string;
@@ -190,6 +191,7 @@ export interface DescribeResponse {
   source_type: string | null;
   vendor: string | null;
   classification: string | null;
+  maturity: string | null;
   tags: string[];
   schema: ApiSchema | null;
   documentation: ApiDocumentation | null;

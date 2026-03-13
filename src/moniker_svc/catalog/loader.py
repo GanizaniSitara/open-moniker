@@ -234,6 +234,15 @@ class CatalogLoader:
             except ValueError:
                 logger.warning(f"Unknown status '{data['status']}' for {path}, defaulting to active")
 
+        # Parse maturity tier from YAML
+        from .types import Maturity
+        maturity = Maturity.CATALOGUED
+        if "maturity" in data:
+            try:
+                maturity = Maturity(data["maturity"])
+            except ValueError:
+                logger.warning(f"Unknown maturity '{data['maturity']}' for {path}, defaulting to catalogued")
+
         # Parse quality shorthand into metadata if present
         metadata = data.get("metadata", {})
         if "quality" in data and isinstance(data["quality"], dict):
@@ -256,6 +265,7 @@ class CatalogLoader:
             access_policy=access_policy,
             documentation=documentation,
             classification=data.get("classification", "internal"),
+            maturity=maturity,
             tags=tags,
             metadata=metadata,
             status=status,

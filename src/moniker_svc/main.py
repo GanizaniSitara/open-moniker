@@ -125,6 +125,7 @@ class DescribeResponse(BaseModel):
     domain: str | None = None
     resolved_domain: str | None = None
     classification: str | None = None
+    maturity: str | None = None
     tags: list[str] = []
 
     # Data governance fields
@@ -1457,6 +1458,7 @@ async def describe_moniker(
         domain=result.node.domain if result.node else None,
         resolved_domain=_service.catalog.resolve_domain_with_fallback(path, _domain_registry) if _domain_registry else (result.node.domain if result.node else None),
         classification=result.node.classification if result.node else None,
+        maturity=result.node.maturity.value if result.node and result.node.maturity else None,
         tags=list(result.node.tags) if result.node else [],
         data_quality=data_quality,
         sla=sla,
@@ -1607,6 +1609,7 @@ async def search_catalog(
                 "status": n.status.value if hasattr(n.status, 'value') else str(n.status),
                 "has_source_binding": n.source_binding is not None,
                 "classification": n.classification,
+                "maturity": n.maturity.value if hasattr(n.maturity, 'value') else str(n.maturity),
                 "tags": list(n.tags),
             }
             for n in results

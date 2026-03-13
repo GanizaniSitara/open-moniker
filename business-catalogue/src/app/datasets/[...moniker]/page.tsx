@@ -285,6 +285,27 @@ export default async function DatasetDetailPage({ params }: PageProps) {
               />
             </Paper>
 
+            {/* Maturity */}
+            <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+              <Typography
+                variant="subtitle1"
+                sx={{ mb: 1.5, fontWeight: 600, fontSize: "0.9rem" }}
+              >
+                Maturity
+              </Typography>
+              <Chip
+                label={(desc.maturity || "catalogued").charAt(0).toUpperCase() + (desc.maturity || "catalogued").slice(1)}
+                size="small"
+                color={
+                  desc.maturity === "certified"
+                    ? "success"
+                    : desc.maturity === "governed"
+                    ? "primary"
+                    : "default"
+                }
+              />
+            </Paper>
+
             {/* Documentation */}
             {desc.documentation && (
               <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>

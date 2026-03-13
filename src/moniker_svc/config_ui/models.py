@@ -190,6 +190,7 @@ class CatalogNodeModel(BaseModel):
     access_policy: AccessPolicyModel | None = None
     documentation: DocumentationModel | None = None
     classification: str = "internal"
+    maturity: str = "catalogued"
     tags: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     is_leaf: bool = False

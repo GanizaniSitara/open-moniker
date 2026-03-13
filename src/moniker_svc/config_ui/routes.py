@@ -146,6 +146,7 @@ def _node_to_model(
         ownership=ownership,
         source_binding=source_binding,
         classification=node.classification,
+        maturity=node.maturity.value if hasattr(node.maturity, 'value') else str(node.maturity),
         tags=list(node.tags) if node.tags else [],
         metadata=node.metadata,
         is_leaf=node.is_leaf,
