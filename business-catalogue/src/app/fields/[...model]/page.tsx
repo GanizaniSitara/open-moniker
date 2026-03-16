@@ -109,8 +109,25 @@ export default async function FieldDetailPage({ params }: PageProps) {
             {model.path}
           </Typography>
           {model.description && (
-            <Typography variant="body1" sx={{ mb: 2, color: "#53565A" }}>
+            <Typography variant="body1" sx={{ mb: 1, color: "#53565A" }}>
               {model.description}
+            </Typography>
+          )}
+          {model.technical_description && (
+            <Typography
+              variant="body2"
+              sx={{
+                mb: 2,
+                color: "#6B7280",
+                bgcolor: "#f8f9fa",
+                p: 1.5,
+                borderRadius: "6px",
+                borderLeft: "3px solid #d1d5db",
+                fontStyle: "italic",
+              }}
+            >
+              <strong style={{ fontStyle: "normal" }}>Technical:</strong>{" "}
+              {model.technical_description}
             </Typography>
           )}
 
@@ -158,6 +175,75 @@ export default async function FieldDetailPage({ params }: PageProps) {
             </Box>
           )}
         </Box>
+
+        {/* Aliases */}
+        {model.aliases && model.aliases.length > 0 && (
+          <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ mb: 1.5, fontWeight: 600, fontSize: "0.9rem" }}
+            >
+              Also Known As
+            </Typography>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {model.aliases.map((alias, i) => (
+                <Box
+                  key={i}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: 600, fontFamily: "monospace" }}
+                  >
+                    {alias.name}
+                  </Typography>
+                  <Chip
+                    label={alias.type.replace(/_/g, " ")}
+                    size="small"
+                    sx={{
+                      fontSize: "0.65rem",
+                      height: 20,
+                      bgcolor:
+                        alias.type === "abbreviation"
+                          ? "#E3F2FD"
+                          : alias.type === "legacy_name"
+                            ? "#FFF3E0"
+                            : alias.type === "system_name"
+                              ? "#F3E5F5"
+                              : alias.type === "vendor_name"
+                                ? "#E8F5E9"
+                                : "#F5F5F5",
+                      color:
+                        alias.type === "abbreviation"
+                          ? "#1565C0"
+                          : alias.type === "legacy_name"
+                            ? "#E65100"
+                            : alias.type === "system_name"
+                              ? "#7B1FA2"
+                              : alias.type === "vendor_name"
+                                ? "#2E7D32"
+                                : "#616161",
+                    }}
+                  />
+                  {alias.context && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ flex: 1 }}
+                    >
+                      {alias.context}
+                    </Typography>
+                  )}
+                </Box>
+              ))}
+            </Box>
+          </Paper>
+        )}
 
         {/* Ownership */}
         {model.ownership && (

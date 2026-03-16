@@ -6,6 +6,7 @@ import {
   Dataset,
   Model,
   MonikerLink,
+  FieldAlias,
   Schema,
   Ownership,
   Documentation,
@@ -98,11 +99,18 @@ function parseModels(raw: Record<string, unknown>): Model[] {
     const v = val as Record<string, unknown>;
     const appearsIn = v.appears_in as MonikerLink[] | undefined;
     const ownership = v.ownership as ModelOwnership | undefined;
+    const rawAliases = v.aliases as (FieldAlias | string)[] | undefined;
+    const aliases: FieldAlias[] | undefined = rawAliases?.map((a) =>
+      typeof a === "string"
+        ? { name: a, type: "common_name" }
+        : { name: a.name, type: a.type || "common_name", context: a.context }
+    );
 
     return {
       key,
       display_name: (v.display_name as string) || key,
       description: v.description as string | undefined,
+      technical_description: v.technical_description as string | undefined,
       formula: v.formula as string | undefined,
       unit: v.unit as string | undefined,
       data_type: v.data_type as string | undefined,
@@ -111,6 +119,7 @@ function parseModels(raw: Record<string, unknown>): Model[] {
       wiki_link: v.wiki_link as string | undefined,
       ownership,
       appears_in: appearsIn,
+      aliases,
       semantic_tags: v.semantic_tags as string[] | undefined,
       isContainer: !appearsIn || appearsIn.length === 0,
     };

@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
             description: m.description,
             formula: m.formula,
             unit: m.unit,
+            aliases: (m.aliases || []).map((a) => a.name),
             semantic_tags: m.semantic_tags,
             containerName,
             datasetCount,

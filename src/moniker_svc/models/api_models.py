@@ -26,6 +26,24 @@ class ModelOwnershipModel(BaseModel):
     support_channel: str | None = Field(None, description="Where to get help")
 
 
+class FieldAliasModel(BaseModel):
+    """An alternative name for a business model/field."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "name": "PVBP",
+                "type": "abbreviation",
+                "context": "Price Value of a Basis Point",
+            }
+        }
+    )
+
+    name: str = Field(..., description="The alias name")
+    type: str = Field("common_name", description="Alias type: abbreviation, common_name, system_name, legacy_name, vendor_name")
+    context: str | None = Field(None, description="Why or where this alias is used")
+
+
 class MonikerLinkModel(BaseModel):
     """Defines where a model appears in the moniker catalog."""
 
@@ -63,6 +81,9 @@ class BusinessModelModel(BaseModel):
                 "appears_in": [
                     {"moniker_pattern": "risk.cvar/*/*", "column_name": "DV01"},
                 ],
+                "aliases": [
+                    {"name": "PVBP", "type": "abbreviation"},
+                ],
                 "semantic_tags": ["interest-rate-risk", "duration"],
             }
         }
@@ -70,7 +91,8 @@ class BusinessModelModel(BaseModel):
 
     path: str = Field(..., description="Hierarchical model path")
     display_name: str = Field("", description="Human-readable name")
-    description: str = Field("", description="Description of the model/measure")
+    description: str = Field("", description="Business description of the model/measure")
+    technical_description: str | None = Field(None, description="Technical/implementation description")
 
     # Business metadata
     formula: str | None = Field(None, description="Mathematical formula")
@@ -85,6 +107,9 @@ class BusinessModelModel(BaseModel):
 
     # Relationships
     appears_in: list[MonikerLinkModel] = Field(default_factory=list, description="Where this model appears")
+
+    # Aliases
+    aliases: list[FieldAliasModel] = Field(default_factory=list, description="Alternative names for this field")
 
     # Tags
     semantic_tags: list[str] = Field(default_factory=list, description="Semantic categorization")
@@ -133,7 +158,8 @@ class CreateModelRequest(BaseModel):
 
     path: str = Field(..., description="Model path (must be unique)")
     display_name: str = Field("", description="Human-readable display name")
-    description: str = Field("", description="Description")
+    description: str = Field("", description="Business description")
+    technical_description: str | None = Field(None, description="Technical/implementation description")
     formula: str | None = Field(None, description="Mathematical formula")
     unit: str | None = Field(None, description="Unit of measure")
     data_type: str = Field("float", description="Data type")
@@ -142,6 +168,7 @@ class CreateModelRequest(BaseModel):
     methodology_url: str | None = Field(None, description="Methodology link")
     wiki_link: str | None = Field(None, description="Link to wiki page")
     appears_in: list[MonikerLinkModel] = Field(default_factory=list, description="Moniker appearances")
+    aliases: list[FieldAliasModel] = Field(default_factory=list, description="Alternative names")
     semantic_tags: list[str] = Field(default_factory=list, description="Semantic tags")
     tags: list[str] = Field(default_factory=list, description="Generic tags")
 
@@ -159,7 +186,8 @@ class UpdateModelRequest(BaseModel):
     )
 
     display_name: str | None = Field(None, description="Display name")
-    description: str | None = Field(None, description="Description")
+    description: str | None = Field(None, description="Business description")
+    technical_description: str | None = Field(None, description="Technical/implementation description")
     formula: str | None = Field(None, description="Formula")
     unit: str | None = Field(None, description="Unit")
     data_type: str | None = Field(None, description="Data type")
@@ -168,6 +196,7 @@ class UpdateModelRequest(BaseModel):
     methodology_url: str | None = Field(None, description="Methodology link")
     wiki_link: str | None = Field(None, description="Link to wiki page")
     appears_in: list[MonikerLinkModel] | None = Field(None, description="Appearances")
+    aliases: list[FieldAliasModel] | None = Field(None, description="Alternative names")
     semantic_tags: list[str] | None = Field(None, description="Semantic tags")
     tags: list[str] | None = Field(None, description="Tags")
 

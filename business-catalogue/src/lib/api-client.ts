@@ -205,6 +205,12 @@ export async function fetchDescribe(path: string): Promise<DescribeResponse> {
 
 // ── Model (business model) types & fetchers ──────────────────────────
 
+export interface ApiFieldAlias {
+  name: string;
+  type: string;
+  context?: string | null;
+}
+
 export interface ApiMonikerLink {
   moniker_pattern: string;
   column_name?: string | null;
@@ -221,6 +227,7 @@ export interface ApiModel {
   path: string;
   display_name: string;
   description: string;
+  technical_description?: string | null;
   formula?: string | null;
   unit?: string | null;
   data_type?: string;
@@ -229,6 +236,7 @@ export interface ApiModel {
   methodology_url?: string | null;
   wiki_link?: string | null;
   appears_in: ApiMonikerLink[];
+  aliases: ApiFieldAlias[];
   semantic_tags: string[];
   tags: string[];
 }

@@ -84,6 +84,13 @@ export interface Dataset {
   isContainer: boolean;
 }
 
+// Field alias (alternative name)
+export interface FieldAlias {
+  name: string;
+  type: string;  // abbreviation, common_name, system_name, legacy_name, vendor_name
+  context?: string;
+}
+
 // Model link (where a model appears)
 export interface MonikerLink {
   moniker_pattern: string;
@@ -103,6 +110,7 @@ export interface Model {
   key: string;
   display_name: string;
   description?: string;
+  technical_description?: string;
   formula?: string;
   unit?: string;
   data_type?: string;
@@ -111,6 +119,7 @@ export interface Model {
   wiki_link?: string;
   ownership?: ModelOwnership;
   appears_in?: MonikerLink[];
+  aliases?: FieldAlias[];
   semantic_tags?: string[];
   // Computed
   isContainer: boolean;

@@ -22,6 +22,7 @@ interface FieldItem {
   description?: string;
   formula?: string;
   unit?: string;
+  aliases?: string[];
   semantic_tags?: string[];
   containerName: string;
   datasetCount: number;
@@ -53,7 +54,8 @@ export default function FieldBrowser() {
       result = result.filter(
         (f) =>
           f.display_name.toLowerCase().includes(q) ||
-          (f.description || "").toLowerCase().includes(q)
+          (f.description || "").toLowerCase().includes(q) ||
+          (f.aliases || []).some((a) => a.toLowerCase().includes(q))
       );
     }
     return result;
@@ -211,6 +213,7 @@ export default function FieldBrowser() {
               description={f.description}
               formula={f.formula}
               unit={f.unit}
+              aliases={f.aliases}
               datasetCount={f.datasetCount}
               semanticTags={f.semantic_tags}
             />

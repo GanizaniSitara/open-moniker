@@ -9,13 +9,14 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 
-from .types import Model, ModelOwnership, MonikerLink
+from .types import Model, ModelOwnership, MonikerLink, FieldAlias
 from .registry import ModelRegistry
 from .loader import load_models_from_yaml
 from .serializer import save_models_to_yaml
 from .api_models import (
     BusinessModelModel,
     CreateModelRequest,
+    FieldAliasModel,
     ModelListResponse,
     ModelOwnershipModel,
     ModelSummaryModel,
@@ -87,10 +88,20 @@ def _model_to_api(model: Model) -> BusinessModelModel:
         for link in model.appears_in
     ]
 
+    aliases = [
+        FieldAliasModel(
+            name=alias.name,
+            type=alias.type,
+            context=alias.context,
+        )
+        for alias in model.aliases
+    ]
+
     return BusinessModelModel(
         path=model.path,
         display_name=model.display_name,
         description=model.description,
+        technical_description=model.technical_description,
         formula=model.formula,
         unit=model.unit,
         data_type=model.data_type,
@@ -99,6 +110,7 @@ def _model_to_api(model: Model) -> BusinessModelModel:
         methodology_url=model.methodology_url,
         wiki_link=model.wiki_link,
         appears_in=appears_in,
+        aliases=aliases,
         semantic_tags=list(model.semantic_tags),
         tags=list(model.tags),
     )
@@ -144,12 +156,27 @@ def _api_to_model(path: str, request: CreateModelRequest | UpdateModelRequest, e
     elif existing:
         appears_in = existing.appears_in
 
+    # Parse aliases
+    aliases: tuple[FieldAlias, ...] = ()
+    if request.aliases is not None:
+        aliases = tuple(
+            FieldAlias(
+                name=a.name,
+                type=a.type,
+                context=a.context,
+            )
+            for a in request.aliases
+        )
+    elif existing:
+        aliases = existing.aliases
+
     # For updates, use existing values as defaults
     if existing and isinstance(request, UpdateModelRequest):
         return Model(
             path=path,
             display_name=request.display_name if request.display_name is not None else existing.display_name,
             description=request.description if request.description is not None else existing.description,
+            technical_description=request.technical_description if request.technical_description is not None else existing.technical_description,
             formula=request.formula if request.formula is not None else existing.formula,
             unit=request.unit if request.unit is not None else existing.unit,
             data_type=request.data_type if request.data_type is not None else existing.data_type,
@@ -158,6 +185,7 @@ def _api_to_model(path: str, request: CreateModelRequest | UpdateModelRequest, e
             methodology_url=request.methodology_url if request.methodology_url is not None else existing.methodology_url,
             wiki_link=request.wiki_link if request.wiki_link is not None else existing.wiki_link,
             appears_in=appears_in,
+            aliases=aliases,
             semantic_tags=tuple(request.semantic_tags) if request.semantic_tags is not None else existing.semantic_tags,
             tags=frozenset(request.tags) if request.tags is not None else existing.tags,
         )
@@ -167,6 +195,7 @@ def _api_to_model(path: str, request: CreateModelRequest | UpdateModelRequest, e
         path=path,
         display_name=request.display_name if hasattr(request, "display_name") else "",
         description=request.description if hasattr(request, "description") else "",
+        technical_description=request.technical_description if hasattr(request, "technical_description") else None,
         formula=request.formula if hasattr(request, "formula") else None,
         unit=request.unit if hasattr(request, "unit") else None,
         data_type=request.data_type if hasattr(request, "data_type") else "float",
@@ -175,6 +204,7 @@ def _api_to_model(path: str, request: CreateModelRequest | UpdateModelRequest, e
         methodology_url=request.methodology_url if hasattr(request, "methodology_url") else None,
         wiki_link=request.wiki_link if hasattr(request, "wiki_link") else None,
         appears_in=appears_in,
+        aliases=aliases,
         semantic_tags=tuple(request.semantic_tags) if request.semantic_tags else (),
         tags=frozenset(request.tags) if request.tags else frozenset(),
     )

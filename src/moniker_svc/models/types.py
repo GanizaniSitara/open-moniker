@@ -50,6 +50,35 @@ class ModelOwnership:
 
 
 @dataclass(frozen=True, slots=True)
+class FieldAlias:
+    """An alternative name for a business model/field."""
+
+    name: str                            # The alias itself, e.g. "PVBP"
+    type: str = "common_name"            # abbreviation, common_name, system_name, legacy_name, vendor_name
+    context: str | None = None           # Why/where this alias is used
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary representation."""
+        result: dict[str, Any] = {"name": self.name}
+        if self.type != "common_name":
+            result["type"] = self.type
+        if self.context:
+            result["context"] = self.context
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict | str) -> "FieldAlias":
+        """Create from dictionary or plain string."""
+        if isinstance(data, str):
+            return cls(name=data)
+        return cls(
+            name=data.get("name", ""),
+            type=data.get("type", "common_name"),
+            context=data.get("context"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class MonikerLink:
     """Defines where a model appears in the moniker catalog."""
 
@@ -92,7 +121,8 @@ class Model:
 
     # Display metadata
     display_name: str = ""
-    description: str = ""
+    description: str = ""                      # Primary (business) description
+    technical_description: str | None = None   # Implementation / technical detail
 
     # Business metadata
     formula: str | None = None        # Mathematical formula
@@ -107,6 +137,9 @@ class Model:
 
     # Moniker relationships (explicit only, no auto-discovery)
     appears_in: tuple[MonikerLink, ...] = ()
+
+    # Alternative names for this field
+    aliases: tuple[FieldAlias, ...] = ()
 
     # Semantic tags for categorization
     semantic_tags: tuple[str, ...] = ()
@@ -124,6 +157,8 @@ class Model:
             result["display_name"] = self.display_name
         if self.description:
             result["description"] = self.description
+        if self.technical_description:
+            result["technical_description"] = self.technical_description
         if self.formula:
             result["formula"] = self.formula
         if self.unit:
@@ -143,6 +178,9 @@ class Model:
 
         if self.appears_in:
             result["appears_in"] = [link.to_dict() for link in self.appears_in]
+
+        if self.aliases:
+            result["aliases"] = [alias.to_dict() for alias in self.aliases]
 
         if self.semantic_tags:
             result["semantic_tags"] = list(self.semantic_tags)
@@ -172,6 +210,10 @@ class Model:
         appears_in_data = data.get("appears_in", [])
         appears_in = tuple(MonikerLink.from_dict(link) for link in appears_in_data)
 
+        # Parse aliases
+        aliases_data = data.get("aliases", [])
+        aliases = tuple(FieldAlias.from_dict(a) for a in aliases_data) if aliases_data else ()
+
         # Parse semantic tags
         semantic_tags_data = data.get("semantic_tags", [])
         semantic_tags = tuple(semantic_tags_data) if semantic_tags_data else ()
@@ -184,6 +226,7 @@ class Model:
             path=path,
             display_name=data.get("display_name") or "",
             description=data.get("description") or "",
+            technical_description=data.get("technical_description"),
             formula=data.get("formula"),
             unit=data.get("unit"),
             data_type=data.get("data_type", "float"),
@@ -192,6 +235,7 @@ class Model:
             methodology_url=data.get("methodology_url"),
             wiki_link=data.get("wiki_link"),
             appears_in=appears_in,
+            aliases=aliases,
             semantic_tags=semantic_tags,
             tags=tags,
         )

@@ -8,6 +8,7 @@ interface FieldCardProps {
   description?: string;
   formula?: string;
   unit?: string;
+  aliases?: string[];
   datasetCount: number;
   semanticTags?: string[];
 }
@@ -18,6 +19,7 @@ export default function FieldCard({
   description,
   formula,
   unit,
+  aliases,
   datasetCount,
   semanticTags,
 }: FieldCardProps) {
@@ -53,6 +55,14 @@ export default function FieldCard({
             }}
           >
             {description}
+          </Typography>
+        )}
+        {aliases && aliases.length > 0 && (
+          <Typography
+            variant="caption"
+            sx={{ color: "#8B8D90", mt: 0.3, display: "block" }}
+          >
+            aka {aliases.join(", ")}
           </Typography>
         )}
         {formula && (
