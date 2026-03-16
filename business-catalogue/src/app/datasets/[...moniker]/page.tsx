@@ -105,26 +105,24 @@ export default async function DatasetDetailPage({ params }: PageProps) {
             {monikerPath}
           </Typography>
           {desc.description && (
-            <Typography variant="body1" sx={{ mt: 1, color: "#53565A" }}>
-              {desc.description}
-            </Typography>
+            <Box sx={{ mt: 1.5, bgcolor: "#f8f9fa", p: 1.5, borderRadius: "6px", borderLeft: "3px solid #005587" }}>
+              <Typography variant="caption" sx={{ color: "#005587", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Business Description
+              </Typography>
+              <Typography variant="body1" sx={{ mt: 0.5, color: "#53565A" }}>
+                {desc.description}
+              </Typography>
+            </Box>
           )}
           {desc.technical_description && (
-            <Typography
-              variant="body2"
-              sx={{
-                mt: 1,
-                color: "#6B7280",
-                bgcolor: "#f8f9fa",
-                p: 1.5,
-                borderRadius: "6px",
-                borderLeft: "3px solid #d1d5db",
-                fontStyle: "italic",
-              }}
-            >
-              <strong style={{ fontStyle: "normal" }}>Technical:</strong>{" "}
-              {desc.technical_description}
-            </Typography>
+            <Box sx={{ mt: 1, bgcolor: "#f8f9fa", p: 1.5, borderRadius: "6px", borderLeft: "3px solid #789D4A" }}>
+              <Typography variant="caption" sx={{ color: "#789D4A", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Technical Description
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.5, color: "#6B7280" }}>
+                {desc.technical_description}
+              </Typography>
+            </Box>
           )}
         </Box>
 
