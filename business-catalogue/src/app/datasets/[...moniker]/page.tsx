@@ -33,7 +33,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
   let nodeRes;
   try {
     [desc, nodeRes] = await Promise.all([
-      fetchDescribe(urlPath),
+      fetchDescribe(monikerPath),
       fetchNode(monikerPath),
     ]);
   } catch {
