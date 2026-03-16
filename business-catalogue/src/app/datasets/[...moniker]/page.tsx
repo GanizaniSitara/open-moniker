@@ -109,6 +109,23 @@ export default async function DatasetDetailPage({ params }: PageProps) {
               {desc.description}
             </Typography>
           )}
+          {desc.technical_description && (
+            <Typography
+              variant="body2"
+              sx={{
+                mt: 1,
+                color: "#6B7280",
+                bgcolor: "#f8f9fa",
+                p: 1.5,
+                borderRadius: "6px",
+                borderLeft: "3px solid #d1d5db",
+                fontStyle: "italic",
+              }}
+            >
+              <strong style={{ fontStyle: "normal" }}>Technical:</strong>{" "}
+              {desc.technical_description}
+            </Typography>
+          )}
         </Box>
 
         <Grid container spacing={3}>

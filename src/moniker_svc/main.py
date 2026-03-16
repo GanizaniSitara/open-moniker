@@ -116,6 +116,7 @@ class DescribeResponse(BaseModel):
     path: str
     display_name: str | None = None
     description: str | None = None
+    technical_description: str | None = None
     asset_class: str | None = None
     update_frequency: str | None = None
     ownership: dict[str, Any]
@@ -1429,6 +1430,7 @@ async def describe_moniker(
         path=result.path,
         display_name=result.node.display_name if result.node else None,
         description=result.node.description if result.node else None,
+        technical_description=result.node.technical_description if result.node else None,
         asset_class=result.node.asset_class if result.node else None,
         update_frequency=result.node.update_frequency if result.node else None,
         ownership={

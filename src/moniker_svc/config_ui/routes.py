@@ -140,6 +140,7 @@ def _node_to_model(
         path=node.path,
         display_name=node.display_name,
         description=node.description,
+        technical_description=node.technical_description,
         domain=node.domain,
         resolved_domain=resolved_domain,
         vendor=node.vendor,
@@ -197,6 +198,7 @@ def _request_to_node(path: str, request: CreateNodeRequest | UpdateNodeRequest, 
     if existing and isinstance(request, UpdateNodeRequest):
         display_name = request.display_name if request.display_name is not None else existing.display_name
         description = request.description if request.description is not None else existing.description
+        technical_description = request.technical_description if request.technical_description is not None else existing.technical_description
         domain = request.domain if request.domain is not None else existing.domain
         ownership = _model_to_ownership(request.ownership) if request.ownership is not None else existing.ownership
         source_binding = _model_to_source_binding(request.source_binding) if request.source_binding is not None else existing.source_binding
@@ -207,6 +209,7 @@ def _request_to_node(path: str, request: CreateNodeRequest | UpdateNodeRequest, 
         # Create request - use defaults
         display_name = request.display_name if hasattr(request, 'display_name') else ""
         description = request.description if hasattr(request, 'description') else ""
+        technical_description = request.technical_description if hasattr(request, 'technical_description') else None
         domain = request.domain if hasattr(request, 'domain') else None
         ownership = _model_to_ownership(request.ownership)
         source_binding = _model_to_source_binding(request.source_binding)
@@ -218,6 +221,7 @@ def _request_to_node(path: str, request: CreateNodeRequest | UpdateNodeRequest, 
         path=path,
         display_name=display_name,
         description=description,
+        technical_description=technical_description,
         domain=domain,
         ownership=ownership,
         source_binding=source_binding,

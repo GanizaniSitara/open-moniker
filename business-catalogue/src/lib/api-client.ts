@@ -184,6 +184,7 @@ export interface DescribeResponse {
   path: string;
   display_name: string | null;
   description: string | null;
+  technical_description?: string | null;
   asset_class?: string | null;
   update_frequency?: string | null;
   ownership: ResolvedOwnership;

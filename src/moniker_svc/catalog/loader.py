@@ -252,6 +252,7 @@ class CatalogLoader:
             path=path,
             display_name=data.get("display_name", ""),
             description=data.get("description", ""),
+            technical_description=data.get("technical_description"),
             asset_class=data.get("asset_class", ""),
             update_frequency=data.get("update_frequency", ""),
             domain=data.get("domain"),

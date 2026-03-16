@@ -303,6 +303,7 @@ class CatalogNode:
     path: str  # Full path string (e.g., "market-data/prices/equity")
     display_name: str = ""
     description: str = ""
+    technical_description: str | None = None   # Technical/implementation detail
 
     # Asset class (rates, credit, mortgages, macro, risk, fx, equities, commodities, em, fixed.income)
     asset_class: str = ""

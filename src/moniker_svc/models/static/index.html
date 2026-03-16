@@ -216,6 +216,48 @@
             font-weight: 700;
         }
 
+        /* Aliases */
+        .alias-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        .alias-name {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-weight: 700;
+            color: var(--c-navy);
+            font-size: 13px;
+        }
+        .alias-type {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-weight: 700;
+        }
+        .alias-type.abbreviation { background: #E3F2FD; color: #1565C0; }
+        .alias-type.common_name { background: #F5F5F5; color: #616161; }
+        .alias-type.system_name { background: #F3E5F5; color: #7B1FA2; }
+        .alias-type.legacy_name { background: #FFF3E0; color: #E65100; }
+        .alias-type.vendor_name { background: #E8F5E9; color: #2E7D32; }
+        .alias-context {
+            font-size: 12px;
+            color: var(--c-gray);
+            flex: 1;
+        }
+        .tech-desc {
+            font-size: 13px;
+            color: #6B7280;
+            background: var(--color-bg);
+            padding: 10px 14px;
+            border-radius: 4px;
+            border-left: 3px solid #d1d5db;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+
         a { color: var(--c-peacock); text-decoration: none; font-weight: 700; }
         a:hover { text-decoration: underline; }
 
@@ -342,6 +384,7 @@
                     <h3>Basic Info</h3>
                     ${detailRow('Display Name', model.display_name || '-')}
                     ${detailRow('Description', model.description || '-')}
+                    ${model.technical_description ? `<div class="tech-desc"><strong style="font-style:normal">Technical:</strong> ${model.technical_description}</div>` : ''}
                     ${model.unit ? detailRow('Unit', model.unit) : ''}
                     ${model.data_type && model.data_type !== 'float' ? detailRow('Data Type', model.data_type) : ''}
                 </div>
@@ -350,6 +393,19 @@
                     <div class="detail-section">
                         <h3>Formula</h3>
                         <div class="formula-display">${model.formula}</div>
+                    </div>
+                ` : ''}
+
+                ${model.aliases && model.aliases.length > 0 ? `
+                    <div class="detail-section">
+                        <h3>Also Known As</h3>
+                        ${model.aliases.map(a => `
+                            <div class="alias-item">
+                                <span class="alias-name">${a.name}</span>
+                                <span class="alias-type ${a.type}">${a.type.replace(/_/g, ' ')}</span>
+                                ${a.context ? `<span class="alias-context">${a.context}</span>` : ''}
+                            </div>
+                        `).join('')}
                     </div>
                 ` : ''}
 
