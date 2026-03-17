@@ -15,7 +15,8 @@ interface PageProps {
 }
 
 export default async function DomainDetailPage({ params }: PageProps) {
-  const { domain: domainKey } = await params;
+  const { domain: rawDomainKey } = await params;
+  const domainKey = decodeURIComponent(rawDomainKey);
 
   let domainRes;
   try {
