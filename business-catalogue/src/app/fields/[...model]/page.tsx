@@ -109,24 +109,9 @@ export default async function FieldDetailPage({ params }: PageProps) {
             {model.path}
           </Typography>
           {model.description && (
-            <Box sx={{ mt: 0.5, mb: 1, bgcolor: "#f8f9fa", p: 1.5, borderRadius: "6px", borderLeft: "3px solid #005587" }}>
-              <Typography variant="caption" sx={{ color: "#005587", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Business Description
-              </Typography>
-              <Typography variant="body1" sx={{ mt: 0.5, color: "#53565A" }}>
-                {model.description}
-              </Typography>
-            </Box>
-          )}
-          {model.technical_description && (
-            <Box sx={{ mb: 2, bgcolor: "#f8f9fa", p: 1.5, borderRadius: "6px", borderLeft: "3px solid #789D4A" }}>
-              <Typography variant="caption" sx={{ color: "#789D4A", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Technical Description
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 0.5, color: "#6B7280" }}>
-                {model.technical_description}
-              </Typography>
-            </Box>
+            <Typography variant="body1" sx={{ mb: 2, color: "#53565A" }}>
+              {model.description}
+            </Typography>
           )}
 
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>

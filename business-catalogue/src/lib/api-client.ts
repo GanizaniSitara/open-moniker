@@ -228,7 +228,6 @@ export interface ApiModel {
   path: string;
   display_name: string;
   description: string;
-  technical_description?: string | null;
   formula?: string | null;
   unit?: string | null;
   data_type?: string;

@@ -110,7 +110,6 @@ function parseModels(raw: Record<string, unknown>): Model[] {
       key,
       display_name: (v.display_name as string) || key,
       description: v.description as string | undefined,
-      technical_description: v.technical_description as string | undefined,
       formula: v.formula as string | undefined,
       unit: v.unit as string | undefined,
       data_type: v.data_type as string | undefined,

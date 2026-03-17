@@ -247,17 +247,6 @@
             color: var(--c-gray);
             flex: 1;
         }
-        .tech-desc {
-            font-size: 13px;
-            color: #6B7280;
-            background: var(--color-bg);
-            padding: 10px 14px;
-            border-radius: 4px;
-            border-left: 3px solid #d1d5db;
-            font-style: italic;
-            margin-bottom: 20px;
-        }
-
         a { color: var(--c-peacock); text-decoration: none; font-weight: 700; }
         a:hover { text-decoration: underline; }
 
@@ -384,7 +373,6 @@
                     <h3>Basic Info</h3>
                     ${detailRow('Display Name', model.display_name || '-')}
                     ${detailRow('Description', model.description || '-')}
-                    ${model.technical_description ? `<div class="tech-desc"><strong style="font-style:normal">Technical:</strong> ${model.technical_description}</div>` : ''}
                     ${model.unit ? detailRow('Unit', model.unit) : ''}
                     ${model.data_type && model.data_type !== 'float' ? detailRow('Data Type', model.data_type) : ''}
                 </div>

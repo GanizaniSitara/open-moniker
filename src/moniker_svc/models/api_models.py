@@ -92,7 +92,6 @@ class BusinessModelModel(BaseModel):
     path: str = Field(..., description="Hierarchical model path")
     display_name: str = Field("", description="Human-readable name")
     description: str = Field("", description="Business description of the model/measure")
-    technical_description: str | None = Field(None, description="Technical/implementation description")
 
     # Business metadata
     formula: str | None = Field(None, description="Mathematical formula")
@@ -159,7 +158,6 @@ class CreateModelRequest(BaseModel):
     path: str = Field(..., description="Model path (must be unique)")
     display_name: str = Field("", description="Human-readable display name")
     description: str = Field("", description="Business description")
-    technical_description: str | None = Field(None, description="Technical/implementation description")
     formula: str | None = Field(None, description="Mathematical formula")
     unit: str | None = Field(None, description="Unit of measure")
     data_type: str = Field("float", description="Data type")
@@ -187,7 +185,6 @@ class UpdateModelRequest(BaseModel):
 
     display_name: str | None = Field(None, description="Display name")
     description: str | None = Field(None, description="Business description")
-    technical_description: str | None = Field(None, description="Technical/implementation description")
     formula: str | None = Field(None, description="Formula")
     unit: str | None = Field(None, description="Unit")
     data_type: str | None = Field(None, description="Data type")

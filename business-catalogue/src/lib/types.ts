@@ -110,7 +110,6 @@ export interface Model {
   key: string;
   display_name: string;
   description?: string;
-  technical_description?: string;
   formula?: string;
   unit?: string;
   data_type?: string;

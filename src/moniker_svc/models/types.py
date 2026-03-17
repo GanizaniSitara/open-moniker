@@ -122,7 +122,6 @@ class Model:
     # Display metadata
     display_name: str = ""
     description: str = ""                      # Primary (business) description
-    technical_description: str | None = None   # Implementation / technical detail
 
     # Business metadata
     formula: str | None = None        # Mathematical formula
@@ -157,8 +156,6 @@ class Model:
             result["display_name"] = self.display_name
         if self.description:
             result["description"] = self.description
-        if self.technical_description:
-            result["technical_description"] = self.technical_description
         if self.formula:
             result["formula"] = self.formula
         if self.unit:
@@ -226,7 +223,6 @@ class Model:
             path=path,
             display_name=data.get("display_name") or "",
             description=data.get("description") or "",
-            technical_description=data.get("technical_description"),
             formula=data.get("formula"),
             unit=data.get("unit"),
             data_type=data.get("data_type", "float"),
