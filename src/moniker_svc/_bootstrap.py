@@ -98,6 +98,31 @@ def build_domain_registry():
 
 
 # ---------------------------------------------------------------------------
+# Application registry
+# ---------------------------------------------------------------------------
+
+def build_application_registry():
+    """Load application registry from YAML.
+
+    Returns ``(registry, applications_yaml_path)``.  The path is returned so
+    the caller can pass it to ``application_routes.configure()``.
+    """
+    from .applications import ApplicationRegistry, load_applications_from_yaml
+
+    applications_yaml_path = os.environ.get("APPLICATIONS_CONFIG", "applications.yaml")
+    registry = ApplicationRegistry()
+    if Path(applications_yaml_path).exists():
+        apps = load_applications_from_yaml(applications_yaml_path, registry)
+        logger.info("Loaded %d applications from %s", len(apps), applications_yaml_path)
+    else:
+        logger.info(
+            "No applications config found at %s, starting with empty registry",
+            applications_yaml_path,
+        )
+    return registry, applications_yaml_path
+
+
+# ---------------------------------------------------------------------------
 # Adapter registry
 # ---------------------------------------------------------------------------
 

@@ -30,85 +30,114 @@ export default function DomainCard({
     >
       <Box
         sx={{
-          py: 1.5,
+          border: "1px solid rgba(0,0,0,0.1)",
+          borderRadius: "8px",
+          overflow: "hidden",
+          transition: "box-shadow 0.15s, transform 0.15s",
+          "&:hover": {
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            transform: "translateY(-1px)",
+          },
+          height: "100%",
           display: "flex",
-          alignItems: "flex-start",
-          gap: 2,
-          "&:hover h6": { textDecoration: "underline" },
+          flexDirection: "column",
         }}
       >
-        {/* Color bar */}
-        <Box
-          sx={{
-            width: 4,
-            minHeight: 40,
-            alignSelf: "stretch",
-            bgcolor: color,
-            borderRadius: 1,
-            flexShrink: 0,
-            mt: 0.3,
-          }}
-        />
+        {/* Top color bar */}
+        <Box sx={{ height: 4, bgcolor: color }} />
 
-        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 0.3 }}>
+        <Box sx={{ p: 2, flexGrow: 1, display: "flex", flexDirection: "column" }}>
+          {/* Header: icon + name */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+            <Box
+              sx={{
+                width: 28,
+                height: 28,
+                borderRadius: "6px",
+                bgcolor: color,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+            </Box>
             <Typography
               variant="h6"
               sx={{
                 color: "#005587",
                 fontWeight: 600,
-                fontSize: "1rem",
+                fontSize: "0.95rem",
                 lineHeight: 1.3,
+                flexGrow: 1,
               }}
             >
               {displayName}
             </Typography>
-            <Box sx={{ flexGrow: 1 }} />
-            {datasetCount > 0 && (
-              <Chip
-                label={`${datasetCount} datasets`}
-                size="small"
-                sx={{
-                  bgcolor: "#022D5E",
-                  color: "white",
-                  fontWeight: 600,
-                  fontSize: "0.7rem",
-                  height: 22,
-                  flexShrink: 0,
-                }}
-              />
-            )}
+            <Chip
+              label={confidentiality}
+              size="small"
+              color={confidentiality === "confidential" ? "warning" : "default"}
+              sx={{ fontSize: "0.65rem", height: 20 }}
+            />
           </Box>
+
+          {/* Notes */}
           {notes && (
             <Typography
               variant="body2"
-              sx={{ color: "#53565A", lineHeight: 1.5 }}
+              sx={{
+                color: "#53565A",
+                lineHeight: 1.5,
+                fontSize: "0.82rem",
+                mb: 1,
+                flexGrow: 1,
+              }}
             >
               {notes}
             </Typography>
           )}
-          <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mt: 0.5 }}>
+
+          {/* Category + owner */}
+          <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mb: 1 }}>
+            <Chip
+              label={dataCategory}
+              size="small"
+              sx={{
+                fontSize: "0.65rem",
+                height: 20,
+                bgcolor: `${color}18`,
+                color: color,
+                fontWeight: 600,
+                border: `1px solid ${color}40`,
+              }}
+            />
             {owner && (
               <Chip
                 label={owner}
                 size="small"
                 variant="outlined"
-                sx={{ fontSize: "0.7rem" }}
+                sx={{ fontSize: "0.65rem", height: 20 }}
               />
             )}
-            <Chip
-              label={dataCategory}
-              size="small"
-              variant="outlined"
-              sx={{ fontSize: "0.7rem" }}
-            />
-            <Chip
-              label={confidentiality}
-              size="small"
-              variant="outlined"
-              color={confidentiality === "confidential" ? "warning" : "default"}
-              sx={{ fontSize: "0.7rem" }}
-            />
+          </Box>
+
+          {/* Count bar */}
+          <Box
+            sx={{
+              pt: 1,
+              borderTop: "1px solid rgba(0,0,0,0.06)",
+            }}
+          >
+            <Typography variant="caption" sx={{ color: "#53565A" }}>
+              <strong>{datasetCount}</strong> datasets
+            </Typography>
           </Box>
         </Box>
       </Box>

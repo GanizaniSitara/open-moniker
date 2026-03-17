@@ -17,6 +17,7 @@ const NAV_LINKS = [
   { label: "Vendors", href: "/vendors" },
   { label: "Hierarchy", href: "/monikers" },
   { label: "Fields", href: "/fields" },
+  { label: "Applications", href: "/applications" },
   { label: "Domains", href: "/domains" },
 ];
 

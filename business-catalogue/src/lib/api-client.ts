@@ -270,6 +270,53 @@ export async function fetchModelsForMoniker(path: string): Promise<ModelsForMoni
   return apiFetch(`/models/for-moniker/${path}`);
 }
 
+// ── Application types & fetchers ──────────────────────────────────────
+
+export interface ApiApplication {
+  key: string;
+  display_name: string;
+  description: string;
+  category: string;
+  color: string;
+  status: string;
+  owner: string;
+  tech_lead: string;
+  support_channel: string;
+  datasets: string[];
+  fields: string[];
+  documentation_url: string;
+  wiki_link: string;
+}
+
+interface ApplicationListResponse {
+  applications: ApiApplication[];
+  count: number;
+}
+
+interface ApplicationDetailResponse {
+  application: ApiApplication;
+  dataset_count: number;
+  field_count: number;
+}
+
+interface ApplicationsForDatasetResponse {
+  dataset_path: string;
+  applications: ApiApplication[];
+  count: number;
+}
+
+export async function fetchApplications(): Promise<ApplicationListResponse> {
+  return apiFetch("/applications");
+}
+
+export async function fetchApplication(key: string): Promise<ApplicationDetailResponse> {
+  return apiFetch(`/applications/${encodeURIComponent(key)}`);
+}
+
+export async function fetchApplicationsForDataset(path: string): Promise<ApplicationsForDatasetResponse> {
+  return apiFetch(`/applications/for-dataset/${path}`);
+}
+
 // ── Search ───────────────────────────────────────────────────────────
 
 interface CatalogSearchResult {

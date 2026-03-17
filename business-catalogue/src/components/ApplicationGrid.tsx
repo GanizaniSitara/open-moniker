@@ -3,52 +3,64 @@ import { useState, useMemo, useCallback } from "react";
 import { Box, TextField, InputAdornment, Typography, Button } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
-import DomainCard from "./DomainCard";
+import ApplicationCard from "./ApplicationCard";
 import DatasetFilters from "./DatasetFilters";
 
-interface DomainGridProps {
-  domains: {
-    domainKey: string;
+interface ApplicationGridProps {
+  applications: {
+    appKey: string;
     displayName: string;
-    notes: string;
+    description: string;
     color: string;
-    dataCategory: string;
-    datasetCount: number;
-    confidentiality: string;
+    category: string;
+    status: string;
     owner: string;
+    datasetCount: number;
+    fieldCount: number;
   }[];
 }
 
-export default function DomainGrid({ domains }: DomainGridProps) {
+export default function ApplicationGrid({ applications }: ApplicationGridProps) {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Record<string, Set<string>>>({
     Category: new Set(),
+    Status: new Set(),
   });
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // Step 1: filter by search text
   const searchFiltered = useMemo(() => {
-    if (!search) return domains;
+    if (!search) return applications;
     const q = search.toLowerCase();
-    return domains.filter(
-      (d) =>
-        d.displayName.toLowerCase().includes(q) ||
-        d.notes.toLowerCase().includes(q) ||
-        d.owner.toLowerCase().includes(q)
+    return applications.filter(
+      (a) =>
+        a.displayName.toLowerCase().includes(q) ||
+        a.description.toLowerCase().includes(q) ||
+        a.owner.toLowerCase().includes(q) ||
+        a.category.toLowerCase().includes(q)
     );
-  }, [domains, search]);
+  }, [applications, search]);
 
   // Step 2: compute facet counts from search-filtered results
   const filterSections = useMemo(() => {
     const categoryCounts = new Map<string, number>();
-    for (const d of searchFiltered) {
-      const cat = d.dataCategory || "Other";
+    const statusCounts = new Map<string, number>();
+    for (const a of searchFiltered) {
+      const cat = a.category || "Other";
       categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+      const st = a.status || "active";
+      statusCounts.set(st, (statusCounts.get(st) || 0) + 1);
     }
     return [
       {
         label: "Category",
         options: [...categoryCounts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([v, c]) => ({ value: v, label: v, count: c })),
+      },
+      {
+        label: "Status",
+        options: [...statusCounts.entries()]
           .sort((a, b) => b[1] - a[1])
           .map(([v, c]) => ({ value: v, label: v, count: c })),
       },
@@ -59,8 +71,13 @@ export default function DomainGrid({ domains }: DomainGridProps) {
   const displayed = useMemo(() => {
     let result = searchFiltered;
     if (filters.Category.size > 0) {
-      result = result.filter((d) =>
-        filters.Category.has(d.dataCategory || "Other")
+      result = result.filter((a) =>
+        filters.Category.has(a.category || "Other")
+      );
+    }
+    if (filters.Status.size > 0) {
+      result = result.filter((a) =>
+        filters.Status.has(a.status || "active")
       );
     }
     return result;
@@ -88,7 +105,7 @@ export default function DomainGrid({ domains }: DomainGridProps) {
         onChange={handleFilterChange}
         mobileOpen={mobileFiltersOpen}
         onMobileToggle={() => setMobileFiltersOpen(false)}
-        onClear={() => setFilters({ Category: new Set() })}
+        onClear={() => setFilters({ Category: new Set(), Status: new Set() })}
       />
 
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
@@ -104,7 +121,7 @@ export default function DomainGrid({ domains }: DomainGridProps) {
         <TextField
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search domains..."
+          placeholder="Search applications..."
           fullWidth
           variant="outlined"
           size="small"
@@ -120,29 +137,22 @@ export default function DomainGrid({ domains }: DomainGridProps) {
           }}
         />
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {displayed.length} domains
+          {displayed.length} applications
         </Typography>
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-            gap: 2,
-          }}
-        >
-          {displayed.map((d) => (
-            <DomainCard
-              key={d.domainKey}
-              domainKey={d.domainKey}
-              displayName={d.displayName}
-              color={d.color}
-              notes={d.notes}
-              dataCategory={d.dataCategory}
-              confidentiality={d.confidentiality}
-              owner={d.owner}
-              datasetCount={d.datasetCount}
-            />
-          ))}
-        </Box>
+        {displayed.map((a) => (
+          <ApplicationCard
+            key={a.appKey}
+            appKey={a.appKey}
+            displayName={a.displayName}
+            description={a.description}
+            color={a.color}
+            category={a.category}
+            status={a.status}
+            owner={a.owner}
+            datasetCount={a.datasetCount}
+            fieldCount={a.fieldCount}
+          />
+        ))}
       </Box>
     </Box>
   );

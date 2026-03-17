@@ -50,6 +50,8 @@ from .telemetry.sinks.zmq import ZmqSink
 from .config_ui import routes as config_ui_routes
 from .domains import routes as domain_routes
 from .domains import DomainRegistry, load_domains_from_yaml
+from .applications import routes as application_routes
+from .applications import ApplicationRegistry, load_applications_from_yaml
 from .models import routes as model_routes
 from .models import ModelRegistry, load_models_from_yaml
 from .requests import routes as request_routes
@@ -67,6 +69,9 @@ _domain_registry: DomainRegistry | None = None
 
 # Model registry - global singleton
 _model_registry: ModelRegistry | None = None
+
+# Application registry - global singleton
+_application_registry: ApplicationRegistry | None = None
 
 # Request registry - global singleton
 _request_registry: RequestRegistry | None = None
@@ -955,6 +960,13 @@ async def lifespan(app: FastAPI):
 
     _service.domain_registry = _domain_registry
 
+    _application_registry, applications_yaml_path = bs.build_application_registry()
+    application_routes.configure(
+        application_registry=_application_registry,
+        applications_yaml_path=applications_yaml_path,
+    )
+    logger.info("Application configuration enabled")
+
     if config.config_ui.enabled:
         logger.info(f"Config UI enabled (catalog_file={catalog_definition_path})")
         config_ui_routes.configure(
@@ -1068,6 +1080,7 @@ Resolves monikers (semantic data paths) to source connection info.
         {"name": "Data Fetch", "description": "Server-side data retrieval and metadata"},
         {"name": "Catalog", "description": "Browse and explore the moniker catalog"},
         {"name": "Domains", "description": "Domain governance and configuration"},
+        {"name": "Applications", "description": "Business application tracking and data lineage"},
         {"name": "Models", "description": "Business models/measures that appear across monikers"},
         {"name": "Requests", "description": "Moniker request submission and approval workflow"},
         {"name": "Config", "description": "Catalog configuration management"},
@@ -1084,6 +1097,7 @@ if _static_dir.exists():
 # Mount management sub-routers (fully populated at import time from their own modules)
 app.include_router(config_ui_routes.router)
 app.include_router(domain_routes.router)
+app.include_router(application_routes.router)
 app.include_router(model_routes.router)
 app.include_router(request_routes.router)
 if dashboard_routes:

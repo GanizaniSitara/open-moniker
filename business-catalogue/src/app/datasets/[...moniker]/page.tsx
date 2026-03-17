@@ -15,7 +15,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import SchemaTable from "@/components/SchemaTable";
 import RelatedModels from "@/components/RelatedModels";
 import SourceBadge from "@/components/SourceBadge";
-import { fetchDescribe, fetchDomains, fetchNode, toDotPath } from "@/lib/api-client";
+import { fetchDescribe, fetchDomains, fetchNode, fetchApplicationsForDataset, toDotPath } from "@/lib/api-client";
 import { sanitizeConfig } from "@/lib/sanitize";
 import { getVendors } from "@/lib/vendors";
 import { notFound } from "next/navigation";
@@ -50,6 +50,20 @@ export default async function DatasetDetailPage({ params }: PageProps) {
     } catch {
       // Domain lookup is optional
     }
+  }
+
+  // Look up applications that use this dataset
+  let usedByApps: { key: string; display_name: string; color: string; category: string }[] = [];
+  try {
+    const appsRes = await fetchApplicationsForDataset(monikerPath);
+    usedByApps = appsRes.applications.map((a) => ({
+      key: a.key,
+      display_name: a.display_name,
+      color: a.color,
+      category: a.category,
+    }));
+  } catch {
+    // Application lookup is optional
   }
 
   const isContainer = !desc.has_source_binding;
@@ -402,6 +416,43 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                     sx={{ ml: 1, fontSize: "0.7rem" }}
                   />
                 )}
+              </Paper>
+            )}
+
+            {/* Used by Applications */}
+            {usedByApps.length > 0 && (
+              <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{ mb: 1.5, fontWeight: 600, fontSize: "0.9rem" }}
+                >
+                  Used by
+                </Typography>
+                {usedByApps.map((app) => (
+                  <Box key={app.key} sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+                    <Box
+                      sx={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        bgcolor: app.color,
+                      }}
+                    />
+                    <MuiLink
+                      href={`/applications/${app.key}`}
+                      variant="body2"
+                      sx={{ color: "#005587" }}
+                    >
+                      {app.display_name}
+                    </MuiLink>
+                    <Chip
+                      label={app.category}
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontSize: "0.65rem", height: 18 }}
+                    />
+                  </Box>
+                ))}
               </Paper>
             )}
 
