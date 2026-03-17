@@ -1,0 +1,133 @@
+# Business Applications Configuration
+# Tracks which applications consume or produce datasets and fields
+
+murex:
+  display_name: Murex
+  description: Cross-asset trading and risk management platform
+  category: Trading
+  color: "#8E44AD"
+  status: active
+  owner: trading-tech@firm.com
+  tech_lead: murex-support@firm.com
+  support_channel: "#murex-support"
+  datasets:
+    - "prices.*/*"
+    - "risk.cvar/*/*"
+  fields:
+    - "risk.analytics/dv01"
+    - "risk.analytics/var"
+  documentation_url: https://confluence.firm.com/display/TECH/Murex
+
+risk_engine:
+  display_name: Risk Engine
+  description: Enterprise risk calculation and aggregation engine
+  category: Risk Management
+  color: "#E74C3C"
+  status: active
+  owner: risk-quant@firm.com
+  tech_lead: risk-eng@firm.com
+  support_channel: "#risk-engine"
+  datasets:
+    - "risk.*/*/*"
+    - "prices.equity.*/*"
+  fields:
+    - "risk.analytics/dv01"
+    - "risk.analytics/var"
+    - "risk.analytics/cvar"
+  documentation_url: https://confluence.firm.com/display/TECH/RiskEngine
+
+client_reporting:
+  display_name: Client Reporting
+  description: Automated client-facing reports and performance summaries
+  category: Reporting
+  color: "#3498DB"
+  status: active
+  owner: client-ops@firm.com
+  tech_lead: reporting-dev@firm.com
+  support_channel: "#client-reports"
+  datasets:
+    - "performance.*/*"
+    - "reference.clients/*"
+  fields:
+    - "performance.attribution/alpha"
+  documentation_url: https://confluence.firm.com/display/TECH/ClientReporting
+
+portfolio_manager:
+  display_name: Portfolio Manager
+  description: Portfolio construction, rebalancing, and compliance checks
+  category: Portfolio Management
+  color: "#27AE60"
+  status: active
+  owner: pm-desk@firm.com
+  tech_lead: pm-tech@firm.com
+  support_channel: "#portfolio-mgmt"
+  datasets:
+    - "positions.*/*"
+    - "reference.instruments/*"
+    - "prices.equity.*/*"
+  fields:
+    - "risk.analytics/beta"
+  documentation_url: https://confluence.firm.com/display/TECH/PortfolioManager
+
+compliance_monitor:
+  display_name: Compliance Monitor
+  description: Real-time regulatory and internal compliance surveillance
+  category: Compliance
+  color: "#F39C12"
+  status: active
+  owner: compliance-team@firm.com
+  tech_lead: compliance-dev@firm.com
+  support_channel: "#compliance-alerts"
+  datasets:
+    - "trades.*/*"
+    - "reference.regulations/*"
+  fields: []
+  documentation_url: https://confluence.firm.com/display/TECH/ComplianceMonitor
+
+data_warehouse:
+  display_name: Data Warehouse
+  description: Central data lake for historical analytics and batch processing
+  category: Operations
+  color: "#34495E"
+  status: active
+  owner: data-eng@firm.com
+  tech_lead: dw-admin@firm.com
+  support_channel: "#data-warehouse"
+  datasets:
+    - "prices.*/*/*"
+    - "risk.*/*/*"
+    - "reference.*/*"
+  fields: []
+  documentation_url: https://confluence.firm.com/display/TECH/DataWarehouse
+
+research_portal:
+  display_name: Research Portal
+  description: Quantitative research platform for strategy backtesting
+  category: Research
+  color: "#1ABC9C"
+  status: active
+  owner: quant-research@firm.com
+  tech_lead: research-dev@firm.com
+  support_channel: "#quant-research"
+  datasets:
+    - "prices.*/*/*"
+    - "indices.*/*"
+  fields:
+    - "risk.analytics/sharpe"
+  documentation_url: https://confluence.firm.com/display/TECH/ResearchPortal
+
+settlement_system:
+  display_name: Settlement System
+  description: Post-trade settlement and reconciliation processing
+  category: Operations
+  color: "#9B59B6"
+  status: planned
+  owner: ops-team@firm.com
+  tech_lead: settlement-dev@firm.com
+  support_channel: "#settlement-ops"
+  datasets:
+    - "trades.*/*"
+    - "reference.counterparties/*"
+  fields: []
+  documentation_url: https://confluence.firm.com/display/TECH/SettlementSystem
+  wiki_link: https://wiki.firm.com/Settlement

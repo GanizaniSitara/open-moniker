@@ -114,6 +114,9 @@ def build_application_registry():
     if Path(applications_yaml_path).exists():
         apps = load_applications_from_yaml(applications_yaml_path, registry)
         logger.info("Loaded %d applications from %s", len(apps), applications_yaml_path)
+    elif Path("sample_applications.yaml").exists():
+        apps = load_applications_from_yaml("sample_applications.yaml", registry)
+        logger.info("Loaded %d applications from sample_applications.yaml", len(apps))
     else:
         logger.info(
             "No applications config found at %s, starting with empty registry",
