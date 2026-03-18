@@ -1,6 +1,6 @@
 """Integration tests for mortgages.pools domain.
 
-Tests resolution and data access for MBS pool data.
+Tests resolution for MBS pool data.
 """
 
 import pytest
@@ -41,53 +41,6 @@ class TestMbsResolution:
         )
 
         assert result.node.classification == "confidential"
-
-
-@pytest.mark.mortgages
-@pytest.mark.integration
-class TestMbsData:
-    """Test MBS data from mock Excel adapter."""
-
-    def test_pool_data_structure(self, excel_adapter):
-        """Pool data should have expected columns."""
-        results = excel_adapter.get_pool_data("FNMA", "30Y")
-
-        assert len(results) > 0
-        row = results[0]
-
-        # Required fields
-        assert "POOL_ID" in row
-        assert "AGENCY" in row
-        assert "WAC" in row
-        assert "WAM" in row
-        assert "POOL_FACTOR" in row
-        assert "CPR_1M" in row
-
-    def test_agencies_available(self, excel_adapter):
-        """Should have data for all agencies."""
-        results = excel_adapter.get_pool_data("ALL", "ALL")
-
-        agencies = {r["AGENCY"] for r in results}
-        assert "FNMA" in agencies
-        assert "FHLMC" in agencies
-        assert "GNMA" in agencies
-
-    def test_pool_factor_valid(self, excel_adapter):
-        """Pool factors should be between 0 and 1."""
-        results = excel_adapter.get_pool_data("FNMA", "30Y")
-
-        for row in results:
-            factor = row["POOL_FACTOR"]
-            assert 0 < factor <= 1, f"Invalid pool factor: {factor}"
-
-    def test_prepay_scenarios(self, excel_adapter):
-        """Prepay data should have multiple scenarios."""
-        results = excel_adapter.get_prepay_data("FNMA", "30Y")
-
-        scenarios = {r["SCENARIO"] for r in results}
-        assert "BASE" in scenarios
-        assert "UP100" in scenarios
-        assert "DN100" in scenarios
 
 
 @pytest.mark.mortgages

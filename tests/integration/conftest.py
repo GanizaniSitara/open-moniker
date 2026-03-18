@@ -1,9 +1,6 @@
 """Shared test fixtures for Moniker integration tests.
 
-These fixtures use moniker-data for mock adapters, ensuring tests
-don't have direct access to implementation details.
-
-When running from within open-moniker-svc (development), imports are adjusted
+When running from within open-moniker (development), imports are adjusted
 to use local paths. When installed as packages, uses package imports.
 """
 
@@ -11,25 +8,16 @@ import pytest
 import sys
 from pathlib import Path
 
-# Detect if running from within open-moniker-svc or as installed packages
+# Detect if running from within open-moniker or as installed packages
 _TESTS_DIR = Path(__file__).parent
 _EXTERNAL_DIR = _TESTS_DIR.parent.parent  # external/moniker-tests -> external
-_REPO_ROOT = _EXTERNAL_DIR.parent  # external -> open-moniker-svc
+_REPO_ROOT = _EXTERNAL_DIR.parent  # external -> open-moniker
 _RUNNING_IN_MONOREPO = (_REPO_ROOT / "src" / "moniker_svc").exists()
 
 if _RUNNING_IN_MONOREPO:
     # Add paths for local development
     sys.path.insert(0, str(_REPO_ROOT / "src"))
     sys.path.insert(0, str(_EXTERNAL_DIR / "moniker-data" / "src"))
-
-# Import from moniker-data package
-from moniker_data.adapters import (
-    MockOracleAdapter,
-    MockSnowflakeAdapter,
-    MockRestAdapter,
-    MockExcelAdapter,
-)
-from moniker_data.adapters.oracle import reset_db as reset_oracle_db
 
 # Import from moniker-svc package
 from moniker_svc.cache.memory import InMemoryCache
@@ -127,42 +115,6 @@ def admin_caller() -> CallerIdentity:
         team="admin-team",
         roles=["admin", "data-steward"],
     )
-
-
-# =============================================================================
-# Mock Adapter Fixtures
-# =============================================================================
-
-@pytest.fixture
-def oracle_adapter() -> MockOracleAdapter:
-    """Mock Oracle adapter with CVaR data."""
-    return MockOracleAdapter()
-
-
-@pytest.fixture
-def snowflake_adapter() -> MockSnowflakeAdapter:
-    """Mock Snowflake adapter with govies/rates data."""
-    return MockSnowflakeAdapter()
-
-
-@pytest.fixture
-def rest_adapter() -> MockRestAdapter:
-    """Mock REST adapter with commodities data."""
-    return MockRestAdapter()
-
-
-@pytest.fixture
-def excel_adapter() -> MockExcelAdapter:
-    """Mock Excel adapter with MBS data."""
-    return MockExcelAdapter()
-
-
-@pytest.fixture(autouse=True)
-def reset_mocks():
-    """Reset mock databases before each test."""
-    reset_oracle_db()
-    yield
-    # Cleanup after test if needed
 
 
 # =============================================================================

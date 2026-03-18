@@ -8,7 +8,7 @@ A unified data access layer for enterprise data governance. Canonical identifica
 ┌─────────────────────────────────────────────────────────────────┐
 │  Your Code                                                      │
 │    m = Moniker("prices.equity/AAPL@20260115")                   │
-│    data = m.fetch()                                             │
+│    info = m.resolve()                                            │
 └───────────────────────────┬─────────────────────────────────────┘
                             │ GET /resolve/prices.equity/AAPL@20260115
                             ▼
@@ -58,7 +58,7 @@ A unified data access layer for enterprise data governance. Canonical identifica
 
 ```bash
 # 1. Clone and install
-git clone <repo-url> && cd open-moniker-svc
+git clone <repo-url> && cd open-moniker
 pip install -e .
 pip install -e client/
 
@@ -82,9 +82,6 @@ curl http://localhost:8050/tree
 # Get metadata for a domain
 curl http://localhost:8050/describe/risk.cvar
 
-# Fetch sample data (uses mock Oracle adapter)
-curl http://localhost:8050/sample/risk.cvar
-
 # See all endpoints
 curl http://localhost:8050/
 ```
@@ -97,10 +94,10 @@ from moniker_client import Moniker
 # Create a moniker for AAPL equity prices
 m = Moniker("prices.equity/AAPL")
 
-# Fetch data
-data = m.fetch()
-print(data.columns)           # ['symbol', 'open', 'high', 'low', 'close', 'volume']
-print(data.data)              # [{'symbol': 'AAPL', 'close': 187.50, ...}]
+# Resolve to get connection info
+result = m.resolve()
+print(result.source_type)     # 'snowflake'
+print(result.connection)      # {'account': 'firm.snowflake', ...}
 
 # Get ownership and metadata
 info = m.describe()
@@ -113,10 +110,7 @@ print(lin["path_hierarchy"])                    # ['prices', 'prices.equity', ..
 
 # Historical data with date version
 m_hist = Moniker("prices.equity/AAPL@20260115")
-historical = m_hist.fetch()
-
-# Quick sample
-preview = m.sample(limit=5)
+historical = m_hist.resolve()
 
 # Navigate to children
 m_prices = Moniker("prices.equity")
@@ -135,27 +129,6 @@ $env:PYTHONPATH="$PWD\src;$PWD\client;$PWD\external\moniker-data\src"
 # Run all tests
 python -m pytest tests/ external/moniker-tests/tests/ -v
 ```
-
-## Mock Data Adapters
-
-The `external/moniker-data/` package provides mock adapters for testing without real databases. Example Oracle mock for CVaR risk data:
-
-```python
-# external/moniker-data/src/moniker_data/adapters/oracle.py
-class MockOracleAdapter:
-    """Returns realistic CVaR data from SQLite instead of Oracle."""
-
-    def execute(self, query, params):
-        # Generates test data: portfolios, currencies, securities, dates
-        # with realistic CVaR/VaR values
-        return [
-            {"portfolio_id": "DESK_A", "currency": "USD", "security_id": "AAPL",
-             "cvar_95": -125000.50, "cvar_99": -187500.75, "var_95": -100000.00},
-            ...
-        ]
-```
-
-These mocks will move to a separate `open-moniker-data` repo.
 
 ## Configure Your Own Catalog
 
@@ -196,11 +169,10 @@ risk.cvar:
 ## Project Structure
 
 ```
-open-moniker-svc/
+open-moniker/
 ├── src/moniker_svc/           # FastAPI service
 ├── client/moniker_client/     # Python client library
 ├── external/                  # Will become separate repos
-│   ├── moniker-data/          # Mock adapters for testing
 │   └── moniker-tests/         # Integration tests
 ├── tests/                     # Unit tests
 └── sample_catalog.yaml        # Example catalog definition
@@ -248,9 +220,6 @@ Once deployed, access:
 ```bash
 # Get the tree structure
 curl https://your-app.onrender.com/tree
-
-# Fetch sample data
-curl https://your-app.onrender.com/sample/risk.cvar
 
 # Run tests against deployed instance
 MONIKER_SERVICE_URL=https://your-app.onrender.com python -m pytest external/moniker-tests/tests/ -v

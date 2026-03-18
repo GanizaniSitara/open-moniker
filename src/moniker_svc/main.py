@@ -1,7 +1,6 @@
 """FastAPI application - Moniker Resolution Service.
 
 This service RESOLVES monikers to source connection info.
-It also provides /fetch for server-side query execution.
 """
 
 from __future__ import annotations
@@ -24,12 +23,9 @@ from fastapi.responses import JSONResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .adapters import AdapterRegistry, SnowflakeAdapter, OracleAdapter, MssqlAdapter, RestApiAdapter
-from .adapters.base import InMemoryAdapter
 from .auth import create_composite_authenticator, get_caller_identity, set_authenticator
 from .cache.memory import InMemoryCache
 from .cache.redis import RedisCache
-from .cache.query_refresh import CachedQueryManager, CacheStatus
 from .catalog.registry import CatalogRegistry
 from .catalog.loader import load_catalog
 from .catalog.types import (
@@ -239,26 +235,6 @@ class ErrorResponse(BaseModel):
     detail: str | None = None
 
 
-class FetchResponse(BaseModel):
-    """Response from /fetch - returns actual data from source."""
-    moniker: str
-    path: str
-    source_type: str
-    row_count: int
-    columns: list[str]
-    data: list[dict[str, Any]]
-    truncated: bool = False
-    query_executed: str | None = None
-    execution_time_ms: float | None = None
-    # Cache metadata
-    cached: bool = False
-    cache_status: str | None = None  # fresh, stale, loading
-    cache_age_seconds: float | None = None
-    cache_last_refresh: str | None = None
-    cache_next_refresh: str | None = None
-    cache_message: str | None = None
-
-
 class MetadataResponse(BaseModel):
     """Rich metadata for AI/agent discoverability."""
     moniker: str
@@ -317,9 +293,6 @@ _service: MonikerService | None = None
 _telemetry_task: asyncio.Task | None = None
 _batcher_task: asyncio.Task | None = None
 _redis_cache: RedisCache | None = None
-_cache_manager: CachedQueryManager | None = None
-_cache_refresh_task: asyncio.Task | None = None
-_adapter_registry: AdapterRegistry | None = None
 _catalog_dir: Path | None = None
 
 # Enterprise governance singletons
@@ -338,10 +311,7 @@ def _set_resolver_globals(
     service,
     rate_limiter,
     circuit_breaker,
-    adapter_registry,
-    cache_manager,
     redis_cache,
-    cache_refresh_task,
     telemetry_task,
     batcher_task,
     catalog_dir,
@@ -353,17 +323,14 @@ def _set_resolver_globals(
     handler functions defined here (which close over this module's globals)
     see the correct instances.
     """
-    global _service, _rate_limiter, _circuit_breaker, _adapter_registry
-    global _cache_manager, _redis_cache, _cache_refresh_task
+    global _service, _rate_limiter, _circuit_breaker
+    global _redis_cache
     global _telemetry_task, _batcher_task, _catalog_dir, _config
 
     _service = service
     _rate_limiter = rate_limiter
     _circuit_breaker = circuit_breaker
-    _adapter_registry = adapter_registry
-    _cache_manager = cache_manager
     _redis_cache = redis_cache
-    _cache_refresh_task = cache_refresh_task
     _telemetry_task = telemetry_task
     _batcher_task = batcher_task
     _catalog_dir = catalog_dir
@@ -917,10 +884,10 @@ async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown."""
     from . import _bootstrap as bs
 
-    global _service, _telemetry_task, _batcher_task, _adapter_registry, _catalog_dir
+    global _service, _telemetry_task, _batcher_task, _catalog_dir
     global _rate_limiter, _circuit_breaker
     global _domain_registry, _model_registry, _request_registry
-    global _redis_cache, _cache_manager, _cache_refresh_task, _config
+    global _redis_cache, _config
 
     logger.info("Starting moniker resolution service...")
 
@@ -929,8 +896,6 @@ async def lifespan(app: FastAPI):
 
     catalog, catalog_dir, catalog_definition_path = bs.build_catalog_registry(config, config_path)
     _catalog_dir = catalog_dir
-
-    _adapter_registry = bs.build_adapter_registry(catalog_dir)
 
     cache = bs.build_cache(config)
 
@@ -1004,9 +969,7 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Dashboard enabled")
 
-    _redis_cache, _cache_manager, _cache_refresh_task = await bs.setup_redis_and_cache_manager(
-        config, catalog, _adapter_registry,
-    )
+    _redis_cache = await bs.setup_redis(config)
 
     logger.info("Moniker resolution service started")
 
@@ -1014,16 +977,6 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down moniker resolution service...")
-
-    if _cache_refresh_task:
-        _cache_refresh_task.cancel()
-        try:
-            await _cache_refresh_task
-        except asyncio.CancelledError:
-            pass
-
-    if _cache_manager:
-        await _cache_manager.stop()
 
     if _redis_cache:
         await _redis_cache.close()
@@ -1062,11 +1015,6 @@ Resolves monikers (semantic data paths) to source connection info.
 - **Monikers**: Hierarchical paths to data assets (e.g., `indices/equity/sp500`)
 - **Resolution**: Maps monikers to connection parameters and query templates
 
-## Execution Models
-
-- **Client-side** (`/resolve`): Returns connection info for direct client execution
-- **Server-side** (`/fetch`): Executes queries and returns data directly
-
 ## Documentation
 
 - Swagger UI: `/docs`
@@ -1077,7 +1025,6 @@ Resolves monikers (semantic data paths) to source connection info.
     lifespan=lifespan,
     openapi_tags=[
         {"name": "Resolution", "description": "Resolve monikers to connection info for client-side execution"},
-        {"name": "Data Fetch", "description": "Server-side data retrieval and metadata"},
         {"name": "Catalog", "description": "Browse and explore the moniker catalog"},
         {"name": "Domains", "description": "Domain governance and configuration"},
         {"name": "Applications", "description": "Business application tracking and data lineage"},
@@ -1127,7 +1074,7 @@ async def not_found_error_handler(request: Request, exc: NotFoundError):
     try:
         path = request.url.path
         # Extract moniker path from URL (after /resolve/, /describe/, etc.)
-        for prefix in ["/resolve/", "/describe/", "/list/", "/lineage/", "/fetch/", "/metadata/", "/tree/"]:
+        for prefix in ["/resolve/", "/describe/", "/list/", "/lineage/", "/metadata/", "/tree/"]:
             if path.startswith(prefix):
                 moniker_path = path[len(prefix):]
                 # Resolve effective domain via hierarchy then registry fallback
@@ -1843,233 +1790,7 @@ async def get_audit_log(
     )
 
 
-# =============================================================================
-# DATA FETCH ENDPOINTS - Server-side query execution
-# =============================================================================
-
-@resolver_router.get("/fetch/{path:path}", response_model=FetchResponse, tags=["Data Fetch"])
-async def fetch_data(
-    request: Request,
-    path: str,
-    caller: Annotated[CallerIdentity, Depends(get_caller_identity)],
-    limit: int = Query(default=100, le=10000, description="Max rows to return"),
-    bypass_cache: bool = Query(default=False, description="Skip cache and fetch fresh data"),
-):
-    """
-    Fetch actual data by executing the query server-side.
-
-    Unlike `/resolve` which returns connection info for client-side execution,
-    this endpoint executes the query and returns the data directly.
-
-    **Use cases:**
-    - Small datasets where direct fetch is convenient
-    - AI agents that need data without managing connections
-    - Demos and exploration
-
-    **Caching:**
-    For expensive queries with cache enabled, results are served from Redis cache.
-    The response includes cache metadata (status, age, last refresh time).
-    Use `bypass_cache=true` to force a fresh fetch.
-
-    For large datasets, use /resolve and execute client-side.
-    """
-    import time
-    if not _service:
-        raise HTTPException(status_code=503, detail="Service not initialized")
-
-    # Get full path from request URL (preserves unencoded slashes)
-    full_path = request.url.path
-    if full_path.startswith("/fetch/"):
-        path = full_path[7:]  # Strip "/fetch/"
-
-    moniker_str = f"moniker://{path}"
-    start_time = time.time()
-
-    # Check if this path has a cached result
-    if _cache_manager and _cache_manager.is_registered(path) and not bypass_cache:
-        cached_result = await _cache_manager.get_cached_result(path)
-
-        # Handle loading state - return 202 Accepted with message
-        if cached_result.status == CacheStatus.LOADING:
-            # For loading state, we return a special response
-            # The client should retry after a short delay
-            return JSONResponse(
-                status_code=202,
-                content={
-                    "moniker": moniker_str,
-                    "path": path,
-                    "source_type": "unknown",
-                    "row_count": 0,
-                    "columns": [],
-                    "data": [],
-                    "truncated": False,
-                    "cached": False,
-                    "cache_status": "loading",
-                    "cache_message": cached_result.message or "Data is loading, please retry shortly",
-                },
-            )
-
-        # For fresh or stale data, return the cached result
-        if cached_result.data is not None:
-            data = cached_result.data
-            columns = cached_result.columns or (list(data[0].keys()) if data else [])
-
-            # Apply limit
-            truncated = len(data) > limit
-            data = data[:limit]
-
-            # Resolve to get source type
-            result = await _service.resolve(moniker_str, caller)
-
-            return FetchResponse(
-                moniker=moniker_str,
-                path=path,
-                source_type=result.source.source_type,
-                row_count=len(data),
-                columns=columns,
-                data=data,
-                truncated=truncated,
-                query_executed=result.source.query,
-                execution_time_ms=round((time.time() - start_time) * 1000, 2),
-                cached=True,
-                cache_status=cached_result.status.value,
-                cache_age_seconds=round(cached_result.cache_age_seconds, 1) if cached_result.cache_age_seconds else None,
-                cache_last_refresh=cached_result.last_refresh.isoformat() if cached_result.last_refresh else None,
-                cache_next_refresh=cached_result.next_refresh.isoformat() if cached_result.next_refresh else None,
-                cache_message=cached_result.message,
-            )
-
-    # Not cached or bypassing cache - fetch directly
-    result = await _service.resolve(moniker_str, caller)
-
-    # Execute the query using the appropriate adapter from the registry
-    data = []
-    columns = []
-
-    try:
-        # Get the node with source binding to pass to adapter
-        binding_node = _service.catalog.get(result.binding_path)
-        if not binding_node or not binding_node.source_binding:
-            raise HTTPException(
-                status_code=500,
-                detail=f"No source binding found at {result.binding_path}"
-            )
-
-        binding = binding_node.source_binding
-
-        # Check if we have an adapter for this source type
-        # FRED and YFINANCE use the REST adapter under the hood
-        adapter_type = binding.source_type
-        if adapter_type in (SourceType.FRED, SourceType.YFINANCE) and not _adapter_registry.has(adapter_type):
-            adapter_type = SourceType.REST
-
-        if _adapter_registry and _adapter_registry.has(adapter_type):
-            adapter = _adapter_registry.get(adapter_type)
-            moniker = parse_moniker(moniker_str)
-            adapter_result = await adapter.fetch(moniker, binding, result.sub_path)
-            data = adapter_result.data if isinstance(adapter_result.data, list) else [adapter_result.data]
-            columns = adapter_result.metadata.get("columns", [])
-            if not columns and data and isinstance(data[0], dict):
-                columns = list(data[0].keys())
-        else:
-            raise HTTPException(
-                status_code=501,
-                detail=f"No adapter available for source type: {binding.source_type}. "
-                       f"Install the appropriate driver package."
-            )
-    except ImportError as e:
-        raise HTTPException(
-            status_code=501,
-            detail=f"Database driver not installed: {e}. "
-                   f"Install the appropriate driver package for {result.source.source_type}."
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error fetching {path}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error executing query: {e}"
-        )
-
-    # Apply limit and track truncation
-    truncated = len(data) > limit
-    data = data[:limit]
-
-    # Extract columns from first row if not already set
-    if not columns and data and isinstance(data[0], dict):
-        columns = list(data[0].keys())
-
-    execution_time = (time.time() - start_time) * 1000
-
-    return FetchResponse(
-        moniker=moniker_str,
-        path=result.path,
-        source_type=result.source.source_type,
-        row_count=len(data),
-        columns=columns,
-        data=data,
-        truncated=truncated,
-        query_executed=result.source.query,
-        execution_time_ms=round(execution_time, 2),
-        cached=False,
-    )
-
-
-# =============================================================================
-# CACHE STATUS ENDPOINTS
-# =============================================================================
-
-@resolver_router.get("/cache/status", tags=["Data Fetch"])
-async def cache_status():
-    """
-    Get status of all cached queries.
-
-    Shows:
-    - All registered cached queries
-    - Last refresh time and next scheduled refresh
-    - Cache age and row count
-    - Any errors from last refresh attempt
-    - Redis connection health
-    """
-    if not _cache_manager:
-        return {
-            "enabled": False,
-            "message": "Redis caching not configured or not connected",
-        }
-
-    return await _cache_manager.get_detailed_status()
-
-
-@resolver_router.post("/cache/refresh/{path:path}", tags=["Data Fetch"])
-async def trigger_cache_refresh(path: str):
-    """
-    Manually trigger a cache refresh for a specific path.
-
-    This is useful for forcing an immediate refresh outside
-    the normal schedule.
-    """
-    if not _cache_manager:
-        raise HTTPException(
-            status_code=503,
-            detail="Redis caching not configured or not connected",
-        )
-
-    if not _cache_manager.is_registered(path):
-        raise HTTPException(
-            status_code=404,
-            detail=f"Path '{path}' is not registered for caching",
-        )
-
-    success = await _cache_manager.trigger_refresh(path)
-
-    if success:
-        return {"status": "refreshed", "path": path}
-    else:
-        return {"status": "refresh_in_progress", "path": path}
-
-
-@resolver_router.get("/metadata/{path:path}", response_model=MetadataResponse, tags=["Data Fetch"])
+@resolver_router.get("/metadata/{path:path}", response_model=MetadataResponse, tags=["Resolution"])
 async def get_metadata(
     request: Request,
     path: str,

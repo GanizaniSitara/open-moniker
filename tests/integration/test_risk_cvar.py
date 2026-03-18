@@ -1,6 +1,6 @@
 """Integration tests for risk.cvar Oracle domain.
 
-Tests the full flow: moniker resolution → query generation → ALL operators.
+Tests the full flow: moniker resolution -> query generation -> ALL operators.
 """
 
 import pytest
@@ -13,13 +13,11 @@ from moniker_svc.service import MonikerService, AccessDeniedError
 from moniker_svc.telemetry.emitter import TelemetryEmitter
 from moniker_svc.telemetry.events import CallerIdentity
 
-from tests.mocks.oracle_risk_mock import execute_query, reset_mock_oracle_db
-
 
 @pytest.fixture
 def catalog_registry():
     """Load the sample catalog with risk.cvar domain."""
-    catalog_path = Path(__file__).parent.parent / "sample_catalog.yaml"
+    catalog_path = Path(__file__).parent.parent.parent / "sample_catalog.yaml"
     return load_catalog(str(catalog_path))
 
 
@@ -46,12 +44,6 @@ def caller():
         app_id="test-app",
         team="test-team",
     )
-
-
-@pytest.fixture(autouse=True)
-def reset_mock_db():
-    """Reset mock database before each test."""
-    reset_mock_oracle_db()
 
 
 class TestRiskCvarResolution:
@@ -133,78 +125,6 @@ class TestRiskCvarResolution:
         assert result.ownership.accountable_owner == "risk-governance@firm.com"
         assert result.ownership.data_specialist == "risk-quant@firm.com"
         assert result.ownership.support_channel == "#risk-analytics"
-
-
-class TestRiskCvarQueryExecution:
-    """Test query execution against mock Oracle."""
-
-    def test_mock_query_specific_portfolio(self):
-        """Test query against mock database for specific portfolio."""
-        query = """
-            SELECT asof_date, port_no, port_type, ssm_id, base_currency, cvar
-            FROM te_stress_tail_risk_pnl
-            WHERE ('758-A' = 'ALL' OR port_no || '-' || port_type = '758-A')
-              AND ('USD' = 'ALL' OR base_currency = 'USD')
-              AND ('ALL' = 'ALL' OR ssm_id = 'ALL')
-            ORDER BY asof_date DESC
-            LIMIT 10
-        """
-        results = execute_query(query)
-
-        assert len(results) > 0
-        for row in results:
-            assert row["PORT_NO"] == "758"
-            assert row["PORT_TYPE"] == "A"
-            assert row["BASE_CURRENCY"] == "USD"
-
-    def test_mock_query_all_portfolios(self):
-        """Test query with ALL on portfolio dimension."""
-        query = """
-            SELECT DISTINCT port_no, port_type
-            FROM te_stress_tail_risk_pnl
-            WHERE ('ALL' = 'ALL' OR port_no || '-' || port_type = 'ALL')
-              AND ('USD' = 'ALL' OR base_currency = 'USD')
-              AND ('ALL' = 'ALL' OR ssm_id = 'ALL')
-        """
-        results = execute_query(query)
-
-        # Should have multiple portfolios
-        portfolios = {(r["PORT_NO"], r["PORT_TYPE"]) for r in results}
-        assert len(portfolios) > 1
-
-    def test_mock_query_specific_security(self):
-        """Test query for specific security across all portfolios."""
-        query = """
-            SELECT asof_date, port_no, port_type, ssm_id, base_currency, cvar
-            FROM te_stress_tail_risk_pnl
-            WHERE ('ALL' = 'ALL' OR port_no || '-' || port_type = 'ALL')
-              AND ('ALL' = 'ALL' OR base_currency = 'ALL')
-              AND ('B0YHY8V7' = 'ALL' OR ssm_id = 'B0YHY8V7')
-            ORDER BY asof_date DESC
-            LIMIT 10
-        """
-        results = execute_query(query)
-
-        for row in results:
-            assert row["SSM_ID"] == "B0YHY8V7"
-
-    def test_mock_query_timeseries_returned(self):
-        """Test that full timeseries history is returned."""
-        query = """
-            SELECT DISTINCT asof_date
-            FROM te_stress_tail_risk_pnl
-            WHERE ('758-A' = 'ALL' OR port_no || '-' || port_type = '758-A')
-              AND ('USD' = 'ALL' OR base_currency = 'USD')
-              AND ('ALL' = 'ALL' OR ssm_id = 'ALL')
-            ORDER BY asof_date
-        """
-        results = execute_query(query)
-
-        # Should have multiple dates (timeseries)
-        dates = [r["ASOF_DATE"] for r in results]
-        assert len(dates) > 1
-        # Dates should be in order
-        assert dates == sorted(dates)
 
 
 class TestRiskCvarCatalogStructure:

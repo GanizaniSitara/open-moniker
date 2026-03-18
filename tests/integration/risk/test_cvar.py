@@ -1,6 +1,6 @@
 """Integration tests for risk.cvar domain.
 
-Tests the full resolution flow using mock Oracle data from moniker-data.
+Tests the full resolution flow.
 These tests validate CONTRACT behavior, not implementation details.
 """
 
@@ -103,52 +103,3 @@ class TestCvarAccessPolicy:
         error_msg = str(exc_info.value)
         # Should mention the scale of data
         assert "billion" in error_msg.lower() or "cvar" in error_msg.lower()
-
-
-@pytest.mark.risk
-@pytest.mark.integration
-class TestCvarQueryExecution:
-    """Test query execution against mock Oracle data."""
-
-    def test_query_returns_data(self, oracle_adapter):
-        """Mock Oracle should return realistic data."""
-        query = """
-            SELECT asof_date, port_no, port_type, ssm_id, base_currency, cvar
-            FROM te_stress_tail_risk_pnl
-            WHERE port_no = '758' AND port_type = 'A'
-            AND base_currency = 'USD'
-            LIMIT 10
-        """
-        results = oracle_adapter.execute(query)
-
-        assert len(results) > 0
-        for row in results:
-            assert row["PORT_NO"] == "758"
-            assert row["PORT_TYPE"] == "A"
-            assert row["BASE_CURRENCY"] == "USD"
-
-    def test_query_filters_work(self, oracle_adapter):
-        """Query filters should correctly subset data."""
-        # Query for specific security
-        query = """
-            SELECT DISTINCT ssm_id
-            FROM te_stress_tail_risk_pnl
-            WHERE ssm_id = 'B0YHY8V7'
-        """
-        results = oracle_adapter.execute(query)
-
-        for row in results:
-            assert row["SSM_ID"] == "B0YHY8V7"
-
-    def test_timeseries_data(self, oracle_adapter):
-        """Data should include timeseries (multiple dates)."""
-        query = """
-            SELECT DISTINCT asof_date
-            FROM te_stress_tail_risk_pnl
-            ORDER BY asof_date
-            LIMIT 30
-        """
-        results = oracle_adapter.execute(query)
-
-        # Should have multiple dates
-        assert len(results) > 1

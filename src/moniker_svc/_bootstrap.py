@@ -7,7 +7,6 @@ in sync.
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 from pathlib import Path
@@ -123,24 +122,6 @@ def build_application_registry():
             applications_yaml_path,
         )
     return registry, applications_yaml_path
-
-
-# ---------------------------------------------------------------------------
-# Adapter registry
-# ---------------------------------------------------------------------------
-
-def build_adapter_registry(catalog_dir: Path):
-    """Build and register all data-source adapters."""
-    from .adapters import AdapterRegistry, SnowflakeAdapter, OracleAdapter, MssqlAdapter
-    from .adapters.base import InMemoryAdapter
-
-    registry = AdapterRegistry()
-    registry.register(SnowflakeAdapter(catalog_dir=catalog_dir))
-    registry.register(OracleAdapter(catalog_dir=catalog_dir))
-    registry.register(MssqlAdapter(catalog_dir=catalog_dir))
-    registry.register(InMemoryAdapter())
-    logger.info("Registered adapters: %s", [t.value for t in registry.all_types()])
-    return registry
 
 
 # ---------------------------------------------------------------------------
@@ -319,76 +300,19 @@ def build_request_registry(config):
 
 
 # ---------------------------------------------------------------------------
-# Redis cache + query refresh manager
+# Redis cache
 # ---------------------------------------------------------------------------
 
-async def setup_redis_and_cache_manager(config, catalog, adapter_registry):
-    """Connect to Redis and register all catalog nodes that have caching enabled.
+async def setup_redis(config):
+    """Connect to Redis and return the cache handle.
 
-    Returns ``(redis_cache, cache_manager, cache_refresh_task)``.  If Redis is
-    unavailable, ``cache_manager`` and ``cache_refresh_task`` are both ``None``.
+    Returns a ``RedisCache`` instance (connected if Redis is reachable).
     """
     from .cache.redis import RedisCache
-    from .cache.query_refresh import CachedQueryManager
-    from .moniker.parser import parse_moniker
 
     redis_cache = RedisCache(config.redis)
     redis_connected = await redis_cache.connect()
 
     if not redis_connected:
-        logger.info("Redis not available, cached queries disabled")
-        return redis_cache, None, None
-
-    cache_manager = CachedQueryManager(redis_cache=redis_cache)
-    cached_count = 0
-
-    for node in catalog.all_nodes():
-        if (
-            node.source_binding
-            and node.source_binding.cache
-            and node.source_binding.cache.enabled
-        ):
-            async def make_fetch_fn(path: str, binding):
-                async def fetch_fn():
-                    data: list = []
-                    columns: list = []
-                    try:
-                        if adapter_registry and adapter_registry.has(binding.source_type):
-                            adapter = adapter_registry.get(binding.source_type)
-                            moniker = parse_moniker(f"moniker://{path}")
-                            result = await adapter.fetch(moniker, binding)
-                            data = result.data if isinstance(result.data, list) else [result.data]
-                            columns = result.metadata.get("columns", [])
-                            if not columns and data:
-                                columns = list(data[0].keys()) if isinstance(data[0], dict) else []
-                        else:
-                            logger.warning("No adapter for source type: %s", binding.source_type)
-                    except ImportError as e:
-                        logger.warning("Driver not available for %s: %s", path, e)
-                    except Exception as e:
-                        logger.error("Error fetching %s: %s", path, e)
-                        raise
-                    return data, columns
-                return fetch_fn
-
-            fetch_fn = await make_fetch_fn(node.path, node.source_binding)
-            cache_manager.register(
-                path=node.path,
-                cache_config=node.source_binding.cache,
-                fetch_fn=fetch_fn,
-            )
-            cached_count += 1
-
-    if cached_count > 0:
-        logger.info("Registered %d cached queries", cached_count)
-        startup_results = await cache_manager.refresh_all_startup()
-        success_count = sum(1 for v in startup_results.values() if v)
-        logger.info(
-            "Startup refresh: %d/%d queries refreshed",
-            success_count,
-            len(startup_results),
-        )
-        cache_refresh_task = asyncio.create_task(cache_manager.refresh_loop())
-        return redis_cache, cache_manager, cache_refresh_task
-
-    return redis_cache, cache_manager, None
+        logger.info("Redis not available")
+    return redis_cache

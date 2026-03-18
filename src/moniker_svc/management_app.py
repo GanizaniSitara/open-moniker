@@ -11,9 +11,9 @@ This process serves only the management/control-plane endpoints:
 - /dashboard/* — observability dashboard
 - GET /        — landing page
 
-It does NOT initialise AdapterRegistry, InMemoryCache, RateLimiter,
-TelemetryEmitter, or the cached-query refresh loop.  Resolver endpoints
-(/resolve/*, /fetch/*, /catalog, /tree, /health, etc.) are absent — requests
+It does NOT initialise InMemoryCache, RateLimiter,
+TelemetryEmitter, or Redis.  Resolver endpoints
+(/resolve/*, /catalog, /tree, /health, etc.) are absent — requests
 to those paths return 404.
 """
 from __future__ import annotations
@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Management-only startup (no adapters, no telemetry, no cache)."""
+    """Management-only startup (no telemetry, no cache)."""
     logger.info("Starting management service...")
 
     config, config_path = bs.load_config()
@@ -110,7 +110,7 @@ app = FastAPI(
     title="Moniker Management",
     description=(
         "Control-plane service.  Low-traffic, write-heavy.\n\n"
-        "Resolver endpoints (`/resolve/*`, `/fetch/*`, `/health`, etc.) "
+        "Resolver endpoints (`/resolve/*`, `/health`, etc.) "
         "are not present on this process — use the resolver service on port 8051."
     ),
     version="0.2.0",

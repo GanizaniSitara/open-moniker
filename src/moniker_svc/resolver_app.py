@@ -5,11 +5,10 @@ Start with:
 
 This process serves only the data-plane endpoints:
 - /resolve, /describe, /lineage, /list
-- /fetch, /metadata
+- /metadata
 - /catalog, /catalog/search, /catalog/stats
 - /tree, /tree/{path}
 - /catalog/{path}/status, /catalog/{path}/audit
-- /cache/status, /cache/refresh/{path}
 - /telemetry/access
 - /health
 - /ui
@@ -53,7 +52,6 @@ async def lifespan(app: FastAPI):
 
     catalog, catalog_dir, _catalog_definition_path = bs.build_catalog_registry(config, config_path)
     domains, _domains_yaml_path = bs.build_domain_registry()
-    adapter_registry = bs.build_adapter_registry(catalog_dir)
     cache = bs.build_cache(config)
 
     emitter, batcher = await bs.build_telemetry(config)
@@ -73,9 +71,7 @@ async def lifespan(app: FastAPI):
 
     bs.configure_auth(config)
 
-    redis_cache, cache_manager, cache_refresh_task = await bs.setup_redis_and_cache_manager(
-        config, catalog, adapter_registry,
-    )
+    redis_cache = await bs.setup_redis(config)
 
     # Wire the globals that the route handlers in main.py read.
     # The handlers are functions defined in main.py; they close over that
@@ -85,10 +81,7 @@ async def lifespan(app: FastAPI):
         service=service,
         rate_limiter=rate_limiter,
         circuit_breaker=circuit_breaker,
-        adapter_registry=adapter_registry,
-        cache_manager=cache_manager,
         redis_cache=redis_cache,
-        cache_refresh_task=cache_refresh_task,
         telemetry_task=telemetry_task,
         batcher_task=batcher_task,
         catalog_dir=catalog_dir,
@@ -104,16 +97,6 @@ async def lifespan(app: FastAPI):
     # Shutdown
     # ------------------------------------------------------------------
     logger.info("Shutting down resolver service...")
-
-    if cache_refresh_task:
-        cache_refresh_task.cancel()
-        try:
-            await cache_refresh_task
-        except asyncio.CancelledError:
-            pass
-
-    if cache_manager:
-        await cache_manager.stop()
 
     if redis_cache:
         await redis_cache.close()
@@ -143,7 +126,6 @@ app = FastAPI(
     lifespan=lifespan,
     openapi_tags=[
         {"name": "Resolution", "description": "Resolve monikers to connection info for client-side execution"},
-        {"name": "Data Fetch", "description": "Server-side data retrieval and metadata"},
         {"name": "Catalog", "description": "Browse and explore the moniker catalog"},
         {"name": "Telemetry", "description": "Access tracking and reporting"},
         {"name": "Health", "description": "Service health and diagnostics"},
@@ -176,7 +158,7 @@ async def not_found_error_handler(request: Request, exc: NotFoundError):
     content = {"error": "Not found", "detail": str(exc)}
     try:
         path = request.url.path
-        for prefix in ["/resolve/", "/describe/", "/list/", "/lineage/", "/fetch/", "/metadata/", "/tree/"]:
+        for prefix in ["/resolve/", "/describe/", "/list/", "/lineage/", "/metadata/", "/tree/"]:
             if path.startswith(prefix):
                 moniker_path = path[len(prefix):]
                 first_segment = moniker_path.split("/")[0].split(".")[0]
