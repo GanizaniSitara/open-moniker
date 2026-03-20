@@ -340,15 +340,14 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                 Maturity
               </Typography>
               <Chip
-                label={(desc.maturity || "catalogued").charAt(0).toUpperCase() + (desc.maturity || "catalogued").slice(1)}
-                size="small"
-                color={
-                  desc.maturity === "certified"
-                    ? "success"
-                    : desc.maturity === "governed"
-                    ? "primary"
-                    : "default"
+                label={
+                  desc.maturity === "certified" ? "🥇 Certified"
+                    : desc.maturity === "governed" ? "🥈 Governed"
+                    : "🥉 Catalogued"
                 }
+                size="small"
+                variant="outlined"
+                sx={{ fontWeight: 600, border: "none" }}
               />
             </Paper>
 

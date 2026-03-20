@@ -103,7 +103,7 @@ export default function CatalogBrowser() {
         label: "Maturity",
         options: [...maturityCounts.entries()]
           .sort((a, b) => b[1] - a[1])
-          .map(([v, c]) => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1), count: c })),
+          .map(([v, c]) => ({ value: v, label: v === "certified" ? "🥇 Certified" : v === "governed" ? "🥈 Governed" : "🥉 Catalogued", count: c })),
       },
     ];
   }, [searchFiltered]);

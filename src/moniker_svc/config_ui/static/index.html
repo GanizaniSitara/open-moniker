@@ -1744,6 +1744,14 @@
                                     <option value="restricted" ${node.classification === 'restricted' ? 'selected' : ''}>Restricted</option>
                                 </select>
                             </div>
+                            <div class="form-row">
+                                <label for="maturity">Maturity</label>
+                                <select id="maturity">
+                                    <option value="catalogued" ${(node.maturity || 'catalogued') === 'catalogued' ? 'selected' : ''}>🥉 Catalogued</option>
+                                    <option value="governed" ${node.maturity === 'governed' ? 'selected' : ''}>🥈 Governed</option>
+                                    <option value="certified" ${node.maturity === 'certified' ? 'selected' : ''}>🥇 Certified</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="form-row">
                             <label for="description">Description</label>
@@ -2246,6 +2254,7 @@
                 display_name: document.getElementById('display_name')?.value || '',
                 description: document.getElementById('description')?.value || '',
                 classification: document.getElementById('classification')?.value || 'internal',
+                maturity: document.getElementById('maturity')?.value || 'catalogued',
                 tags: collectTags(),
             };
 

@@ -16,7 +16,7 @@ from ..catalog.registry import CatalogRegistry
 from ..catalog.serializer import CatalogSerializer
 from ..catalog.types import (
     AccessPolicy, CatalogNode, ColumnSchema, DataQuality, DataSchema,
-    Documentation, Freshness, Ownership, SLA, SourceBinding, SourceType,
+    Documentation, Freshness, Maturity, Ownership, SLA, SourceBinding, SourceType,
 )
 from .models import (
     CatalogNodeModel,
@@ -203,6 +203,7 @@ def _request_to_node(path: str, request: CreateNodeRequest | UpdateNodeRequest, 
         ownership = _model_to_ownership(request.ownership) if request.ownership is not None else existing.ownership
         source_binding = _model_to_source_binding(request.source_binding) if request.source_binding is not None else existing.source_binding
         classification = request.classification if request.classification is not None else existing.classification
+        maturity = Maturity(request.maturity) if request.maturity is not None else existing.maturity
         tags = frozenset(request.tags) if request.tags is not None else existing.tags
         metadata = request.metadata if request.metadata is not None else existing.metadata
     else:
@@ -214,6 +215,7 @@ def _request_to_node(path: str, request: CreateNodeRequest | UpdateNodeRequest, 
         ownership = _model_to_ownership(request.ownership)
         source_binding = _model_to_source_binding(request.source_binding)
         classification = request.classification if hasattr(request, 'classification') else "internal"
+        maturity = Maturity(request.maturity) if hasattr(request, 'maturity') and request.maturity else Maturity.CATALOGUED
         tags = frozenset(request.tags) if request.tags else frozenset()
         metadata = request.metadata if request.metadata else {}
 
@@ -226,6 +228,7 @@ def _request_to_node(path: str, request: CreateNodeRequest | UpdateNodeRequest, 
         ownership=ownership,
         source_binding=source_binding,
         classification=classification,
+        maturity=maturity,
         tags=tags,
         metadata=metadata,
         is_leaf=source_binding is not None,

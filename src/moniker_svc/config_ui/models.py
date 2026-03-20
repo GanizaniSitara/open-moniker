@@ -226,6 +226,7 @@ class CreateNodeRequest(BaseModel):
     access_policy: AccessPolicyModel | None = None
     documentation: DocumentationModel | None = None
     classification: str = "internal"
+    maturity: str = "catalogued"
     tags: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -247,6 +248,7 @@ class UpdateNodeRequest(BaseModel):
     access_policy: AccessPolicyModel | None = None
     documentation: DocumentationModel | None = None
     classification: str | None = None
+    maturity: str | None = None
     tags: list[str] | None = None
     metadata: dict[str, Any] | None = None
 

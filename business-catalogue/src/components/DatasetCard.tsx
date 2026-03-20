@@ -84,19 +84,18 @@ export default function DatasetCard({
               }}
             />
           )}
-          {maturity && maturity !== "catalogued" && (
+          {maturity && (
             <Chip
-              label={maturity}
+              label={maturity === "certified" ? "🥇 Certified" : maturity === "governed" ? "🥈 Governed" : "🥉 Catalogued"}
               size="small"
+              variant="outlined"
               sx={{
                 ml: 0.5,
                 fontSize: "0.7rem",
                 height: 22,
                 flexShrink: 0,
-                bgcolor: maturity === "certified" ? "#4caf50" : "#1976d2",
-                color: "white",
                 fontWeight: 600,
-                textTransform: "capitalize",
+                border: "none",
               }}
             />
           )}
