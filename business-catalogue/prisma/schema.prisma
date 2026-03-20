@@ -1,0 +1,115 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("CONTRIBUTIONS_DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Flag {
+  id          String    @id @default(uuid())
+  entityType  String    @map("entity_type")
+  entityKey   String    @map("entity_key")
+  flagType    String    @map("flag_type")
+  comment     String?
+  author      String
+  status      String    @default("open")
+  resolvedBy  String?   @map("resolved_by")
+  resolvedAt  DateTime? @map("resolved_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([entityType, entityKey])
+  @@index([status])
+  @@map("flags")
+}
+
+model Suggestion {
+  id            String    @id @default(uuid())
+  entityType    String    @map("entity_type")
+  entityKey     String    @map("entity_key")
+  fieldName     String    @map("field_name")
+  currentValue  String?   @map("current_value")
+  proposedValue String    @map("proposed_value")
+  reason        String?
+  author        String
+  status        String    @default("pending")
+  reviewedBy    String?   @map("reviewed_by")
+  reviewComment String?   @map("review_comment")
+  reviewedAt    DateTime? @map("reviewed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([entityType, entityKey])
+  @@index([status])
+  @@map("suggestions")
+}
+
+model Annotation {
+  id             String           @id @default(uuid())
+  entityType     String           @map("entity_type")
+  entityKey      String           @map("entity_key")
+  annotationType String           @map("annotation_type")
+  content        String
+  author         String
+  upvoteCount    Int              @default(0) @map("upvote_count")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  votes          AnnotationVote[]
+
+  @@index([entityType, entityKey])
+  @@map("annotations")
+}
+
+model AnnotationVote {
+  id           String     @id @default(uuid())
+  annotationId String     @map("annotation_id")
+  voter        String
+  createdAt    DateTime   @default(now()) @map("created_at")
+  annotation   Annotation @relation(fields: [annotationId], references: [id], onDelete: Cascade)
+
+  @@unique([annotationId, voter])
+  @@map("annotation_votes")
+}
+
+model Discussion {
+  id         String            @id @default(uuid())
+  entityType String            @map("entity_type")
+  entityKey  String            @map("entity_key")
+  title      String
+  author     String
+  createdAt  DateTime          @default(now()) @map("created_at")
+  updatedAt  DateTime          @updatedAt @map("updated_at")
+  replies    DiscussionReply[]
+
+  @@index([entityType, entityKey])
+  @@map("discussions")
+}
+
+model DiscussionReply {
+  id            String     @id @default(uuid())
+  discussionId  String     @map("discussion_id")
+  parentReplyId String?    @map("parent_reply_id")
+  content       String
+  author        String
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  discussion    Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+
+  @@index([discussionId])
+  @@map("discussion_replies")
+}
+
+model HelpfulVote {
+  id         String   @id @default(uuid())
+  entityType String   @map("entity_type")
+  entityKey  String   @map("entity_key")
+  helpful    Boolean
+  comment    String?
+  author     String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityKey])
+  @@map("helpful_votes")
+}

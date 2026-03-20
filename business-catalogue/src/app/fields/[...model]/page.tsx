@@ -8,6 +8,10 @@ import {
 } from "@mui/material";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import AppearsInTable from "@/components/AppearsInTable";
+import TrustIndicator from "@/components/contributions/TrustIndicator";
+import SidebarToggle from "@/components/contributions/SidebarToggle";
+import SuggestEditButton from "@/components/contributions/SuggestEditButton";
+import HelpfulVote from "@/components/contributions/HelpfulVote";
 import { fetchModel, fetchNodes, toSlashPath } from "@/lib/api-client";
 import { notFound } from "next/navigation";
 
@@ -98,9 +102,13 @@ export default async function FieldDetailPage({ params }: PageProps) {
       <Container maxWidth="lg" sx={{ py: 3 }}>
         {/* Header */}
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" sx={{ mb: 1, color: "#022D5E" }}>
-            {model.display_name}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+            <TrustIndicator entityType="field" entityKey={path} />
+            <Typography variant="h4" sx={{ color: "#022D5E" }}>
+              {model.display_name}
+            </Typography>
+            <SidebarToggle entityType="field" entityKey={path} />
+          </Box>
           <Typography
             variant="body2"
             color="text.secondary"
@@ -109,10 +117,20 @@ export default async function FieldDetailPage({ params }: PageProps) {
             {model.path}
           </Typography>
           {model.description && (
-            <Typography variant="body1" sx={{ mb: 2, color: "#53565A" }}>
+            <Typography variant="body1" sx={{ mb: 1, color: "#53565A" }}>
               {model.description}
             </Typography>
           )}
+          <SuggestEditButton
+            entityType="field"
+            entityKey={path}
+            fields={[
+              { name: "description", label: "Description", currentValue: model.description },
+              { name: "formula", label: "Formula", currentValue: model.formula },
+              { name: "unit", label: "Unit", currentValue: model.unit },
+              { name: "data_type", label: "Data Type", currentValue: model.data_type },
+            ]}
+          />
 
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>
             {model.formula && (
@@ -363,6 +381,8 @@ export default async function FieldDetailPage({ params }: PageProps) {
             ))}
           </Paper>
         )}
+
+        <HelpfulVote entityType="field" entityKey={path} />
       </Container>
     </>
   );

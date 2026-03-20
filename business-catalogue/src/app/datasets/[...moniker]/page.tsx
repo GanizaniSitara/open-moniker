@@ -15,6 +15,10 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import SchemaTable from "@/components/SchemaTable";
 import RelatedModels from "@/components/RelatedModels";
 import SourceBadge from "@/components/SourceBadge";
+import TrustIndicator from "@/components/contributions/TrustIndicator";
+import SidebarToggle from "@/components/contributions/SidebarToggle";
+import SuggestEditButton from "@/components/contributions/SuggestEditButton";
+import HelpfulVote from "@/components/contributions/HelpfulVote";
 import { fetchDescribe, fetchDomains, fetchNode, fetchApplicationsForDataset, toDotPath } from "@/lib/api-client";
 import { sanitizeConfig } from "@/lib/sanitize";
 import { getVendors } from "@/lib/vendors";
@@ -103,6 +107,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
           <Box
             sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}
           >
+            <TrustIndicator entityType="dataset" entityKey={monikerPath} />
             <Typography variant="h4" sx={{ color: "#022D5E" }}>
               {desc.display_name || monikerPath}
             </Typography>
@@ -110,6 +115,7 @@ export default async function DatasetDetailPage({ params }: PageProps) {
             {isContainer && (
               <Chip label="Container" size="small" variant="outlined" />
             )}
+            <SidebarToggle entityType="dataset" entityKey={monikerPath} />
           </Box>
           <Typography
             variant="body2"
@@ -138,6 +144,17 @@ export default async function DatasetDetailPage({ params }: PageProps) {
               </Typography>
             </Box>
           )}
+          <SuggestEditButton
+            entityType="dataset"
+            entityKey={monikerPath}
+            fields={[
+              { name: "description", label: "Description", currentValue: desc.description },
+              { name: "display_name", label: "Display Name", currentValue: desc.display_name },
+              { name: "owner", label: "Owner", currentValue: ownership?.accountable_owner },
+              { name: "classification", label: "Classification", currentValue: desc.classification },
+              { name: "maturity", label: "Maturity", currentValue: desc.maturity },
+            ]}
+          />
         </Box>
 
         <Grid container spacing={3}>
@@ -498,6 +515,8 @@ export default async function DatasetDetailPage({ params }: PageProps) {
             )}
           </Grid>
         </Grid>
+
+        <HelpfulVote entityType="dataset" entityKey={monikerPath} />
       </Container>
     </>
   );

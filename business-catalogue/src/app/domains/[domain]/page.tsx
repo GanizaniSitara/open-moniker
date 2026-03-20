@@ -7,6 +7,10 @@ import {
 } from "@mui/material";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import DatasetCard from "@/components/DatasetCard";
+import TrustIndicator from "@/components/contributions/TrustIndicator";
+import SidebarToggle from "@/components/contributions/SidebarToggle";
+import SuggestEditButton from "@/components/contributions/SuggestEditButton";
+import HelpfulVote from "@/components/contributions/HelpfulVote";
 import { fetchDomain, fetchNodes, toSlashPath } from "@/lib/api-client";
 import { notFound } from "next/navigation";
 
@@ -52,9 +56,11 @@ export default async function DomainDetailPage({ params }: PageProps) {
         {/* Header */}
         <Box sx={{ mb: 4 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+            <TrustIndicator entityType="domain" entityKey={domainKey} />
             <Typography variant="h4" sx={{ color: "#022D5E" }}>
               {domain.display_name}
             </Typography>
+            <SidebarToggle entityType="domain" entityKey={domainKey} />
             <Box
               sx={{
                 bgcolor: domain.color,
@@ -69,9 +75,19 @@ export default async function DomainDetailPage({ params }: PageProps) {
               {domain.short_code}
             </Box>
           </Box>
-          <Typography variant="body1" sx={{ mb: 2, color: "#53565A" }}>
+          <Typography variant="body1" sx={{ mb: 1, color: "#53565A" }}>
             {domain.notes}
           </Typography>
+          <SuggestEditButton
+            entityType="domain"
+            entityKey={domainKey}
+            fields={[
+              { name: "notes", label: "Notes", currentValue: domain.notes },
+              { name: "owner", label: "Owner", currentValue: domain.owner },
+              { name: "business_steward", label: "Business Steward", currentValue: domain.business_steward },
+              { name: "tech_custodian", label: "Tech Custodian", currentValue: domain.tech_custodian },
+            ]}
+          />
 
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
             <Paper variant="outlined" sx={{ p: 2, flex: 1, minWidth: 200 }}>
@@ -138,6 +154,8 @@ export default async function DomainDetailPage({ params }: PageProps) {
             />
           ))}
         </Box>
+
+        <HelpfulVote entityType="domain" entityKey={domainKey} />
       </Container>
     </>
   );

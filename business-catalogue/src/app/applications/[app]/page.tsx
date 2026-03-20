@@ -7,6 +7,10 @@ import {
   Link as MuiLink,
 } from "@mui/material";
 import Breadcrumbs from "@/components/Breadcrumbs";
+import TrustIndicator from "@/components/contributions/TrustIndicator";
+import SidebarToggle from "@/components/contributions/SidebarToggle";
+import SuggestEditButton from "@/components/contributions/SuggestEditButton";
+import HelpfulVote from "@/components/contributions/HelpfulVote";
 import { fetchApplication } from "@/lib/api-client";
 import { notFound } from "next/navigation";
 
@@ -39,9 +43,11 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
         {/* Header */}
         <Box sx={{ mb: 4 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+            <TrustIndicator entityType="application" entityKey={appKey} />
             <Typography variant="h4" sx={{ color: "#022D5E" }}>
               {app.display_name}
             </Typography>
+            <SidebarToggle entityType="application" entityKey={appKey} />
             <Chip
               label={app.status}
               size="small"
@@ -67,9 +73,19 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
               {app.category}
             </Box>
           </Box>
-          <Typography variant="body1" sx={{ mb: 2, color: "#53565A" }}>
+          <Typography variant="body1" sx={{ mb: 1, color: "#53565A" }}>
             {app.description}
           </Typography>
+          <SuggestEditButton
+            entityType="application"
+            entityKey={appKey}
+            fields={[
+              { name: "description", label: "Description", currentValue: app.description },
+              { name: "owner", label: "Owner", currentValue: app.owner },
+              { name: "tech_lead", label: "Tech Lead", currentValue: app.tech_lead },
+              { name: "support_channel", label: "Support Channel", currentValue: app.support_channel },
+            ]}
+          />
 
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
             <Paper variant="outlined" sx={{ p: 2, flex: 1, minWidth: 200 }}>
@@ -183,6 +199,8 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
             No field references configured.
           </Typography>
         )}
+
+        <HelpfulVote entityType="application" entityKey={appKey} />
       </Container>
     </>
   );
