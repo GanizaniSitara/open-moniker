@@ -9,8 +9,8 @@ import {
 } from "@mui/material";
 import StorageIcon from "@mui/icons-material/Storage";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { preloadAll } from "@/lib/data-cache";
+import { usePathname, useRouter } from "next/navigation";
+import { preloadAll, invalidateCache } from "@/lib/data-cache";
 
 const NAV_LINKS = [
   { label: "Datasets", href: "/" },
@@ -21,10 +21,23 @@ const NAV_LINKS = [
   { label: "Domains", href: "/domains" },
 ];
 
+const AUTO_RELOAD_INTERVAL = Number(process.env.NEXT_PUBLIC_AUTO_RELOAD_INTERVAL) || 0;
+
 export default function AppHeader() {
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => { preloadAll(); }, []);
+
+  useEffect(() => {
+    if (!AUTO_RELOAD_INTERVAL) return;
+    const id = setInterval(() => {
+      invalidateCache();
+      router.refresh();
+      preloadAll();
+    }, AUTO_RELOAD_INTERVAL * 1000);
+    return () => clearInterval(id);
+  }, [router]);
 
   return (
     <AppBar position="sticky" elevation={0} sx={{ bgcolor: "#022D5E" }}>
