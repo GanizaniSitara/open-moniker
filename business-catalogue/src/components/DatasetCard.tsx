@@ -1,5 +1,6 @@
 "use client";
 import { Typography, Box, Chip } from "@mui/material";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import Link from "next/link";
 interface Column {
   name: string;
@@ -86,7 +87,8 @@ export default function DatasetCard({
           )}
           {maturity && (
             <Chip
-              label={maturity === "certified" ? "🥇 Certified" : maturity === "governed" ? "🥈 Governed" : "🥉 Catalogued"}
+              icon={<WorkspacePremiumIcon />}
+              label={maturity === "certified" ? "Certified" : maturity === "governed" ? "Governed" : "Catalogued"}
               size="small"
               variant="outlined"
               sx={{
@@ -96,6 +98,10 @@ export default function DatasetCard({
                 flexShrink: 0,
                 fontWeight: 600,
                 border: "none",
+                "& .MuiChip-icon": {
+                  fontSize: 16,
+                  color: maturity === "certified" ? "#D4A017" : maturity === "governed" ? "#7B8FA1" : "#A0522D",
+                },
               }}
             />
           )}

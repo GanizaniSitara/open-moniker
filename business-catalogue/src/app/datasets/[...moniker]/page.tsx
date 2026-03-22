@@ -11,6 +11,7 @@ import {
   AccordionDetails,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import SchemaTable from "@/components/SchemaTable";
 import RelatedModels from "@/components/RelatedModels";
@@ -340,14 +341,17 @@ export default async function DatasetDetailPage({ params }: PageProps) {
                 Maturity
               </Typography>
               <Chip
-                label={
-                  desc.maturity === "certified" ? "🥇 Certified"
-                    : desc.maturity === "governed" ? "🥈 Governed"
-                    : "🥉 Catalogued"
-                }
+                icon={<WorkspacePremiumIcon />}
+                label={desc.maturity === "certified" ? "Certified" : desc.maturity === "governed" ? "Governed" : "Catalogued"}
                 size="small"
                 variant="outlined"
-                sx={{ fontWeight: 600, border: "none" }}
+                sx={{
+                  fontWeight: 600,
+                  border: "none",
+                  "& .MuiChip-icon": {
+                    color: desc.maturity === "certified" ? "#D4A017" : desc.maturity === "governed" ? "#7B8FA1" : "#A0522D",
+                  },
+                }}
               />
             </Paper>
 
