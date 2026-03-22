@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { IconButton, Badge } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import { isContributionsEnabled, fetchActivity } from "@/lib/contributions-client";
 import ContributionsSidebar from "./ContributionsSidebar";
@@ -25,27 +25,22 @@ export default function SidebarToggle({ entityType, entityKey }: SidebarTogglePr
 
   return (
     <>
-      <IconButton
+      <Box
         onClick={() => setOpen(true)}
-        size="small"
-        sx={{ color: "#005587" }}
+        sx={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 0.5,
+          cursor: "pointer",
+          color: "#005587",
+          "&:hover": { opacity: 0.7 },
+        }}
       >
-        <Badge
-          badgeContent={count}
-          color="primary"
-          max={99}
-          sx={{
-            "& .MuiBadge-badge": {
-              fontSize: "0.65rem",
-              height: 16,
-              minWidth: 16,
-              bgcolor: "#005587",
-            },
-          }}
-        >
-          <ChatBubbleOutlineIcon sx={{ fontSize: 20 }} />
-        </Badge>
-      </IconButton>
+        <ChatBubbleOutlineIcon sx={{ fontSize: 18 }} />
+        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: "0.8rem" }}>
+          {count > 0 ? `Community · ${count}` : "Community"}
+        </Typography>
+      </Box>
 
       <ContributionsSidebar
         open={open}

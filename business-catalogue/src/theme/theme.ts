@@ -85,7 +85,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: '"Arial", "Helvetica", sans-serif',
+    fontFamily: '"Arial", "Helvetica", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
     h1: {
       fontSize: "2.5rem",
       fontWeight: 700,
