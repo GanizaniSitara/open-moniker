@@ -60,30 +60,88 @@ catalog:
   # Hot reload interval (0 = disabled)
   reload_interval_seconds: 60
 
-# Authentication configuration
+# =============================================================================
+# Authentication
+# =============================================================================
+#
+# Auth is OFF by default. The service runs fully anonymous — anyone can call
+# any endpoint, no tokens needed. This is fine for local dev.
+#
+# To lock it down, you need an OIDC identity provider (Auth0, Okta, Azure AD,
+# etc.) and three things from it:
+#
+#   1. issuer   — the base URL of your OIDC provider
+#                 Auth0:    https://YOUR-TENANT.auth0.com/
+#                 Okta:     https://YOUR-ORG.okta.com/oauth2/default
+#                 Azure AD: https://login.microsoftonline.com/YOUR-TENANT/v2.0
+#
+#   2. audience — the API identifier you registered in your provider
+#                 (e.g. "api://moniker-svc" or "https://moniker.yourfirm.com")
+#
+#   3. Nothing else. The service fetches the provider's public keys (JWKS)
+#      automatically to verify token signatures. No secrets needed server-side.
+#
+# HOW IT WORKS:
+#   - Callers send:  Authorization: Bearer <jwt-token>
+#   - The service validates the token signature, issuer, audience, and expiry
+#   - If valid:  extracts user identity from the token claims
+#   - If invalid or missing:
+#       enforce: true  → 401 Unauthorized
+#       enforce: false → anonymous access (for dev/testing)
+#
+# QUICK START (3 steps):
+#   1. Set enabled: true and enforce: true below
+#   2. Set okta.enabled: true (ignore the name — works with any OIDC provider)
+#   3. Fill in issuer and audience from your provider
+#   That's it. Restart the service.
+#
+# LOCAL DEV WITHOUT A PROVIDER:
+#   Set issuer to "test" and provide a test_secret. This enables HS256
+#   symmetric signing so you can generate tokens locally without any
+#   external provider. DO NOT use this in production.
+#
+# =============================================================================
 auth:
-  enabled: false
-  enforce: false  # If false, allow anonymous fallback for dev/testing
-  method_order: [kerberos, jwt]  # Try Kerberos first, then JWT
+  enabled: false       # Master switch. Set to true to require authentication.
+  enforce: false       # true = reject anonymous (production)
+                       # false = allow anonymous fallback (dev/testing)
+  method_order: [jwt]  # Authentication methods to try, in order.
+                       # Options: "jwt" (OIDC/OAuth2) and "kerberos" (AD/SPNEGO)
 
-  # Kerberos SPNEGO configuration
+  # --- Kerberos SPNEGO (Active Directory) ---
+  # Only needed if your firm uses Kerberos. Most won't.
   kerberos:
     enabled: false
-    service_principal: "HTTP/moniker-svc.firm.com@FIRM.COM"
-    keytab_path: "/etc/moniker-svc/krb5.keytab"
-    realm: "FIRM.COM"
+    # service_principal: "HTTP/moniker-svc.firm.com@FIRM.COM"
+    # keytab_path: "/etc/moniker-svc/krb5.keytab"
+    # realm: "FIRM.COM"
 
-  # Okta JWT configuration
+  # --- JWT / OIDC authentication ---
+  # Works with Auth0, Okta, Azure AD, or any OIDC-compliant provider.
+  # Despite the field name "okta", this is generic OIDC.
   okta:
     enabled: false
-    issuer: "https://firm.okta.com/oauth2/default"
+
+    # Your OIDC provider's issuer URL (see examples above)
+    issuer: "https://YOUR-PROVIDER.example.com/"
+
+    # The API identifier / audience you registered in your provider
     audience: "api://moniker-svc"
-    jwks_cache_ttl: 3600  # seconds
+
+    # How long to cache the provider's signing keys (seconds). Default 1 hour.
+    jwks_cache_ttl: 3600
+
+    # Which JWT claim contains the username. Usually "sub" or "email".
     user_claim: "sub"
+
+    # Which JWT claim contains group memberships (for future RBAC).
     groups_claim: "groups"
-    # Test mode (local dev only!): set issuer to "test" and provide secret
+
+    # --- Local dev test mode (no provider needed) ---
+    # Uncomment these two lines to use HS256 symmetric tokens locally.
+    # Generate tokens with: python -c "from jose import jwt; print(jwt.encode({'sub':'you','iss':'test','aud':'api://moniker-svc','exp':9999999999,'iat':0}, 'your-secret-here', algorithm='HS256'))"
     # issuer: "test"
-    # test_secret: "your-test-secret-min-32-chars-long"
+    # test_secret: "pick-any-secret-at-least-32-characters-long"
 
 # Config UI settings
 config_ui:

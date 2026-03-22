@@ -971,6 +971,19 @@ async def lifespan(app: FastAPI):
 
     _redis_cache = await bs.setup_redis(config)
 
+    # Mount read-only MCP server on /mcp (SSE transport)
+    from . import mcp as mcp_module
+    mcp_module.configure(
+        catalog=catalog,
+        service=_service,
+        domain_registry=_domain_registry,
+        model_registry=_model_registry,
+        request_registry=_request_registry,
+        config=config,
+    )
+    app.mount("/mcp", mcp_module.get_sse_app())
+    logger.info("MCP server mounted at /mcp/sse (read-only, SSE transport)")
+
     logger.info("Moniker resolution service started")
 
     yield

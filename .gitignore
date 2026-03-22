@@ -59,10 +59,17 @@ catalog.yaml
 domains.yaml
 models.yaml
 vendors.yaml
+applications.yaml
 demo/demo_monikers.yaml
 
 # Database files
 *.db
+
+# Claude Code project config
+.claude/
+
+# Playwright test results
+test-results/
 
 # OS
 .DS_Store
@@ -75,6 +82,9 @@ catalog_output.yaml
 # Strategy docs (sensitive)
 PLAN.md
 ROADMAP.md
+
+# Internal task tracking
+docs/tasks/
 
 # Scratch / cross-repo instruction files
 PORTAL_INTEGRATION_INSTRUCTIONS.md
