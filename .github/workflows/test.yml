@@ -33,7 +33,7 @@ jobs:
           pip install "mcp>=1.0.0" pyyaml httpx python-dateutil asgi-lifespan beautifulsoup4
 
       - name: Unit & integration tests
-        run: pytest tests/ -v --tb=short -x --ignore=tests/test_mcp.py
+        run: pytest tests/ -v --tb=short -x --ignore=tests/test_mcp.py -m "not integration"
 
       - name: Start moniker service
         run: |

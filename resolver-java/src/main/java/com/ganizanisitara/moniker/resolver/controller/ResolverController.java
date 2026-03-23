@@ -59,11 +59,12 @@ public class ResolverController {
     /**
      * Resolve a moniker.
      */
-    @GetMapping("/resolve/{path:.*}")
+    @GetMapping("/resolve/{*path}")
     public ResponseEntity<?> resolve(@PathVariable String path,
                                      @RequestParam(required = false) String namespace,
                                      @RequestParam(required = false) String version) {
         try {
+            if (path.startsWith("/")) path = path.substring(1);
             // Build full moniker string
             StringBuilder moniker = new StringBuilder();
             if (namespace != null) {
@@ -92,9 +93,10 @@ public class ResolverController {
     /**
      * Describe a catalog node.
      */
-    @GetMapping("/describe/{path:.*}")
+    @GetMapping("/describe/{*path}")
     public ResponseEntity<?> describe(@PathVariable String path) {
         try {
+            if (path.startsWith("/")) path = path.substring(1);
             DescribeResult result = monikerService.describe(path);
             return ResponseEntity.ok(result);
 
@@ -113,9 +115,10 @@ public class ResolverController {
     /**
      * List children of a path.
      */
-    @GetMapping("/list/{path:.*}")
+    @GetMapping("/list/{*path}")
     public ResponseEntity<?> listChildren(@PathVariable String path) {
         try {
+            if (path.startsWith("/")) path = path.substring(1);
             List<String> children = monikerService.listChildren(path);
 
             Map<String, Object> response = new HashMap<>();
@@ -136,9 +139,10 @@ public class ResolverController {
     /**
      * Get lineage (ancestor chain) for a path.
      */
-    @GetMapping("/lineage/{path:.*}")
+    @GetMapping("/lineage/{*path}")
     public ResponseEntity<?> lineage(@PathVariable String path) {
         try {
+            if (path.startsWith("/")) path = path.substring(1);
             List<Map<String, Object>> lineage = monikerService.getLineage(path);
 
             Map<String, Object> response = new HashMap<>();
