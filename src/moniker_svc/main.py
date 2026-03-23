@@ -168,7 +168,7 @@ class AccessReport(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
-    service: str = "Open Moniker"
+    service: str = "Moniker Service"
     telemetry: dict[str, Any]
     cache: dict[str, Any]
     rate_limiter: dict[str, Any] | None = None
@@ -1140,7 +1140,7 @@ async def resolution_error_handler(request: Request, exc: ResolutionError):
 @resolver_router.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health():
     """Health check endpoint with telemetry, cache, rate limiter, and circuit breaker statistics."""
-    project_name = _config.project_name if _config else "Open Moniker"
+    project_name = _config.project_name if _config else "Moniker Service"
     return HealthResponse(
         status="healthy",
         service=project_name,
@@ -2367,7 +2367,7 @@ _LANDING_HTML = """
 @app.get("/", response_class=HTMLResponse, tags=["Health"])
 async def root():
     """Landing page with links to all UIs and documentation."""
-    project_name = _config.project_name if _config else "Open Moniker"
+    project_name = _config.project_name if _config else "Moniker Service"
 
     # Generate dynamic HTML with project name
     html = _LANDING_HTML.replace("Moniker Service", project_name)

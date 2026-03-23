@@ -117,7 +117,7 @@ class GovernanceConfig:
 class Config:
     """Main configuration container."""
     # Project branding
-    project_name: str = "Open Moniker"
+    project_name: str = "Moniker Service"
 
     server: ServerConfig = field(default_factory=ServerConfig)
     telemetry: TelemetryConfig = field(default_factory=TelemetryConfig)
@@ -136,7 +136,7 @@ class Config:
         """Create config from dictionary."""
         auth_data = data.get("auth", {})
         return cls(
-            project_name=data.get("project_name", "Open Moniker"),
+            project_name=data.get("project_name", "Moniker Service"),
             server=ServerConfig(**data.get("server", {})),
             telemetry=TelemetryConfig(**data.get("telemetry", {})),
             cache=CacheConfig(**data.get("cache", {})),
