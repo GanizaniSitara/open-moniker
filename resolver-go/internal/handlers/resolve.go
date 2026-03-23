@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/service"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/service"
 )
 
 // ResolveHandler handles /resolve/{path} requests

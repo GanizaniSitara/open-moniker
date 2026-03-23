@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/catalog"
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/service"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/catalog"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/service"
 )
 
 // CatalogListHandler handles GET /catalog

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/catalog"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/catalog"
 )
 
 // UpdateStatusHandler handles PUT /catalog/{path}/status

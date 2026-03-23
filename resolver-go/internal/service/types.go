@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/catalog"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/catalog"
 )
 
 // ResolvedSource represents the result of resolving a moniker
