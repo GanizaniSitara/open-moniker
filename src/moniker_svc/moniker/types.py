@@ -116,6 +116,11 @@ class QueryParams:
     def get(self, key: str, default: str | None = None) -> str | None:
         return self.params.get(key, default)
 
+    def __getattr__(self, name: str) -> str | None:
+        if name.startswith("_"):
+            raise AttributeError(name)
+        return self.params.get(name)
+
     def __contains__(self, key: str) -> bool:
         return key in self.params
 

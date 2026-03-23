@@ -33,9 +33,8 @@ class TestTreasuryResolution:
         # Resolution returns source binding info
         assert result.source.source_type == "snowflake"
 
-        # Governance roles are defined at parent level (govies)
-        govies_node = catalog_registry.get("govies")
-        assert govies_node is not None
-        assert govies_node.ownership.adop is not None
-        assert govies_node.ownership.ads is not None
-        assert govies_node.ownership.adal is not None
+        # Governance roles are defined at parent level (fixed.income)
+        fi_node = catalog_registry.get("fixed.income")
+        assert fi_node is not None
+        assert fi_node.ownership.adop is not None
+        assert fi_node.ownership.ads is not None

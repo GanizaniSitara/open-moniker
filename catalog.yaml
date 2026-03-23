@@ -2,6 +2,7 @@ benchmarks:
   display_name: Benchmarks
   domain: benchmarks
   vendor: msci
+  maturity: governed
   description: Benchmark indices, constituents, and returns
   ownership:
     accountable_owner: indices-governance@firm.com
@@ -11,9 +12,11 @@ benchmarks:
     glossary: https://confluence.firm.com/display/DATA/Benchmark+Glossary
     runbook: https://confluence.firm.com/display/OPS/Benchmark+Runbook
     data_dictionary: https://confluence.firm.com/display/DATA/Benchmark+Data+Dictionary
-benchmarks.constituents:
+benchmarks/constituents:
   display_name: Benchmark Constituents
   domain: benchmarks
+  vendor: ftse-russell
+  maturity: governed
   description: Index membership and weights
   source_binding:
     type: snowflake
@@ -25,37 +28,15 @@ benchmarks.constituents:
       query: "SELECT benchmark_id, security_id, weight, sector, country\nFROM BENCHMARK_CONSTITUENTS\n\
         WHERE benchmark_id = '{segments[0]}'\n  AND as_of_date = TO_DATE('{segments[1]}',\
         \ 'YYYYMMDD')\n"
-
-# Example of a cached query - expensive Snowflake query that runs in background
-benchmarks.constituents_all:
-  display_name: All Benchmark Constituents (Cached)
-  domain: benchmarks
-  description: |
-    Complete benchmark constituents with all indices - this is a slow 10-minute query
-    that is cached in Redis and refreshed in the background every 10 minutes.
-  source_binding:
-    type: snowflake
-    config:
-      account: firm-prod.us-east-1
-      warehouse: ANALYTICS_WH
-      database: BENCHMARKS
-      schema: CONSTITUENTS
-      query: |
-        SELECT benchmark_id, security_id, weight, sector, country, as_of_date
-        FROM BENCHMARK_CONSTITUENTS
-        WHERE as_of_date = (SELECT MAX(as_of_date) FROM BENCHMARK_CONSTITUENTS)
-    cache:
-      enabled: true
-      ttl_seconds: 3600           # Serve from cache for 1 hour
-      refresh_interval_seconds: 600  # Background refresh every 10 min
-      refresh_on_startup: true    # Pre-warm cache on service start
-benchmarks.corporate:
+benchmarks/corporate:
   display_name: Corporate Bond Indices
   domain: benchmarks
+  vendor: barclays-indices
+  maturity: certified
   description: Investment grade and high yield corporate bond indices
   ownership:
     data_specialist: credit-research@firm.com
-benchmarks.corporate/ig:
+benchmarks/corporate/ig:
   display_name: Investment Grade Corporate
   domain: benchmarks
   source_binding:
@@ -72,10 +53,12 @@ benchmarks.corporate/ig:
         WHERE sector = ''{segments[0]}''
 
         '
-benchmarks.returns:
+benchmarks/returns:
   display_name: Benchmark Returns
   domain: benchmarks
+  vendor: msci
   description: Daily, MTD, YTD returns for benchmarks
+  technical_description: Pulled from Snowflake BENCHMARKS.RETURNS_DAILY table. Returns are total-return (price + income) in local currency and USD. Calculated by MSCI end-of-day and loaded via nightly batch at 22:00 ET. Inception dates vary by index — most go back to 1999.
   source_binding:
     type: snowflake
     config:
@@ -90,11 +73,12 @@ benchmarks.returns:
         WHERE benchmark_id = ''{segments[0]}''
 
         '
-benchmarks.sovereign:
+benchmarks/sovereign:
   display_name: Sovereign Bond Indices
   domain: benchmarks
+  vendor: ftse-russell
   description: Government bond indices by region and currency
-benchmarks.sovereign/developed:
+benchmarks/sovereign/developed:
   display_name: Developed Markets Sovereign
   domain: benchmarks
   description: DM government bond benchmarks
@@ -138,6 +122,7 @@ commodities.energy:
   domain: commodities
   vendor: bloomberg
   description: Crude oil, natural gas, and refined products
+  technical_description: Sourced from Bloomberg NEFA energy API. Prices are snapped at 16:00 ET from the composite feed. Contract roll follows the ICE front-month convention. Backfill from 2005 via batch load, daily updates via streaming ingest.
   source_binding:
     type: rest
     config:
@@ -213,14 +198,15 @@ fixed.income/govies/sovereign:
       warehouse: MARKET_DATA_WH
       database: FIXED_INCOME
       schema: GOVIES
-      segment_names: country,tenor
       query: "SELECT asof_date, isin, country, tenor, yield, spread_vs_usd, price,\
-        \ duration\nFROM SOVEREIGN_BONDS\nWHERE {filter[0]:country}\n  AND {filter[1]:tenor}\n\
+        \ duration\nFROM SOVEREIGN_BONDS\nWHERE ('{segments[0]}' = 'ALL' OR country\
+        \ = '{segments[0]}')\n  AND ('{segments[1]}' = 'ALL' OR tenor = '{segments[1]}')\n\
         ORDER BY asof_date DESC, country, tenor\n"
 fixed.income/govies/treasury:
   display_name: US Treasury Securities
   vendor: fred
   description: US Treasury bills, notes, and bonds with yields and pricing
+  technical_description: Loaded from Snowflake FIXED_INCOME.GOVIES.US_TREASURIES table. Yields sourced from FRED H.15 release, prices computed using standard discounting. Updated daily at 18:00 ET after the Fed publishes the daily yield curve. Historical data back to 1962.
   source_binding:
     type: snowflake
     config:
@@ -228,10 +214,10 @@ fixed.income/govies/treasury:
       warehouse: MARKET_DATA_WH
       database: FIXED_INCOME
       schema: GOVIES
-      segment_names: tenor,cusip
       query: "SELECT asof_date, cusip, tenor, coupon, yield, price, duration, convexity\n\
-        FROM TREASURY_SECURITIES\nWHERE {filter[0]:tenor}\n  AND {filter[1]:cusip}\n\
-        ORDER BY asof_date DESC, tenor\n"
+        FROM TREASURY_SECURITIES\nWHERE ('{segments[0]}' = 'ALL' OR tenor = '{segments[0]}')\n\
+        \  AND ('{segments[1]}' = 'ALL' OR cusip = '{segments[1]}')\nORDER BY asof_date\
+        \ DESC, tenor\n"
   schema:
     columns:
     - name: ASOF_DATE
@@ -396,6 +382,7 @@ flows.subscriptions:
 nav:
   display_name: NAV
   domain: nav
+  maturity: governed
   description: Net Asset Value and fund accounting
   ownership:
     accountable_owner: fund-accounting@firm.com
@@ -418,6 +405,7 @@ nav.official:
   display_name: Official NAV
   domain: nav
   vendor: factset
+  maturity: governed
   description: End of day official NAV per share
   source_binding:
     type: snowflake
@@ -432,6 +420,7 @@ nav.official:
 portfolios:
   display_name: Portfolios
   domain: portfolios
+  maturity: governed
   description: Portfolio master, holdings, performance, and attribution
   ownership:
     accountable_owner: portfolio-ops@firm.com
@@ -508,6 +497,7 @@ portfolios.performance:
 prices:
   display_name: Prices
   domain: prices
+  maturity: certified
   description: Real-time and historical security prices
   ownership:
     accountable_owner: market-data-governance@firm.com
@@ -522,6 +512,7 @@ prices.equity:
   display_name: Equity Prices
   domain: prices
   vendor: refinitiv
+  maturity: certified
   source_binding:
     type: snowflake
     config:
@@ -566,6 +557,7 @@ prices.fx:
 rates:
   display_name: Interest Rates
   domain: rates
+  maturity: certified
   description: Interest rate curves, swaps, and money market rates
   ownership:
     accountable_owner: rates-governance@firm.com
@@ -585,6 +577,7 @@ rates.curves:
   display_name: Yield Curves
   domain: rates
   vendor: bloomberg
+  maturity: governed
   description: Constructed yield curves by currency
   source_binding:
     type: snowflake
@@ -600,6 +593,7 @@ rates.sofr:
   display_name: SOFR Rates
   domain: rates
   vendor: fred
+  maturity: certified
   description: Secured Overnight Financing Rate and term SOFR
   source_binding:
     type: snowflake
@@ -649,16 +643,18 @@ rates.swap:
       warehouse: MARKET_DATA_WH
       database: RATES
       schema: SWAPS
-      segment_names: currency,tenor
+      segment_names: currency,tenor,date
       query: |
         SELECT asof_date, currency, tenor, par_rate, spread_vs_govt, dv01
         FROM SWAP_RATES
-        WHERE {filter[0]:currency}
-          AND {filter[1]:tenor}
+        WHERE ('{segments[0]}' = 'ALL' OR currency = '{segments[0]}')
+          AND ('{segments[1]}' = 'ALL' OR tenor = '{segments[1]}')
+          AND ('{segments[2]}' = 'ALL' OR asof_date = TO_DATE('{segments[2]}', 'YYYYMMDD'))
         ORDER BY asof_date DESC, currency, tenor
 reference:
   display_name: Reference Data
   domain: reference
+  maturity: certified
   description: Calendars, classifications, and static reference
   ownership:
     accountable_owner: ref-data-governance@firm.com
@@ -671,6 +667,7 @@ reference.calendars:
   display_name: Trading Calendars
   domain: reference
   vendor: refinitiv
+  maturity: governed
   description: Exchange and settlement calendars
 reference.calendars/exchange:
   display_name: Exchange Calendars
@@ -774,7 +771,6 @@ risk.cvar:
   domain: risk
   vendor: bloomberg
   description: CVaR tail risk measures by portfolio, currency, and security
-  asset_class: risk
   ownership:
     accountable_owner: risk-governance@firm.com
     data_specialist: risk-quant@firm.com
@@ -932,637 +928,3 @@ securities/terms:
       index: instruments-v2
       query: "{\n  \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\"term\"\
         : {\"security_id\": \"{segments[0]}\"}}\n      ]\n    }\n  }\n}\n"
-
-# ==========================================================================
-# FLOWS - Fund flows and AUM data
-# ==========================================================================
-flows.redemptions:
-  display_name: Fund Redemptions
-  domain: flows
-  vendor: factset
-  description: Daily redemption transactions by fund
-  source_binding:
-    type: snowflake
-    config:
-      account: firm-prod.us-east-1
-      warehouse: TA_WH
-      database: FLOWS
-      schema: TRANSACTIONS
-      query: |
-        SELECT fund_id, trade_date, settle_date, amount, shares, investor_type
-        FROM REDEMPTIONS
-        WHERE fund_id = '{segments[0]}'
-
-flows.aum:
-  display_name: Assets Under Management
-  domain: flows
-  vendor: factset
-  description: Daily AUM by fund and strategy
-  source_binding:
-    type: snowflake
-    config:
-      account: firm-prod.us-east-1
-      warehouse: TA_WH
-      database: FLOWS
-      schema: AUM
-      query: |
-        SELECT fund_id, as_of_date, aum, aum_change_1d, net_flows_mtd
-        FROM DAILY_AUM
-        WHERE ('{segments[0]}' = 'ALL' OR fund_id = '{segments[0]}')
-
-# ==========================================================================
-# CREDIT - Credit Risk (MS-SQL) - from demo catalog
-# ==========================================================================
-credit:
-  display_name: Credit Risk
-  domain: risk
-  vendor: moodys
-  description: Counterparty credit exposures, limits, and risk metrics from the Credit Risk Engine (SQL Server)
-  ownership:
-    accountable_owner: credit-risk-governance@firm.com
-    data_specialist: credit-analytics@firm.com
-    support_channel: "#credit-risk-data"
-
-credit.exposures:
-  display_name: Counterparty Credit Exposures
-  domain: risk
-  vendor: sp-global
-  description: Daily counterparty credit exposure snapshots for financial institutions (derivatives, loans, guarantees, trade finance) including notional, MTM, PFE, CVA, and expected loss metrics
-  source_binding:
-    type: mssql
-    config:
-      server: credit-risk-sql.firm.com
-      port: 1433
-      database: CreditRisk
-      driver: "ODBC Driver 17 for SQL Server"
-      query: >
-        SELECT ASOF_DATE, COUNTERPARTY_ID, COUNTERPARTY_NAME,
-        SECTOR, RATING, COUNTRY, EXPOSURE_TYPE, NOTIONAL,
-        MARK_TO_MARKET, PFE, CVA, LGD, PD, EXPECTED_LOSS, CURRENCY
-        FROM [dbo].[credit_exposures]
-        WHERE ASOF_DATE >= DATEADD(DAY, -30, GETDATE())
-  schema:
-    description: Daily counterparty credit exposure snapshots with full risk metrics
-    semantic_tags: [credit, risk, counterparty, exposure, timeseries]
-    primary_key: [ASOF_DATE, COUNTERPARTY_ID, EXPOSURE_TYPE]
-    granularity: daily per-counterparty per-exposure-type
-    use_cases:
-      - counterparty risk monitoring
-      - limit utilization analysis
-      - CVA desk hedging
-      - regulatory reporting (SA-CCR)
-      - concentration risk assessment
-    related_monikers: [credit.limits]
-    columns:
-      - name: ASOF_DATE
-        type: date
-        description: Business date of the exposure snapshot
-        semantic_type: timestamp
-        example: "2026-01-15"
-      - name: COUNTERPARTY_ID
-        type: string
-        description: Unique counterparty identifier
-        semantic_type: identifier
-        example: CP001
-      - name: COUNTERPARTY_NAME
-        type: string
-        description: Legal entity name
-        semantic_type: dimension
-        example: Goldman Sachs Group
-      - name: SECTOR
-        type: string
-        description: Industry sector classification
-        semantic_type: dimension
-        example: Financials
-      - name: RATING
-        type: string
-        description: Credit rating (S&P scale)
-        semantic_type: dimension
-        example: AA-
-      - name: COUNTRY
-        type: string
-        description: Country of incorporation (ISO 3166-1 alpha-2)
-        semantic_type: dimension
-        example: US
-      - name: EXPOSURE_TYPE
-        type: string
-        description: Type of credit exposure
-        semantic_type: dimension
-        example: Derivative
-      - name: NOTIONAL
-        type: float
-        description: Notional amount of the exposure
-        semantic_type: measure
-        example: "150000000.00"
-      - name: MARK_TO_MARKET
-        type: float
-        description: Current mark-to-market value
-        semantic_type: measure
-        example: "2350000.50"
-      - name: PFE
-        type: float
-        description: Potential Future Exposure at 97.5% confidence
-        semantic_type: measure
-        example: "12500000.00"
-      - name: CVA
-        type: float
-        description: Credit Valuation Adjustment
-        semantic_type: measure
-        example: "45000.00"
-      - name: LGD
-        type: float
-        description: Loss Given Default (0-1)
-        semantic_type: measure
-        example: "0.45"
-      - name: PD
-        type: float
-        description: Probability of Default (annualized)
-        semantic_type: measure
-        example: "0.002"
-      - name: EXPECTED_LOSS
-        type: float
-        description: Expected loss = Notional x LGD x PD
-        semantic_type: measure
-        example: "135000.00"
-      - name: CURRENCY
-        type: string
-        description: Exposure currency (ISO 4217)
-        semantic_type: dimension
-        example: USD
-  data_quality:
-    dq_owner: credit-dq@firm.com
-    quality_score: 92
-    known_issues:
-      - "Weekend gaps in timeseries -- no weekend data points"
-      - "UBS Group (CP006) rating may lag by 1 business day"
-    validation_rules:
-      - "NOTIONAL > 0"
-      - "LGD BETWEEN 0 AND 1"
-      - "PD BETWEEN 0 AND 1"
-      - "EXPECTED_LOSS ≈ NOTIONAL × LGD × PD (±5%)"
-    last_validated: "2026-01-28T06:30:00Z"
-  tags: [credit, risk, mssql, counterparty, timeseries]
-
-credit.limits:
-  display_name: Credit Limits
-  domain: risk
-  vendor: moodys
-  description: Counterparty credit limits with utilization, approval, and expiry information
-  source_binding:
-    type: mssql
-    config:
-      server: credit-risk-sql.firm.com
-      port: 1433
-      database: CreditRisk
-      driver: "ODBC Driver 17 for SQL Server"
-      query: >
-        SELECT COUNTERPARTY_ID, LIMIT_TYPE, LIMIT_AMOUNT,
-        UTILIZED, AVAILABLE, APPROVED_BY, EXPIRY_DATE
-        FROM [dbo].[credit_limits]
-  schema:
-    description: Counterparty credit limits by type with utilization tracking
-    semantic_tags: [credit, limits, counterparty, governance]
-    primary_key: [COUNTERPARTY_ID, LIMIT_TYPE]
-    use_cases:
-      - limit utilization monitoring
-      - limit breach alerts
-      - counterparty onboarding
-      - credit committee reporting
-    related_monikers: [credit.exposures]
-    granularity: per-counterparty per-limit-type
-    columns:
-      - name: COUNTERPARTY_ID
-        type: string
-        description: Unique counterparty identifier
-        semantic_type: identifier
-        example: CP001
-      - name: LIMIT_TYPE
-        type: string
-        description: Type of credit limit
-        semantic_type: dimension
-        example: SingleName
-      - name: LIMIT_AMOUNT
-        type: float
-        description: Approved credit limit
-        semantic_type: measure
-        example: "500000000.00"
-      - name: UTILIZED
-        type: float
-        description: Amount currently utilized
-        semantic_type: measure
-        example: "350000000.00"
-      - name: AVAILABLE
-        type: float
-        description: Remaining available limit
-        semantic_type: measure
-        example: "150000000.00"
-      - name: APPROVED_BY
-        type: string
-        description: Approver name and title
-        semantic_type: dimension
-        example: "J. Smith (CRO)"
-      - name: EXPIRY_DATE
-        type: date
-        description: Limit expiry date
-        semantic_type: timestamp
-        example: "2027-06-15"
-  data_quality:
-    dq_owner: credit-dq@firm.com
-    quality_score: 98
-    validation_rules:
-      - "LIMIT_AMOUNT > 0"
-      - "UTILIZED >= 0"
-      - "AVAILABLE = LIMIT_AMOUNT - UTILIZED"
-      - "EXPIRY_DATE > current_date"
-    last_validated: "2026-01-28T06:30:00Z"
-  tags: [credit, risk, mssql, limits, governance]
-
-# ==========================================================================
-# REPORTS/REGULATORY - Excel files (using slash path from demo catalog)
-# ==========================================================================
-reports/regulatory:
-  display_name: Regulatory Reports
-  domain: reports
-  classification: restricted
-  source_binding:
-    type: excel
-    config:
-      base_path: /data/reports/regulatory
-      file_pattern: "{segments[0]}/{segments[1]}.xlsx"
-      sheet: Summary
-
-# ==========================================================================
-# FIXED INCOME DATA LANDSCAPE — Public data sources for portal display
-# These entries use FRED API and yfinance as source bindings.
-# Consumers call sources directly with their own credentials.
-# ==========================================================================
-
-# --------------------------------------------------------------------------
-# RATES
-# --------------------------------------------------------------------------
-rates.treasury.yield-curve.daily:
-  display_name: "US Treasury Yield Curve (Daily)"
-  domain: rates
-  vendor: fred
-  description: "Constant maturity Treasury rates — full curve from 1M to 30Y"
-  asset_class: rates
-  ownership:
-    accountable_owner: "rates-analytics@example.com"
-    support_channel: "#rates-data"
-  source_binding:
-    type: fred
-    config:
-      base_url: "https://api.stlouisfed.org/fred/series/observations"
-      series_ids:
-        1M: DGS1MO
-        3M: DGS3MO
-        6M: DGS6MO
-        1Y: DGS1
-        2Y: DGS2
-        3Y: DGS3
-        5Y: DGS5
-        7Y: DGS7
-        10Y: DGS10
-        20Y: DGS20
-        30Y: DGS30
-      auth: api_key
-      docs: "https://fred.stlouisfed.org/docs/api/"
-  update_frequency: daily
-  quality:
-    completeness: 0.99
-    timeliness: "T+1 business day 18:00 ET"
-
-rates.treasury.spreads:
-  display_name: "Treasury Curve Spreads"
-  domain: rates
-  vendor: fred
-  description: "Key yield curve spread measures"
-  asset_class: rates
-  ownership:
-    accountable_owner: "rates-analytics@example.com"
-  source_binding:
-    type: fred
-    config:
-      base_url: "https://api.stlouisfed.org/fred/series/observations"
-      series_ids:
-        10Y_minus_2Y: T10Y2Y
-        10Y_minus_3M: T10Y3M
-      auth: api_key
-      docs: "https://fred.stlouisfed.org/docs/api/"
-  update_frequency: daily
-
-rates.fed-funds:
-  display_name: "Federal Funds Effective Rate"
-  domain: rates
-  vendor: fred
-  description: "Daily effective federal funds rate"
-  asset_class: rates
-  source_binding:
-    type: fred
-    config:
-      base_url: "https://api.stlouisfed.org/fred/series/observations"
-      series_ids:
-        effective_rate: DFF
-      auth: api_key
-      docs: "https://fred.stlouisfed.org/docs/api/"
-  update_frequency: daily
-
-# --------------------------------------------------------------------------
-# CREDIT
-# --------------------------------------------------------------------------
-credit.spreads.ig:
-  display_name: "US Investment Grade Credit Spreads"
-  domain: risk
-  vendor: fred
-  description: "ICE BofA US Corporate Master Option-Adjusted Spread"
-  asset_class: credit
-  ownership:
-    accountable_owner: "credit-analytics@example.com"
-    support_channel: "#credit-data"
-  source_binding:
-    type: fred
-    config:
-      base_url: "https://api.stlouisfed.org/fred/series/observations"
-      series_ids:
-        ig_oas: BAMLC0A0CM
-      auth: api_key
-      docs: "https://fred.stlouisfed.org/docs/api/"
-  update_frequency: daily
-  quality:
-    completeness: 0.99
-
-credit.spreads.hy:
-  display_name: "US High Yield Credit Spreads"
-  domain: risk
-  vendor: fred
-  description: "ICE BofA high yield OAS by rating tier"
-  asset_class: credit
-  source_binding:
-    type: fred
-    config:
-      base_url: "https://api.stlouisfed.org/fred/series/observations"
-      series_ids:
-        hy_master: BAMLH0A0HYM2
-        bb: BAMLH0A1HYBB
-        b: BAMLH0A2HYB
-        ccc: BAMLH0A3HYC
-      auth: api_key
-      docs: "https://fred.stlouisfed.org/docs/api/"
-  update_frequency: daily
-
-credit.spreads.bbb:
-  display_name: "US BBB Corporate Spreads"
-  domain: risk
-  vendor: fred
-  description: "ICE BofA BBB US Corporate Index OAS"
-  asset_class: credit
-  source_binding:
-    type: fred
-    config:
-      base_url: "https://api.stlouisfed.org/fred/series/observations"
-      series_ids:
-        bbb_oas: BAMLC0A4CBBB
-      auth: api_key
-      docs: "https://fred.stlouisfed.org/docs/api/"
-  update_frequency: daily
-
-# --------------------------------------------------------------------------
-# MORTGAGES
-# --------------------------------------------------------------------------
-mortgages.rates:
-  display_name: "US Mortgage Rates"
-  domain: rates
-  vendor: fred
-  description: "Freddie Mac Primary Mortgage Market Survey — 30Y and 15Y fixed"
-  asset_class: mortgages
-  ownership:
-    accountable_owner: "mortgage-analytics@example.com"
-  source_binding:
-    type: fred
-    config:
-      base_url: "https://api.stlouisfed.org/fred/series/observations"
-      series_ids:
-        rate_30y: MORTGAGE30US
-        rate_15y: MORTGAGE15US
-      auth: api_key
-      docs: "https://fred.stlouisfed.org/docs/api/"
-  update_frequency: weekly
-
-# --------------------------------------------------------------------------
-# MACRO
-# --------------------------------------------------------------------------
-macro.us.gdp:
-  display_name: "US Real GDP"
-  domain: rates
-  vendor: haver
-  description: "Real GDP, seasonally adjusted annual rate (quarterly)"
-  asset_class: macro
-  source_binding:
-    type: fred
-    config:
-      base_url: "https://api.stlouisfed.org/fred/series/observations"
-      series_ids:
-        real_gdp: GDPC1
-      auth: api_key
-      docs: "https://fred.stlouisfed.org/docs/api/"
-  update_frequency: quarterly
-
-macro.us.inflation:
-  display_name: "US Inflation (CPI)"
-  domain: rates
-  vendor: haver
-  description: "Consumer Price Index — all items and core"
-  asset_class: macro
-  source_binding:
-    type: fred
-    config:
-      base_url: "https://api.stlouisfed.org/fred/series/observations"
-      series_ids:
-        cpi_all: CPIAUCSL
-        cpi_core: CPILFESL
-      auth: api_key
-      docs: "https://fred.stlouisfed.org/docs/api/"
-  update_frequency: monthly
-
-macro.us.inflation-expectations:
-  display_name: "US Inflation Expectations"
-  domain: rates
-  vendor: haver
-  description: "Market-implied and survey-based inflation expectations"
-  asset_class: macro
-  source_binding:
-    type: fred
-    config:
-      base_url: "https://api.stlouisfed.org/fred/series/observations"
-      series_ids:
-        breakeven_5y: T5YIE
-        breakeven_10y: T10YIE
-        forward_5y5y: T5YIFR
-        umich_survey: MICH
-      auth: api_key
-      docs: "https://fred.stlouisfed.org/docs/api/"
-  update_frequency: daily
-
-macro.us.employment:
-  display_name: "US Employment"
-  domain: rates
-  vendor: haver
-  description: "Nonfarm payrolls, unemployment rate, initial claims"
-  asset_class: macro
-  source_binding:
-    type: fred
-    config:
-      base_url: "https://api.stlouisfed.org/fred/series/observations"
-      series_ids:
-        nonfarm_payrolls: PAYEMS
-        unemployment_rate: UNRATE
-        initial_claims: ICSA
-      auth: api_key
-      docs: "https://fred.stlouisfed.org/docs/api/"
-  update_frequency: monthly
-
-# --------------------------------------------------------------------------
-# RISK / VOLATILITY
-# --------------------------------------------------------------------------
-risk.volatility.vix:
-  display_name: "CBOE Volatility Index (VIX)"
-  domain: risk
-  vendor: refinitiv
-  description: "Market-implied 30-day volatility from S&P 500 options"
-  asset_class: risk
-  source_binding:
-    type: fred
-    config:
-      base_url: "https://api.stlouisfed.org/fred/series/observations"
-      series_ids:
-        vix: VIXCLS
-      auth: api_key
-      docs: "https://fred.stlouisfed.org/docs/api/"
-  update_frequency: daily
-
-# --------------------------------------------------------------------------
-# FX
-# --------------------------------------------------------------------------
-fx.dollar-index:
-  display_name: "US Dollar Index (Trade-Weighted)"
-  domain: prices
-  vendor: refinitiv
-  description: "Broad trade-weighted US dollar index"
-  asset_class: fx
-  source_binding:
-    type: fred
-    config:
-      base_url: "https://api.stlouisfed.org/fred/series/observations"
-      series_ids:
-        dollar_broad: DTWEXBGS
-      auth: api_key
-      docs: "https://fred.stlouisfed.org/docs/api/"
-  update_frequency: daily
-
-# --------------------------------------------------------------------------
-# EQUITIES
-# --------------------------------------------------------------------------
-equities.indices.us:
-  display_name: "US Equity Indices"
-  domain: prices
-  vendor: yfinance
-  description: "S&P 500 and Nasdaq Composite"
-  asset_class: equities
-  source_binding:
-    type: yfinance
-    config:
-      tickers:
-        sp500: "^GSPC"
-        nasdaq: "^IXIC"
-      period: "2y"
-      docs: "https://pypi.org/project/yfinance/"
-  update_frequency: daily
-
-equities.indices.em:
-  display_name: "Emerging Market Equities"
-  domain: prices
-  vendor: yfinance
-  description: "MSCI EM proxied by EEM and VWO ETFs"
-  asset_class: em
-  source_binding:
-    type: yfinance
-    config:
-      tickers:
-        eem: EEM
-        vwo: VWO
-      period: "2y"
-      docs: "https://pypi.org/project/yfinance/"
-  update_frequency: daily
-
-# --------------------------------------------------------------------------
-# COMMODITIES
-# --------------------------------------------------------------------------
-commodities.energy.crude:
-  display_name: "WTI Crude Oil"
-  domain: commodities
-  vendor: yfinance
-  description: "West Texas Intermediate crude oil futures"
-  asset_class: commodities
-  source_binding:
-    type: yfinance
-    config:
-      tickers:
-        wti: "CL=F"
-      period: "2y"
-      docs: "https://pypi.org/project/yfinance/"
-  update_frequency: daily
-
-commodities.metals.gold:
-  display_name: "Gold"
-  domain: commodities
-  vendor: yfinance
-  description: "Gold futures"
-  asset_class: commodities
-  source_binding:
-    type: yfinance
-    config:
-      tickers:
-        gold: "GC=F"
-      period: "2y"
-      docs: "https://pypi.org/project/yfinance/"
-  update_frequency: daily
-
-# --------------------------------------------------------------------------
-# EM BONDS
-# --------------------------------------------------------------------------
-em.bonds:
-  display_name: "Emerging Market Bonds"
-  domain: fixed_income
-  vendor: bloomberg
-  description: "EM sovereign debt proxied by EMB (USD) and EMLC (local currency) ETFs"
-  asset_class: em
-  source_binding:
-    type: yfinance
-    config:
-      tickers:
-        emb_usd: EMB
-        emlc_local: EMLC
-      period: "2y"
-      docs: "https://pypi.org/project/yfinance/"
-  update_frequency: daily
-
-# --------------------------------------------------------------------------
-# BOND ETF PROXIES
-# --------------------------------------------------------------------------
-bonds.etf.proxies:
-  display_name: "Bond ETF Proxies"
-  domain: fixed_income
-  vendor: yfinance
-  description: "Liquid ETFs used as proxies for fixed income sectors"
-  asset_class: fixed.income
-  source_binding:
-    type: yfinance
-    config:
-      tickers:
-        mbs: MBB
-        long_treasury: TLT
-        hy_corporate: HYG
-        ig_corporate: LQD
-      period: "2y"
-      docs: "https://pypi.org/project/yfinance/"
-  update_frequency: daily

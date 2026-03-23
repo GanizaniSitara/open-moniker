@@ -31,7 +31,8 @@ class TestSwapResolution:
         )
 
         assert result.source.source_type == "snowflake"
-        assert "'ALL' = 'ALL'" in result.source.query or "ALL" in result.source.query
+        # filter[N] template replaces ALL with 1=1 (no-op filter)
+        assert "1=1" in result.source.query or "'ALL' = 'ALL'" in result.source.query or "ALL" in result.source.query
 
 
 @pytest.mark.rates

@@ -285,7 +285,7 @@ class TestRiskDocumentation:
 
     def test_multiple_domains_have_documentation(self, catalog_registry):
         """Multiple domains should have documentation configured."""
-        domains_with_docs = ["risk", "govies", "commods", "rates", "mortgages"]
+        domains_with_docs = ["risk", "rates", "benchmarks", "prices", "portfolios"]
 
         for domain in domains_with_docs:
             node = catalog_registry.get(domain)
