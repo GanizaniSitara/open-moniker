@@ -259,10 +259,36 @@ class UpdateNodeRequest(BaseModel):
 # Response Models
 # =============================================================================
 
+class NodeSummaryModel(BaseModel):
+    """Lightweight node model for listing — omits heavy fields like source_binding.config."""
+    path: str
+    display_name: str = ""
+    description: str = ""
+    domain: str | None = None
+    resolved_domain: str | None = None
+    vendor: str | None = None
+    classification: str = "internal"
+    maturity: str = "catalogued"
+    is_leaf: bool = False
+    status: str = "active"
+    source_type: str | None = None
+    tags: list[str] = Field(default_factory=list)
+
+
 class NodeListResponse(BaseModel):
     """List of nodes response."""
     nodes: list[CatalogNodeModel]
     total: int
+    offset: int = 0
+    limit: int | None = None
+
+
+class NodeSummaryListResponse(BaseModel):
+    """Paginated lightweight node list — for large catalogs."""
+    nodes: list[NodeSummaryModel]
+    total: int
+    offset: int = 0
+    limit: int | None = None
 
 
 class SaveResponse(BaseModel):

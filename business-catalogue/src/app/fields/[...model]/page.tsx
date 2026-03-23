@@ -12,7 +12,7 @@ import TrustIndicator from "@/components/contributions/TrustIndicator";
 import SidebarToggle from "@/components/contributions/SidebarToggle";
 import SuggestEditButton from "@/components/contributions/SuggestEditButton";
 import HelpfulVote from "@/components/contributions/HelpfulVote";
-import { fetchModel, fetchNodes, toSlashPath } from "@/lib/api-client";
+import { fetchModel, fetchNodeSummaries, toSlashPath } from "@/lib/api-client";
 import { notFound } from "next/navigation";
 
 interface PageProps {
@@ -56,13 +56,13 @@ export default async function FieldDetailPage({ params }: PageProps) {
 
   if (model.appears_in.length > 0) {
     try {
-      const nodesRes = await fetchNodes();
-      const nodeByPath = new Map(nodesRes.nodes.map((n) => [n.path, n]));
+      const allNodes = await fetchNodeSummaries();
+      const nodeByPath = new Map(allNodes.map((n) => [n.path, n]));
 
       for (const link of model.appears_in) {
         // Match pattern against node paths
         const pattern = link.moniker_pattern;
-        for (const node of nodesRes.nodes) {
+        for (const node of allNodes) {
           if (!node.is_leaf) continue;
           if (patternMatches(pattern, node.path)) {
             appearsInEntries.push({
