@@ -1,6 +1,7 @@
 package com.ganizanisitara.moniker.resolver.controller;
 
 import com.ganizanisitara.moniker.resolver.catalog.*;
+import com.ganizanisitara.moniker.resolver.config.ApplicationConfig;
 import com.ganizanisitara.moniker.resolver.service.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,9 @@ class ResolverControllerTest {
 
     @MockitoBean
     private CatalogRegistry catalog;
+
+    @MockitoBean
+    private ApplicationConfig applicationConfig;
 
     // ---- /ping ----
 
