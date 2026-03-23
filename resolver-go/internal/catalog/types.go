@@ -279,15 +279,15 @@ type DataSchema struct {
 
 // Documentation represents documentation links for a data source
 type Documentation struct {
-	GlossaryURL        *string           `json:"glossary_url,omitempty" yaml:"glossary_url,omitempty"`
-	RunbookURL         *string           `json:"runbook_url,omitempty" yaml:"runbook_url,omitempty"`
-	OnboardingURL      *string           `json:"onboarding_url,omitempty" yaml:"onboarding_url,omitempty"`
-	DataDictionaryURL  *string           `json:"data_dictionary_url,omitempty" yaml:"data_dictionary_url,omitempty"`
-	APIDocsURL         *string           `json:"api_docs_url,omitempty" yaml:"api_docs_url,omitempty"`
-	ArchitectureURL    *string           `json:"architecture_url,omitempty" yaml:"architecture_url,omitempty"`
-	ChangelogURL       *string           `json:"changelog_url,omitempty" yaml:"changelog_url,omitempty"`
-	ContactURL         *string           `json:"contact_url,omitempty" yaml:"contact_url,omitempty"`
-	AdditionalLinks    map[string]string `json:"additional_links,omitempty" yaml:"additional_links,omitempty"`
+	GlossaryURL        *string           `json:"glossary,omitempty" yaml:"glossary,omitempty"`
+	RunbookURL         *string           `json:"runbook,omitempty" yaml:"runbook,omitempty"`
+	OnboardingURL      *string           `json:"onboarding,omitempty" yaml:"onboarding,omitempty"`
+	DataDictionaryURL  *string           `json:"data_dictionary,omitempty" yaml:"data_dictionary,omitempty"`
+	APIDocsURL         *string           `json:"api_docs,omitempty" yaml:"api_docs,omitempty"`
+	ArchitectureURL    *string           `json:"architecture,omitempty" yaml:"architecture,omitempty"`
+	ChangelogURL       *string           `json:"changelog,omitempty" yaml:"changelog,omitempty"`
+	ContactURL         *string           `json:"contact,omitempty" yaml:"contact,omitempty"`
+	AdditionalLinks    map[string]string `json:"additional,omitempty" yaml:"additional,omitempty"`
 }
 
 // ToDict converts documentation to dictionary for API responses
@@ -349,6 +349,15 @@ type CatalogNode struct {
 
 	// Domain mapping (for top-level nodes)
 	Domain *string `json:"domain,omitempty" yaml:"domain,omitempty"`
+
+	// Vendor (e.g., bloomberg, refinitiv, msci)
+	Vendor *string `json:"vendor,omitempty" yaml:"vendor,omitempty"`
+
+	// Maturity level (e.g., governed, certified)
+	Maturity *string `json:"maturity,omitempty" yaml:"maturity,omitempty"`
+
+	// Extended technical description
+	TechnicalDescription *string `json:"technical_description,omitempty" yaml:"technical_description,omitempty"`
 
 	// Ownership (inherits from ancestors if not set)
 	Ownership *Ownership `json:"ownership,omitempty" yaml:"ownership,omitempty"`
