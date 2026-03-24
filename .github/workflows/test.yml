@@ -43,9 +43,9 @@ jobs:
             sleep 1
           done
 
-      - name: MCP SSE tests
+      - name: MCP tests
         env:
-          MCP_URL: http://127.0.0.1:8060/mcp/sse
+          MCP_URL: http://127.0.0.1:8060/mcp
         run: pytest tests/test_mcp.py -v --tb=short
 
   go-tests:

@@ -971,7 +971,7 @@ async def lifespan(app: FastAPI):
 
     _redis_cache = await bs.setup_redis(config)
 
-    # Mount read-only MCP server on /mcp (SSE transport)
+    # Mount read-only MCP server on /mcp (streamable HTTP transport)
     from . import mcp as mcp_module
     mcp_module.configure(
         catalog=catalog,
@@ -981,17 +981,8 @@ async def lifespan(app: FastAPI):
         request_registry=_request_registry,
         config=config,
     )
-    app.mount("/mcp", mcp_module.get_sse_app())
-    logger.info("MCP server mounted at /mcp/sse (read-only, SSE transport)")
-
-    # Redirect /mcp/messages (no trailing slash) → /mcp/messages/ so clients
-    # that don't append a trailing slash still reach the SSE message handler.
-    from starlette.responses import RedirectResponse
-
-    @app.post("/mcp/messages")
-    async def _mcp_messages_redirect(request: Request):
-        url = str(request.url).replace("/mcp/messages", "/mcp/messages/", 1)
-        return RedirectResponse(url=url, status_code=307)
+    app.mount("/mcp", mcp_module.get_streamable_http_app())
+    logger.info("MCP server mounted at /mcp (read-only, streamable HTTP transport)")
 
     logger.info("Moniker resolution service started")
 

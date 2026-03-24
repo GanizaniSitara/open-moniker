@@ -93,7 +93,7 @@ def run_mcp_tests() -> bool:
             return False
 
         print(f"Server ready on port {SERVER_PORT}")
-        env = {**os.environ, "MCP_URL": f"http://127.0.0.1:{SERVER_PORT}/mcp/sse"}
+        env = {**os.environ, "MCP_URL": f"http://127.0.0.1:{SERVER_PORT}/mcp"}
         result = subprocess.run(
             [PYTHON, "-m", "pytest", "tests/test_mcp.py", "-v", "--tb=short"],
             cwd=REPO_ROOT,
