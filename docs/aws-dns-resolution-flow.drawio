@@ -8,7 +8,7 @@
         <!-- ============================================================ -->
         <!-- TITLE -->
         <!-- ============================================================ -->
-        <mxCell id="title" value="Open Moniker — DNS Resolution &amp; Request Flow" style="text;html=1;fontSize=20;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+        <mxCell id="title" value="Moniker Service — DNS Resolution &amp; Request Flow" style="text;html=1;fontSize=20;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
           <mxGeometry x="250" y="10" width="900" height="40" as="geometry" />
         </mxCell>
 

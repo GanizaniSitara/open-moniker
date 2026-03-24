@@ -37,7 +37,7 @@ server:
 
 # Moniker-specific configuration
 moniker:
-  project-name: ${PROJECT_NAME:Open Moniker}
+  project-name: ${PROJECT_NAME:Moniker Service}
   config-file: ${CONFIG_FILE:../config.yaml}
   catalog-file: ${CATALOG_FILE:../catalog.yaml}
 

@@ -26,7 +26,7 @@ public class ResolverController {
     private final String projectName;
 
     public ResolverController(MonikerService monikerService, CatalogRegistry catalog,
-                            @Value("${moniker.project-name:Open Moniker}") String projectName) {
+                            @Value("${moniker.project-name:Moniker Service}") String projectName) {
         this.monikerService = monikerService;
         this.catalog = catalog;
         this.projectName = projectName;

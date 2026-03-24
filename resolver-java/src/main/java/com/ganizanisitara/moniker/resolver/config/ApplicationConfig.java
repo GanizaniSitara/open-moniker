@@ -7,7 +7,7 @@ import lombok.Data;
  */
 @Data
 public class ApplicationConfig {
-    private String projectName = "Open Moniker";
+    private String projectName = "Moniker Service";
     private ServerConfig server = new ServerConfig();
     private TelemetryConfig telemetry = new TelemetryConfig();
     private CacheConfig cache = new CacheConfig();

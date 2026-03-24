@@ -41,7 +41,7 @@ func main() {
 
 	// Set default project name if not configured
 	if cfg.ProjectName == "" {
-		cfg.ProjectName = "Open Moniker"
+		cfg.ProjectName = "Moniker Service"
 	}
 
 	// Display startup banner

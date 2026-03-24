@@ -65,7 +65,7 @@ HashiCorp Consul is excellent but adds another system to operate. Cloud Map
          │                              │
          ▼                              ▼
 ┌──────────────────┐        ┌──────────────────────┐
-│ Open Moniker Svc │        │ CloudWatch / X-Ray   │
+│ Moniker Service Svc │        │ CloudWatch / X-Ray   │
 │ (Python/FastAPI) │        │ (metrics + traces)   │
 └──────────────────┘        └──────────────────────┘
 ```
@@ -74,7 +74,7 @@ HashiCorp Consul is excellent but adds another system to operate. Cloud Map
 
 ## The 6 Go Services — Suggested Roles
 
-Based on Open Moniker's data governance domain, the 6 Go servers likely map to:
+Based on Moniker Service's data governance domain, the 6 Go servers likely map to:
 
 | Service | Purpose | Why Go |
 |---------|---------|--------|
@@ -210,7 +210,7 @@ func main() {
     grpcServer.Serve(lis)
 }
 
-// clusters defines the 6 Go services + Open Moniker backend
+// clusters defines the 6 Go services + Moniker Service backend
 func clusters() []cache.Resource {
     services := []string{
         "gateway", "resolver", "telemetry-collector",
@@ -253,7 +253,7 @@ require (
 
 ---
 
-## Phase 3: Integration with Open Moniker
+## Phase 3: Integration with Moniker Service
 
 The Go control plane can dynamically route based on moniker catalog metadata:
 

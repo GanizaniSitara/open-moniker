@@ -6,7 +6,7 @@
         <mxCell id="1" parent="0" />
 
         <!-- Title -->
-        <mxCell id="title" value="Open Moniker — AWS Multi-Region Deployment (6 Go Services)" style="text;html=1;fontSize=20;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+        <mxCell id="title" value="Moniker Service — AWS Multi-Region Deployment (6 Go Services)" style="text;html=1;fontSize=20;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
           <mxGeometry x="400" y="10" width="800" height="40" as="geometry" />
         </mxCell>
 

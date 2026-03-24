@@ -1,4 +1,4 @@
-"""Run the full Open Moniker test suite.
+"""Run the full Moniker Service test suite.
 
 Usage:
     python scripts/run_all_tests.py            # run everything
@@ -134,7 +134,7 @@ def run_java_tests() -> bool:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run Open Moniker test suite")
+    parser = argparse.ArgumentParser(description="Run Moniker Service test suite")
     parser.add_argument("--python", action="store_true", help="Python tests only")
     parser.add_argument("--mcp", action="store_true", help="MCP SSE tests only")
     parser.add_argument("--go", action="store_true", help="Go tests only")

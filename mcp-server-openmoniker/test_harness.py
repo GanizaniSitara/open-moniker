@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test harness for the Open Moniker MCP server.
+Test harness for the Moniker Service MCP server.
 
 Exercises every tool and resource, reports pass/fail with timing.
 
@@ -250,7 +250,7 @@ async def run_tests(base_url: str, run_write: bool, submit_token: str, approve_t
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Test harness for MCP Open Moniker server")
+    parser = argparse.ArgumentParser(description="Test harness for MCP Moniker Service server")
     parser.add_argument("--url", default="http://localhost:8051/mcp",
                         help="MCP server URL (default: http://localhost:8051/mcp)")
     parser.add_argument("--write", action="store_true",
