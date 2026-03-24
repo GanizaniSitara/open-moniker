@@ -116,14 +116,9 @@ class TestCacheErrors:
         await cache.set("key", "value", ttl_seconds=0)
         # With ttl=0, is_expired uses strict > comparison:
         #   time.time() > created_at + 0
-        # So the entry may still be alive at the exact same instant.
-        # Verify that we get back the value (ttl=0 does not prevent storage)
-        # and that the entry *will* expire once any time passes.
-        result = cache.get("key")
-        # The value should be retrievable since expiry requires time > created_at
-        assert result == "value"
-
-        # After a tiny sleep the entry must expire
+        # On fast machines time advances between set() and get(),
+        # so the entry may or may not be expired. Just verify
+        # that after a tiny sleep it is definitely gone.
         import time
         time.sleep(0.01)
         result_after = cache.get("key")
