@@ -75,7 +75,7 @@ def _require_state() -> _McpState:
 mcp = FastMCP(
     name="open-moniker",
     instructions=(
-        "Moniker Service MCP Server — a unified data catalog and governance layer for firm-wide data access.\n\n"
+        "Open Moniker MCP Server — a unified data catalog and governance layer for firm-wide data access.\n\n"
 
         "## What is a Moniker?\n"
         "A moniker is a human-readable, hierarchical path that identifies a data asset. "
@@ -539,7 +539,7 @@ async def domains_list() -> str:
     "moniker://about",
     name="about",
     description=(
-        "Full self-description of Moniker Service: what it is, how monikers are structured, "
+        "Full self-description of Open Moniker: what it is, how monikers are structured, "
         "path conventions, segment filtering, and how to design a moniker hierarchy."
     ),
     mime_type="text/markdown",
@@ -558,9 +558,9 @@ async def about() -> str:
     source_summary = ", ".join(f"{v} {k}" for k, v in sorted(source_types.items(), key=lambda x: -x[1]))
 
     return (
-        "# Moniker Service — Self-Description\n\n"
-        "## What Is Moniker Service?\n"
-        "Moniker Service is a unified data catalog and governance layer. It lets you access\n"
+        "# Open Moniker — Self-Description\n\n"
+        "## What Is Open Moniker?\n"
+        "Open Moniker is a unified data catalog and governance layer. It lets you access\n"
         "any data asset across the firm using a single, human-readable path (a \"moniker\")\n"
         "without knowing connection strings, credentials, SQL dialects, or API shapes.\n\n"
         f"## This Catalog\n"
@@ -614,7 +614,7 @@ async def naming_guide() -> str:
     leaves.sort(key=lambda x: x["path"])
 
     lines = [
-        "# Moniker Service — Live Naming Guide",
+        "# Open Moniker — Live Naming Guide",
         "",
         "This guide is generated from the live catalog and shows real moniker patterns.",
         "",
