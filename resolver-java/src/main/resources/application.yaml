@@ -41,6 +41,15 @@ moniker:
   config-file: ${CONFIG_FILE:../config.yaml}
   catalog-file: ${CATALOG_FILE:../catalog.yaml}
 
+# Springdoc / Swagger UI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+
 # Logging
 logging:
   level:
