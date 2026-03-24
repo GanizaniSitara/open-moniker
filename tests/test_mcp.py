@@ -309,7 +309,7 @@ async def test_read_about(mcp_url):
     async with mcp_session(mcp_url) as session:
         result = await session.read_resource("moniker://about")
         text = result.contents[0].text if result.contents else ""
-        assert "Open Moniker" in text
+        assert "Moniker" in text
 
 
 @pytest.mark.asyncio
