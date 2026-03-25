@@ -300,6 +300,49 @@ def build_request_registry(config):
 
 
 # ---------------------------------------------------------------------------
+# Community contributions
+# ---------------------------------------------------------------------------
+
+def build_community_registry(config):
+    """Load community registry from JSON files if enabled.
+
+    Returns ``(registry, storage)``.
+    """
+    from .community import CommunityRegistry, FileStorage
+
+    storage = FileStorage(config.community.data_dir)
+    registry = CommunityRegistry()
+    if config.community.enabled:
+        all_data = storage.load_all()
+        for (et, ek), contrib in all_data.items():
+            registry.load_entity(et, ek, contrib)
+        logger.info("Loaded community data for %d entities", len(all_data))
+    else:
+        logger.info("Community contributions disabled")
+    return registry, storage
+
+
+# ---------------------------------------------------------------------------
+# Shortlinks
+# ---------------------------------------------------------------------------
+
+def build_shortlink_store(config):
+    """Load shortlink store from JSON file.
+
+    Returns the ``ShortlinkStore`` instance.
+    """
+    from .shortlinks import ShortlinkStore
+
+    storage_file = os.environ.get("SHORTLINKS_FILE", config.shortlinks.storage_file)
+    store = ShortlinkStore(file_path=storage_file)
+    if Path(storage_file).exists():
+        store.load()
+    else:
+        logger.info("No shortlinks file at %s, starting empty", storage_file)
+    return store
+
+
+# ---------------------------------------------------------------------------
 # Redis cache
 # ---------------------------------------------------------------------------
 

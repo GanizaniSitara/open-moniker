@@ -52,6 +52,8 @@ from .models import routes as model_routes
 from .models import ModelRegistry, load_models_from_yaml
 from .requests import routes as request_routes
 from .requests import RequestRegistry, load_requests_from_yaml
+from .shortlinks import routes as shortlink_routes
+from .shortlinks import ShortlinkStore
 try:
     from .dashboard import routes as dashboard_routes
 except ImportError:
@@ -71,6 +73,9 @@ _application_registry: ApplicationRegistry | None = None
 
 # Request registry - global singleton
 _request_registry: RequestRegistry | None = None
+
+# Shortlink store - global singleton
+_shortlink_store: ShortlinkStore | None = None
 
 
 # Response models
@@ -969,6 +974,13 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Dashboard enabled")
 
+    # Shortlinks
+    global _shortlink_store
+    if config.shortlinks.enabled:
+        _shortlink_store = bs.build_shortlink_store(config)
+        shortlink_routes.configure(store=_shortlink_store)
+        logger.info("Shortlinks enabled (%d loaded)", _shortlink_store.count())
+
     _redis_cache = await bs.setup_redis(config)
 
     # Mount read-only MCP server on /mcp (SSE transport)
@@ -1060,6 +1072,7 @@ app.include_router(domain_routes.router)
 app.include_router(application_routes.router)
 app.include_router(model_routes.router)
 app.include_router(request_routes.router)
+app.include_router(shortlink_routes.router)
 if dashboard_routes:
     app.include_router(dashboard_routes.router)
 # resolver_router is mounted AFTER all @resolver_router.xxx() decorators are processed
@@ -1189,9 +1202,22 @@ async def resolve_moniker(
     if full_path.startswith("/resolve/"):
         path = full_path[9:]  # Strip "/resolve/"
 
+    # Shortlink expansion: detect ~-prefixed segment and expand inline
+    shortlink_alias = None
+    if _shortlink_store:
+        try:
+            expanded, alias = _shortlink_store.try_expand_path(path)
+            if alias:
+                shortlink_alias = alias
+                path = expanded
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+
     # Build full moniker string
     moniker_str = f"moniker://{path}"
-    if request.query_params:
+    if not shortlink_alias and request.query_params:
+        # Only append client query params for non-shortlink requests
+        # (shortlinks have params baked in — the expand() already includes them)
         params = list(request.query_params.items())
         if params:
             moniker_str += "?" + "&".join(f"{k}={v}" for k, v in params)
@@ -1253,14 +1279,18 @@ async def resolve_moniker(
         redirected_from=result.redirected_from,
     )
 
+    # Override redirected_from if this was a shortlink expansion
+    if shortlink_alias:
+        response.redirected_from = shortlink_alias
+
     # Add deprecation/redirect headers
     headers = {}
     if status_val == "deprecated":
         headers["X-Moniker-Deprecated"] = deprecation_msg or "This moniker is deprecated"
     if successor:
         headers["X-Moniker-Successor"] = successor
-    if result.redirected_from:
-        headers["X-Moniker-Redirected-From"] = result.redirected_from
+    if response.redirected_from:
+        headers["X-Moniker-Redirected-From"] = response.redirected_from
 
     if headers:
         return JSONResponse(
