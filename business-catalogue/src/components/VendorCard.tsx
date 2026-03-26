@@ -23,7 +23,8 @@ export default function VendorCard({
   datasetCount,
   website,
 }: VendorCardProps) {
-  const ext = SVG_VENDORS.has(vendorKey) ? "svg" : "png";
+  const isSvg = SVG_VENDORS.has(vendorKey);
+  const ext = isSvg ? "svg" : "png";
   const [imgError, setImgError] = useState(false);
 
   return (
@@ -69,6 +70,7 @@ export default function VendorCard({
             alt={`${name} logo`}
             width={40}
             height={40}
+            unoptimized={isSvg}
             style={{ objectFit: "contain" }}
             onError={() => setImgError(true)}
           />
