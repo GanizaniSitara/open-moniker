@@ -39,6 +39,8 @@ from .domains import routes as domain_routes
 from .models import routes as model_routes
 from .requests import routes as request_routes
 from .dashboard import routes as dashboard_routes
+from .community import routes as community_routes
+from .community import config_routes as community_config_routes
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +102,20 @@ async def lifespan(app: FastAPI):
     )
     logger.info("Dashboard enabled")
 
+    if config.community.enabled:
+        community_registry, community_storage = bs.build_community_registry(config)
+        community_routes.configure(
+            registry=community_registry,
+            storage=community_storage,
+        )
+        from .catalog.serializer import CatalogSerializer
+        community_config_routes.configure(
+            storage=community_storage,
+            catalog=catalog,
+            serializer=CatalogSerializer(),
+        )
+        logger.info("Community contributions enabled (data_dir=%s)", config.community.data_dir)
+
     logger.info("Management service started")
     yield
 
@@ -121,6 +137,8 @@ app = FastAPI(
         {"name": "Models", "description": "Business models / measures"},
         {"name": "Requests", "description": "Moniker request submission and approval workflow"},
         {"name": "Dashboard", "description": "Observability dashboard"},
+        {"name": "Community", "description": "Community contributions (flags, suggestions, annotations, discussions)"},
+        {"name": "Community Configs", "description": "Shared catalog config snapshots"},
         {"name": "Health", "description": "Landing page"},
     ],
 )
@@ -136,6 +154,8 @@ app.include_router(domain_routes.router)
 app.include_router(model_routes.router)
 app.include_router(request_routes.router)
 app.include_router(dashboard_routes.router)
+app.include_router(community_routes.router)
+app.include_router(community_config_routes.config_router)
 
 
 # ---------------------------------------------------------------------------
@@ -296,11 +316,6 @@ async def root(request: Request):
                 <h2>Catalog Config</h2>
                 <p>Edit monikers, source bindings, and ownership configuration.</p>
                 <a href="/config/ui">Catalog Config UI</a>
-            </div>
-            <div class="card">
-                <h2>Catalog Browser</h2>
-                <p>Browse the moniker catalog hierarchy, view ownership and metadata for data assets.</p>
-                <a href="/ui">Open Catalog Browser</a>
             </div>
             <div class="card">
                 <h2>Business Models</h2>
