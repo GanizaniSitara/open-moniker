@@ -104,6 +104,20 @@ class RequestsConfig:
 
 
 @dataclass
+class CommunityConfig:
+    """Community contributions configuration (file-based)."""
+    enabled: bool = True
+    data_dir: str = "community_data"
+
+
+@dataclass
+class ShortlinksConfig:
+    """Shortlink alias configuration."""
+    enabled: bool = True
+    storage_file: str = "shortlinks.json"
+
+
+@dataclass
 class GovernanceConfig:
     """Enterprise governance configuration."""
     rate_limiter_enabled: bool = True
@@ -129,6 +143,8 @@ class Config:
     deprecation: DeprecationConfig = field(default_factory=DeprecationConfig)
     models: ModelsConfig = field(default_factory=ModelsConfig)
     requests: RequestsConfig = field(default_factory=RequestsConfig)
+    community: CommunityConfig = field(default_factory=CommunityConfig)
+    shortlinks: ShortlinksConfig = field(default_factory=ShortlinksConfig)
     governance: GovernanceConfig = field(default_factory=GovernanceConfig)
 
     @classmethod
@@ -147,6 +163,8 @@ class Config:
             deprecation=DeprecationConfig(**data.get("deprecation", {})),
             models=ModelsConfig(**data.get("models", {})),
             requests=RequestsConfig(**data.get("requests", {})),
+            community=CommunityConfig(**data.get("community", {})),
+            shortlinks=ShortlinksConfig(**data.get("shortlinks", {})),
             governance=GovernanceConfig(**data.get("governance", {})),
         )
 
