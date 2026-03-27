@@ -64,10 +64,10 @@ pip install -e client/
 
 # 2. Start the server (uses built-in demo catalog with mock data)
 # Linux/Mac:
-PYTHONPATH="$PWD/src:$PWD/external/moniker-data/src" uvicorn moniker_svc.main:app --reload
+PYTHONPATH="$PWD:$PWD/external/moniker-data/src" uvicorn moniker_svc.main:app --reload
 
 # Windows PowerShell:
-$env:PYTHONPATH="$PWD\src;$PWD\external\moniker-data\src"; uvicorn moniker_svc.main:app --reload
+$env:PYTHONPATH="$PWD;$PWD\external\moniker-data\src"; uvicorn moniker_svc.main:app --reload
 
 # 3. Open the web UI
 # http://localhost:8050/ui
@@ -121,10 +121,10 @@ print(m_prices.children())    # ['AAPL', 'MSFT', 'GOOGL', ...]
 
 ```bash
 # Set PYTHONPATH (Linux/Mac)
-export PYTHONPATH="$PWD/src:$PWD/client:$PWD/external/moniker-data/src"
+export PYTHONPATH="$PWD:$PWD/client:$PWD/external/moniker-data/src"
 
 # Windows PowerShell
-$env:PYTHONPATH="$PWD\src;$PWD\client;$PWD\external\moniker-data\src"
+$env:PYTHONPATH="$PWD;$PWD\client;$PWD\external\moniker-data\src"
 
 # Run all tests
 python -m pytest tests/ external/moniker-tests/tests/ -v
@@ -170,7 +170,7 @@ risk.cvar:
 
 ```
 open-moniker/
-├── src/moniker_svc/           # FastAPI service
+├── moniker_svc/               # FastAPI service
 ├── client/moniker_client/     # Python client library
 ├── external/                  # Will become separate repos
 │   └── moniker-tests/         # Integration tests
@@ -208,7 +208,7 @@ Browse the catalog visually at **http://localhost:8050/ui**
 2. Settings:
    - **Runtime**: Python
    - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `PYTHONPATH=src:external/moniker-data/src uvicorn moniker_svc.main:app --host 0.0.0.0 --port $PORT`
+   - **Start Command**: `PYTHONPATH=.:external/moniker-data/src uvicorn moniker_svc.main:app --host 0.0.0.0 --port $PORT`
 3. Add environment variable: `PYTHON_VERSION=3.11`
 
 Once deployed, access:

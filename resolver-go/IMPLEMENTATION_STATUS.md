@@ -122,7 +122,7 @@ This document tracks the implementation status of the Go resolver against the pl
 - Validation during load
 - Error reporting for malformed YAML
 
-**Reference:** `src/moniker_svc/catalog/loader.py` (if exists) or YAML parsing in _bootstrap.py
+**Reference:** `moniker_svc/catalog/loader.py` (if exists) or YAML parsing in _bootstrap.py
 
 #### 8. Service Layer (`internal/service/`) - NEXT
 **Status:** Not started
@@ -150,7 +150,7 @@ This document tracks the implementation status of the Go resolver against the pl
 7. Emit telemetry
 8. Return result
 
-**Reference:** `src/moniker_svc/service.py` lines 1-300
+**Reference:** `moniker_svc/service.py` lines 1-300
 
 ### ⏳ Not Started Components (30%)
 
@@ -184,7 +184,7 @@ This document tracks the implementation status of the Go resolver against the pl
 - Caller identity extraction
 - Query parameter parsing
 
-**Reference:** `src/moniker_svc/resolver_app.py` (FastAPI routes)
+**Reference:** `moniker_svc/resolver_app.py` (FastAPI routes)
 
 #### 10. Dialect System (`internal/dialect/`)
 **Priority:** MEDIUM
@@ -206,7 +206,7 @@ This document tracks the implementation status of the Go resolver against the pl
 - `{date_filter:column}` - Full WHERE clause
 - `{is_latest}` - Boolean for "latest" version
 
-**Reference:** `src/moniker_svc/dialect/placeholders.py`
+**Reference:** `moniker_svc/dialect/placeholders.py`
 
 #### 11. Telemetry (`internal/telemetry/`)
 **Priority:** MEDIUM
@@ -219,7 +219,7 @@ This document tracks the implementation status of the Go resolver against the pl
 - `sinks/console.go` - Console sink
 - `sinks/file.go` - File sink (rotating logs)
 
-**Reference:** `src/moniker_svc/telemetry/`
+**Reference:** `moniker_svc/telemetry/`
 
 #### 12. Domains (`internal/domains/`)
 **Priority:** LOW - Nice to have for Phase 1
@@ -230,7 +230,7 @@ This document tracks the implementation status of the Go resolver against the pl
 - `types.go` - Domain struct
 - `loader.go` - Load from domains.yaml
 
-**Reference:** `src/moniker_svc/domains/`
+**Reference:** `moniker_svc/domains/`
 
 #### 13. Governance (`internal/governance/`)
 **Priority:** Phase 3
@@ -349,5 +349,5 @@ None currently. All dependencies resolved, code compiles and runs.
 ## References
 
 - Plan document: Plan attached in conversation
-- Python reference: `/home/user/open-moniker-svc/src/moniker_svc/`
-- Go implementation: `/home/user/open-moniker-svc/resolver-go/`
+- Python reference: `/home/user/open-moniker/moniker_svc/`
+- Go implementation: `/home/user/open-moniker/resolver-go/`

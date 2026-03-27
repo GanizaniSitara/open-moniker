@@ -16,6 +16,8 @@ type CatalogNodeYAML struct {
 	DisplayName          string                 `yaml:"display_name"`
 	Description          string                 `yaml:"description"`
 	TechnicalDescription string                 `yaml:"technical_description"`
+	AssetClass           string                 `yaml:"asset_class"`
+	UpdateFrequency      string                 `yaml:"update_frequency"`
 	Domain               *string                `yaml:"domain"`
 	Vendor               *string                `yaml:"vendor"`
 	Maturity             *string                `yaml:"maturity"`
@@ -29,6 +31,13 @@ type CatalogNodeYAML struct {
 	Status               string                 `yaml:"status"`
 	IsLeaf               bool                   `yaml:"is_leaf"`
 	Successor            *string                `yaml:"successor"`
+	DeprecationMessage   *string                `yaml:"deprecation_message"`
+	MigrationGuideURL    *string                `yaml:"migration_guide_url"`
+	SunsetDeadline       *string                `yaml:"sunset_deadline"`
+	Metadata             map[string]interface{} `yaml:"metadata"`
+	DataQuality          map[string]interface{} `yaml:"data_quality"`
+	SLAData              map[string]interface{} `yaml:"sla"`
+	FreshnessData        map[string]interface{} `yaml:"freshness"`
 }
 
 // OwnershipYAML represents ownership in YAML
@@ -91,16 +100,18 @@ func LoadCatalog(path string) ([]*CatalogNode, error) {
 
 func convertYAMLToNode(path string, yaml *CatalogNodeYAML) *CatalogNode {
 	node := &CatalogNode{
-		Path:           path,
-		DisplayName:    yaml.DisplayName,
-		Description:    yaml.Description,
-		Domain:         yaml.Domain,
-		Vendor:         yaml.Vendor,
-		Maturity:       yaml.Maturity,
-		Classification: yaml.Classification,
-		Tags:           yaml.Tags,
-		IsLeaf:         yaml.IsLeaf,
-		Successor:      yaml.Successor,
+		Path:            path,
+		DisplayName:     yaml.DisplayName,
+		Description:     yaml.Description,
+		AssetClass:      yaml.AssetClass,
+		UpdateFrequency: yaml.UpdateFrequency,
+		Domain:          yaml.Domain,
+		Vendor:          yaml.Vendor,
+		Maturity:        yaml.Maturity,
+		Classification:  yaml.Classification,
+		Tags:            yaml.Tags,
+		IsLeaf:          yaml.IsLeaf,
+		Successor:       yaml.Successor,
 	}
 
 	// Set technical description
@@ -230,7 +241,109 @@ func convertYAMLToNode(path string, yaml *CatalogNodeYAML) *CatalogNode {
 		}
 	}
 
+	// Copy deprecation fields
+	if yaml.DeprecationMessage != nil {
+		node.DeprecationMessage = yaml.DeprecationMessage
+	}
+	if yaml.MigrationGuideURL != nil {
+		node.MigrationGuideURL = yaml.MigrationGuideURL
+	}
+	if yaml.SunsetDeadline != nil {
+		node.SunsetDeadline = yaml.SunsetDeadline
+	}
+
+	// Copy metadata
+	if yaml.Metadata != nil {
+		node.Metadata = yaml.Metadata
+	}
+
+	// Parse data quality
+	if yaml.DataQuality != nil {
+		node.DataQuality = parseDataQuality(yaml.DataQuality)
+	}
+
+	// Parse SLA
+	if yaml.SLAData != nil {
+		node.SLA = parseSLA(yaml.SLAData)
+	}
+
+	// Parse freshness
+	if yaml.FreshnessData != nil {
+		node.Freshness = parseFreshness(yaml.FreshnessData)
+	}
+
 	return node
+}
+
+func parseDataQuality(data map[string]interface{}) *DataQuality {
+	dq := &DataQuality{}
+	if v, ok := data["dq_owner"].(string); ok {
+		dq.DQOwner = &v
+	}
+	if v, ok := data["quality_score"].(float64); ok {
+		dq.QualityScore = &v
+	}
+	// yaml.v3 may decode integers as int, so handle both
+	if v, ok := data["quality_score"].(int); ok {
+		f := float64(v)
+		dq.QualityScore = &f
+	}
+	if v, ok := data["last_validated"].(string); ok {
+		dq.LastValidated = &v
+	}
+	if rules, ok := data["validation_rules"].([]interface{}); ok {
+		for _, r := range rules {
+			if s, ok := r.(string); ok {
+				dq.ValidationRules = append(dq.ValidationRules, s)
+			}
+		}
+	}
+	if issues, ok := data["known_issues"].([]interface{}); ok {
+		for _, i := range issues {
+			if s, ok := i.(string); ok {
+				dq.KnownIssues = append(dq.KnownIssues, s)
+			}
+		}
+	}
+	return dq
+}
+
+func parseSLA(data map[string]interface{}) *SLA {
+	s := &SLA{}
+	if v, ok := data["freshness"].(string); ok {
+		s.Freshness = &v
+	}
+	if v, ok := data["availability"].(string); ok {
+		s.Availability = &v
+	}
+	if v, ok := data["support_hours"].(string); ok {
+		s.SupportHours = &v
+	}
+	if v, ok := data["escalation_contact"].(string); ok {
+		s.EscalationContact = &v
+	}
+	return s
+}
+
+func parseFreshness(data map[string]interface{}) *Freshness {
+	f := &Freshness{}
+	if v, ok := data["last_loaded"].(string); ok {
+		f.LastLoaded = &v
+	}
+	if v, ok := data["refresh_schedule"].(string); ok {
+		f.RefreshSchedule = &v
+	}
+	if v, ok := data["source_system"].(string); ok {
+		f.SourceSystem = &v
+	}
+	if deps, ok := data["upstream_dependencies"].([]interface{}); ok {
+		for _, d := range deps {
+			if s, ok := d.(string); ok {
+				f.UpstreamDependencies = append(f.UpstreamDependencies, s)
+			}
+		}
+	}
+	return f
 }
 
 // stringFromMap safely extracts a string value from a map

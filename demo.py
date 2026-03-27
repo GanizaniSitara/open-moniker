@@ -283,7 +283,7 @@ def main():
     print(f"\n\n{c('Demo complete!', Style.BRIGHT)}")
     print(f"\n{c('To run:', Style.BRIGHT)}")
     print(f"  # Start the service")
-    print(f"  {c('cd /path/to/open-moniker-svc', Style.DIM)}")
+    print(f"  {c('cd /path/to/open-moniker', Style.DIM)}")
     print(f"  {c('pip install -e .', Fore.CYAN)}")
     print(f"  {c('python -m moniker_svc.main', Fore.CYAN)}")
     print(f"\n  # Use the client")

@@ -84,6 +84,8 @@ public class CatalogLoader {
             node.setDescription((String) nodeData.getOrDefault("description", ""));
             node.setDomain((String) nodeData.get("domain"));
             node.setVendor((String) nodeData.get("vendor"));
+            node.setAssetClass((String) nodeData.get("asset_class"));
+            node.setUpdateFrequency((String) nodeData.get("update_frequency"));
             node.setMaturity((String) nodeData.get("maturity"));
             node.setTechnicalDescription((String) nodeData.get("technical_description"));
             node.setClassification((String) nodeData.getOrDefault("classification", ""));
@@ -115,6 +117,36 @@ public class CatalogLoader {
             // Parse tags
             if (nodeData.containsKey("tags")) {
                 node.setTags((List<String>) nodeData.get("tags"));
+            }
+
+            // Deprecation fields
+            node.setDeprecationMessage((String) nodeData.get("deprecation_message"));
+            node.setMigrationGuideUrl((String) nodeData.get("migration_guide_url"));
+
+            // Data governance maps
+            if (nodeData.containsKey("data_quality")) {
+                Object dqVal = nodeData.get("data_quality");
+                if (dqVal instanceof Map) {
+                    node.setDataQuality((Map<String, Object>) dqVal);
+                }
+            }
+            if (nodeData.containsKey("sla")) {
+                Object slaVal = nodeData.get("sla");
+                if (slaVal instanceof Map) {
+                    node.setSla((Map<String, Object>) slaVal);
+                }
+            }
+            if (nodeData.containsKey("freshness")) {
+                Object freshVal = nodeData.get("freshness");
+                if (freshVal instanceof Map) {
+                    node.setFreshness((Map<String, Object>) freshVal);
+                }
+            }
+            if (nodeData.containsKey("metadata")) {
+                Object metaVal = nodeData.get("metadata");
+                if (metaVal instanceof Map) {
+                    node.setMetadata((Map<String, Object>) metaVal);
+                }
             }
 
             // Metadata fields

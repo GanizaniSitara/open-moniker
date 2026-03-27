@@ -14,7 +14,7 @@ unified access pattern provided by the moniker service.
 
 Usage:
     # Start the service in one terminal:
-    cd /home/user/open-moniker-svc
+    cd /home/user/open-moniker
     python -m uvicorn moniker_svc.main:app --port 8050
 
     # Run this demo in another terminal:
@@ -32,7 +32,7 @@ from pathlib import Path
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "client"))
-sys.path.insert(0, str(project_root / "src"))
+sys.path.insert(0, str(project_root))
 
 
 def run_demo():

@@ -4,7 +4,7 @@
 
 ```
   +---------------------------+      +---------------------------+
-  |    open-moniker-client    |      |     open-moniker-svc      |
+  |    open-moniker-client    |      |     open-moniker      |
   |                           |      |                           |
   |  config.py                |      |  config.py                |
   |    deprecation_enabled    |      |    DeprecationConfig      |
@@ -351,7 +351,7 @@ telemetry payload:
 
 ## File Change Summary
 
-### Server (`open-moniker-svc/src/moniker_svc/`)
+### Server (`open-moniker/moniker_svc/`)
 
 | File | What Changed |
 |---|---|
@@ -408,7 +408,7 @@ telemetry payload:
 
 ```bash
 cd ~/open-moniker-client-tests
-PYTHONPATH=~/open-moniker-svc/src:~/open-moniker-client python3 -m pytest test_governance.py -v
+PYTHONPATH=~/open-moniker:~/open-moniker-client python3 -m pytest test_governance.py -v
 ```
 
 ---
