@@ -144,9 +144,11 @@ export default async function DomainDetailPage({ params }: PageProps) {
               datasetKey={toSlashPath(ds.path)}
               displayName={ds.display_name}
               description={ds.description}
-              sourceType={ds.source_binding?.type}
+              sourceType={ds.source_type ?? undefined}
               domainDisplayName={domain.display_name}
               domainColor={domain.color}
+              vendor={ds.vendor ?? undefined}
+              maturity={ds.maturity}
               columnCount={0}
               classification={ds.classification}
               isContainer={!ds.is_leaf}
