@@ -983,9 +983,9 @@ async def lifespan(app: FastAPI):
 
     _redis_cache = await bs.setup_redis(config)
 
-    # Mount read-only MCP server on /mcp (streamable HTTP transport)
-    from . import mcp as mcp_module
-    mcp_module.configure(
+    # Configure MCP shared state (app is mounted at module level for routing;
+    # session manager must be started here so its task group is alive)
+    _mcp_module.configure(
         catalog=catalog,
         service=_service,
         domain_registry=_domain_registry,
@@ -993,12 +993,12 @@ async def lifespan(app: FastAPI):
         request_registry=_request_registry,
         config=config,
     )
-    app.mount("/mcp", mcp_module.get_streamable_http_app())
-    logger.info("MCP server mounted at /mcp (read-only, streamable HTTP transport)")
+    logger.info("MCP server configured (read-only, streamable HTTP transport)")
 
     logger.info("Moniker resolution service started")
 
-    yield
+    async with _mcp_module.mcp.session_manager.run():
+        yield
 
     # Shutdown
     logger.info("Shutting down moniker resolution service...")
@@ -1075,6 +1075,13 @@ app.include_router(request_routes.router)
 app.include_router(shortlink_routes.router)
 if dashboard_routes:
     app.include_router(dashboard_routes.router)
+
+# Mount read-only MCP server (streamable HTTP transport).
+# Must be at module level so the sub-app's lifespan fires and the
+# StreamableHTTPSessionManager task group is initialised.
+from . import mcp as _mcp_module  # noqa: E402
+app.mount("/mcp", _mcp_module.get_streamable_http_app())
+
 # resolver_router is mounted AFTER all @resolver_router.xxx() decorators are processed
 # (see the app.include_router(resolver_router) call after the ui() handler below)
 
