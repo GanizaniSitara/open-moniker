@@ -1,4 +1,4 @@
-"""Run the full Open Moniker test suite.
+"""Run the full Moniker Service test suite.
 
 Usage:
     python scripts/run_all_tests.py            # run everything
@@ -93,7 +93,7 @@ def run_mcp_tests() -> bool:
             return False
 
         print(f"Server ready on port {SERVER_PORT}")
-        env = {**os.environ, "MCP_URL": f"http://127.0.0.1:{SERVER_PORT}/mcp/sse"}
+        env = {**os.environ, "MCP_URL": f"http://127.0.0.1:{SERVER_PORT}/mcp"}
         result = subprocess.run(
             [PYTHON, "-m", "pytest", "tests/test_mcp.py", "-v", "--tb=short"],
             cwd=REPO_ROOT,
@@ -134,7 +134,7 @@ def run_java_tests() -> bool:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run Open Moniker test suite")
+    parser = argparse.ArgumentParser(description="Run Moniker Service test suite")
     parser.add_argument("--python", action="store_true", help="Python tests only")
     parser.add_argument("--mcp", action="store_true", help="MCP SSE tests only")
     parser.add_argument("--go", action="store_true", help="Go tests only")

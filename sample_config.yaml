@@ -1,7 +1,7 @@
 # Service Configuration
 
 # Project branding
-project_name: "Open Moniker"
+project_name: "Moniker Service"
 
 server:
   host: "0.0.0.0"

@@ -6,7 +6,7 @@ its registries (no duplicate YAML loading).
 
 Write tools (submit/approve/reject) are intentionally excluded.
 
-Transport: SSE — endpoints are /mcp/sse (GET) and /mcp/messages/ (POST)
+Transport: Streamable HTTP — a single endpoint at /mcp/ (POST|GET|DELETE)
 when mounted at /mcp on the FastAPI app.
 """
 
@@ -74,6 +74,7 @@ def _require_state() -> _McpState:
 
 mcp = FastMCP(
     name="open-moniker",
+    streamable_http_path="/",
     instructions=(
         "Moniker Service MCP Server — a unified data catalog and governance layer for firm-wide data access.\n\n"
 
@@ -755,11 +756,10 @@ async def check_ownership_prompt(path: str) -> str:
 # ASGI app factory — called from main.py to mount on /mcp
 # ---------------------------------------------------------------------------
 
-def get_sse_app():
-    """Return the MCP SSE Starlette ASGI app for mounting on FastAPI.
+def get_streamable_http_app():
+    """Return the MCP streamable HTTP Starlette ASGI app for mounting on FastAPI.
 
-    When mounted at ``/mcp`` on the FastAPI app the endpoints become:
-      GET  /mcp/sse        — SSE event stream
-      POST /mcp/messages/  — client message channel
+    When mounted at ``/mcp`` on the FastAPI app the endpoint becomes:
+      POST|GET|DELETE  /mcp/  — streamable HTTP transport
     """
-    return mcp.sse_app()
+    return mcp.streamable_http_app()

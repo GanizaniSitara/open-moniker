@@ -1,6 +1,6 @@
 # Moniker Resolver - Java Implementation
 
-High-performance Java implementation of the Open Moniker resolver service using Spring Boot 3.2 and Java 21 virtual threads.
+High-performance Java implementation of the Moniker Service resolver service using Spring Boot 3.2 and Java 21 virtual threads.
 
 ## Overview
 
@@ -72,7 +72,7 @@ curl http://localhost:8054/health
 # Expected output:
 # {
 #   "status": "healthy",
-#   "project": "Open Moniker",
+#   "project": "Moniker Service",
 #   "service": "resolver-java",
 #   "version": "0.1.0",
 #   "catalog_nodes": 123,
@@ -251,7 +251,7 @@ resolver-java/
 - `PORT` - Server port (default: 8054)
 - `CONFIG_FILE` - Path to config.yaml (default: ../config.yaml)
 - `CATALOG_FILE` - Path to catalog.yaml (default: ../catalog.yaml)
-- `PROJECT_NAME` - Project name (default: Open Moniker)
+- `PROJECT_NAME` - Project name (default: Moniker Service)
 
 ### JVM Options
 
