@@ -11,7 +11,7 @@ import TrustIndicator from "@/components/contributions/TrustIndicator";
 import SidebarToggle from "@/components/contributions/SidebarToggle";
 import SuggestEditButton from "@/components/contributions/SuggestEditButton";
 import HelpfulVote from "@/components/contributions/HelpfulVote";
-import { fetchDomain, fetchNodes, toSlashPath } from "@/lib/api-client";
+import { fetchDomain, fetchNodeSummaries, toSlashPath } from "@/lib/api-client";
 import { notFound } from "next/navigation";
 
 interface PageProps {
@@ -32,8 +32,8 @@ export default async function DomainDetailPage({ params }: PageProps) {
   const domain = domainRes.domain;
 
   // Fetch all nodes, filter to this domain's datasets (prefix match + explicit domain mapping)
-  const nodesRes = await fetchNodes();
-  const datasets = nodesRes.nodes
+  const { nodes: allNodes } = await fetchNodeSummaries();
+  const datasets = allNodes
     .filter((n) =>
       n.resolved_domain === domainKey ||
       n.domain === domainKey ||

@@ -1,18 +1,18 @@
 import { Container } from "@mui/material";
 import DomainGrid from "@/components/DomainGrid";
 import PageTitle from "@/components/PageTitle";
-import { fetchDomains, fetchNodes } from "@/lib/api-client";
+import { fetchDomains, fetchNodeSummaries } from "@/lib/api-client";
 
 export default async function DomainsPage() {
-  const [domainsRes, nodesRes] = await Promise.all([
+  const [domainsRes, summaryRes] = await Promise.all([
     fetchDomains(),
-    fetchNodes(),
+    fetchNodeSummaries(),
   ]);
 
   // Count leaf datasets per domain (resolved_domain > domain > prefix matching)
   const domainKeys = domainsRes.domains.map((d) => d.name);
   const datasetCounts = new Map<string, number>();
-  for (const node of nodesRes.nodes) {
+  for (const node of summaryRes.nodes) {
     if (!node.is_leaf) continue;
     const dk = node.resolved_domain || node.domain || domainKeys.find(
       (k) => node.path === k || node.path.startsWith(k + ".") || node.path.startsWith(k + "/")

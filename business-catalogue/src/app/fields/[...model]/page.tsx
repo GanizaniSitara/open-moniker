@@ -56,7 +56,7 @@ export default async function FieldDetailPage({ params }: PageProps) {
 
   if (model.appears_in.length > 0) {
     try {
-      const allNodes = await fetchNodeSummaries();
+      const { nodes: allNodes } = await fetchNodeSummaries();
 
       for (const link of model.appears_in) {
         // Match pattern against node paths

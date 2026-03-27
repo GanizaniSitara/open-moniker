@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   fetchDomains,
-  fetchNodes,
+  fetchNodeSummaries,
   fetchModels,
   fetchCatalogSearch,
   toSlashPath,
@@ -52,8 +52,8 @@ export async function GET(request: NextRequest) {
 
     // All datasets (for the datasets listing page)
     if (all === "datasets") {
-      const [nodesRes, domainsRes] = await Promise.all([
-        fetchNodes(),
+      const [summaryRes, domainsRes] = await Promise.all([
+        fetchNodeSummaries(),
         fetchDomains(),
       ]);
 
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       );
       const domainKeys = domainsRes.domains.map((d) => d.name);
 
-      const datasets = nodesRes.nodes.map((node) => {
+      const datasets = summaryRes.nodes.map((node) => {
         // Domain is either set on the node or inferred by prefix matching
         const domainKey =
           node.resolved_domain || node.domain || domainKeys.find((dk) => node.path === dk || node.path.startsWith(dk + ".") || node.path.startsWith(dk + "/")) || null;
@@ -78,8 +78,8 @@ export async function GET(request: NextRequest) {
           classification: node.classification,
           maturity: node.maturity || "catalogued",
           vendor: node.vendor || undefined,
-          source_binding: node.source_binding
-            ? { type: node.source_binding.type }
+          source_binding: node.source_type
+            ? { type: node.source_type }
             : undefined,
           schema: null as null, // Schema not in list view
         };

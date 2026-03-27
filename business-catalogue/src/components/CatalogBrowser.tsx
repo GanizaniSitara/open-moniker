@@ -11,6 +11,8 @@ import {
   InputAdornment,
   Chip,
   Button,
+  Skeleton,
+  LinearProgress,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
@@ -18,34 +20,34 @@ import DatasetCard from "@/components/DatasetCard";
 import DatasetFilters from "@/components/DatasetFilters";
 import { fetchCached } from "@/lib/data-cache";
 import type { Vendor } from "@/lib/vendors";
-interface BrowseDataset {
-  key: string;
-  display_name: string;
-  description?: string;
-  domainDisplayName?: string;
-  domainColor?: string;
-  isContainer: boolean;
-  classification?: string;
-  maturity?: string;
-  vendor?: string;
-  source_binding?: { type: string };
-  schema: null;
+import type { BrowseDataset, BrowseDomain } from "@/lib/load-datasets";
+
+interface CatalogBrowserProps {
+  initialDatasets?: BrowseDataset[];
+  initialDomains?: BrowseDomain[];
+  totalHint?: number;
 }
 
-export default function CatalogBrowser() {
+export default function CatalogBrowser({
+  initialDatasets,
+  initialDomains,
+  totalHint,
+}: CatalogBrowserProps) {
   const searchParams = useSearchParams();
   const vendorParam = searchParams.get("vendor");
   const [searchQuery, setSearchQuery] = useState("");
-  const [datasets, setDatasets] = useState<BrowseDataset[]>([]);
-  const [, setDomains] = useState<{ key: string; display_name: string; color: string }[]>([]);
+  const [datasets, setDatasets] = useState<BrowseDataset[]>(initialDatasets || []);
+  const [, setDomains] = useState<BrowseDomain[]>(initialDomains || []);
   const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const hasInitial = !!initialDatasets && initialDatasets.length > 0;
+  const [fullyLoaded, setFullyLoaded] = useState(false);
   const [filters, setFilters] = useState<Record<string, Set<string>>>({
     Domain: new Set(),
     Maturity: new Set(),
   });
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
+  // Fetch full catalog in background
   useEffect(() => {
     Promise.all([
       fetchCached("/api/search?q=&all=datasets"),
@@ -54,7 +56,7 @@ export default function CatalogBrowser() {
       setDatasets(d.datasets || []);
       setDomains(d.domains || []);
       setVendors(v.vendors || []);
-      setLoaded(true);
+      setFullyLoaded(true);
     });
   }, []);
 
@@ -168,6 +170,8 @@ export default function CatalogBrowser() {
     []
   );
 
+  const showSkeleton = !hasInitial && !fullyLoaded;
+
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
       <Box sx={{ display: "flex", gap: 4 }}>
@@ -243,9 +247,39 @@ export default function CatalogBrowser() {
             </Box>
           )}
 
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {loaded ? `${displayedDatasets.length} datasets` : "Loading..."}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+            {fullyLoaded
+              ? `${displayedDatasets.length} datasets`
+              : hasInitial
+                ? `${displayedDatasets.length} datasets shown`
+                : "Loading catalogue\u2026"}
           </Typography>
+          {hasInitial && !fullyLoaded && (
+            <Box sx={{ mb: 1.5 }}>
+              <LinearProgress
+                sx={{ height: 2, borderRadius: 1, bgcolor: "#e0e0e0", "& .MuiLinearProgress-bar": { bgcolor: "#005587" } }}
+              />
+            </Box>
+          )}
+          {!hasInitial && fullyLoaded && (
+            <Box sx={{ mb: 1.5 }} />
+          )}
+
+          {showSkeleton && (
+            <>
+              {Array.from({ length: 12 }, (_, i) => (
+                <Box key={i} sx={{ py: 1.5 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 0.3 }}>
+                    <Skeleton variant="text" width={180 + (i % 3) * 60} height={28} />
+                    <Box sx={{ flexGrow: 1 }} />
+                    <Skeleton variant="rounded" width={70} height={22} sx={{ borderRadius: "16px", mr: 0.5 }} />
+                    <Skeleton variant="rounded" width={55} height={22} sx={{ borderRadius: "16px" }} />
+                  </Box>
+                  <Skeleton variant="text" width="85%" height={20} />
+                </Box>
+              ))}
+            </>
+          )}
 
           {visibleDatasets.map((ds) => (
             <DatasetCard

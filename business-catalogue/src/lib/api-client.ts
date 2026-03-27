@@ -125,6 +125,60 @@ export async function fetchNodes(): Promise<NodeListResponse> {
   return apiFetch("/config/nodes");
 }
 
+/** Lightweight node for listing pages — no source_binding.config, ownership, etc. */
+export interface ApiNodeSummary {
+  path: string;
+  display_name: string;
+  description: string;
+  domain: string | null;
+  resolved_domain: string | null;
+  vendor: string | null;
+  classification: string;
+  maturity: string;
+  is_leaf: boolean;
+  status: string;
+  source_type: string | null;
+  tags: string[];
+}
+
+interface NodeSummaryListResponse {
+  nodes: ApiNodeSummary[];
+  total: number;
+  offset: number;
+  limit: number | null;
+}
+
+const SUMMARY_PAGE_SIZE = 2000;
+
+/**
+ * Fetch node summaries. Pass a limit for a quick first batch,
+ * or omit for the full catalog (paginated automatically).
+ */
+export async function fetchNodeSummaries(limit?: number): Promise<{ nodes: ApiNodeSummary[]; total: number }> {
+  const fetchLimit = limit ?? SUMMARY_PAGE_SIZE;
+  const first = await apiFetch<NodeSummaryListResponse>(
+    `/config/nodes?summary=true&offset=0&limit=${fetchLimit}`
+  );
+
+  // If a specific limit was requested, return just that batch
+  if (limit != null) return { nodes: first.nodes, total: first.total };
+
+  const allNodes = [...first.nodes];
+  if (first.total > SUMMARY_PAGE_SIZE) {
+    const remaining = Math.ceil((first.total - SUMMARY_PAGE_SIZE) / SUMMARY_PAGE_SIZE);
+    const pages = await Promise.all(
+      Array.from({ length: remaining }, (_, i) => {
+        const offset = (i + 1) * SUMMARY_PAGE_SIZE;
+        return apiFetch<NodeSummaryListResponse>(
+          `/config/nodes?summary=true&offset=${offset}&limit=${SUMMARY_PAGE_SIZE}`
+        );
+      })
+    );
+    for (const page of pages) allNodes.push(...page.nodes);
+  }
+  return { nodes: allNodes, total: first.total };
+}
+
 export async function fetchNode(path: string): Promise<NodeWithOwnershipResponse> {
   return apiFetch(`/config/nodes/${path}`);
 }
