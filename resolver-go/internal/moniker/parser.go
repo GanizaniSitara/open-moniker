@@ -204,7 +204,7 @@ func Parse(monikerStr string, validate bool) (*Moniker, error) {
 			before := remaining[:lowerIdx]
 			after := remaining[lowerIdx+2:] // Skip the "/v" or "/V"
 			// Check if it's a valid revision (just digits at the end or before ?)
-			revMatch := regexp.MustCompile(`^(\d+)(?:$|(?=\?))`).FindStringSubmatch(after)
+			revMatch := regexp.MustCompile(`^(\d+)(?:$|\?)`).FindStringSubmatch(after)
 			if len(revMatch) > 1 {
 				rev, _ := strconv.Atoi(revMatch[1])
 				revision = &rev

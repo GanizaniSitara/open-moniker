@@ -12,12 +12,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/cache"
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/catalog"
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/config"
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/handlers"
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/service"
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/telemetry"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/cache"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/catalog"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/config"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/handlers"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/service"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/telemetry"
 )
 
 func main() {
@@ -41,7 +41,7 @@ func main() {
 
 	// Set default project name if not configured
 	if cfg.ProjectName == "" {
-		cfg.ProjectName = "Open Moniker"
+		cfg.ProjectName = "Moniker Service"
 	}
 
 	// Display startup banner
@@ -92,7 +92,7 @@ func main() {
 	}
 
 	// Create service
-	svc := service.NewMonikerService(registry, cacheInst, cfg, emitter)
+	svc := service.NewMonikerService(registry, cacheInst, cfg)
 
 	// Set up HTTP routes
 	mux := http.NewServeMux()

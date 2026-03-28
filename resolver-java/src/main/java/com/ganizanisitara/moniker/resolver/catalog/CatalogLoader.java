@@ -82,6 +82,10 @@ public class CatalogLoader {
             node.setPath(path);
             node.setDisplayName((String) nodeData.getOrDefault("display_name", name));
             node.setDescription((String) nodeData.getOrDefault("description", ""));
+            node.setDomain((String) nodeData.get("domain"));
+            node.setVendor((String) nodeData.get("vendor"));
+            node.setMaturity((String) nodeData.get("maturity"));
+            node.setTechnicalDescription((String) nodeData.get("technical_description"));
             node.setClassification((String) nodeData.getOrDefault("classification", ""));
 
             // Parse status
@@ -119,6 +123,22 @@ public class CatalogLoader {
             node.setCreatedBy((String) nodeData.get("created_by"));
             node.setSuccessor((String) nodeData.get("successor"));
             node.setSunsetDeadline((String) nodeData.get("sunset_deadline"));
+
+            // Parse documentation (map of link names to URLs)
+            if (nodeData.containsKey("documentation")) {
+                Object docVal = nodeData.get("documentation");
+                if (docVal instanceof Map) {
+                    node.setDocumentation((Map<String, Object>) docVal);
+                }
+            }
+
+            // Parse node-level schema (columns, semantic_tags, use_cases)
+            if (nodeData.containsKey("schema")) {
+                Object schemaVal = nodeData.get("schema");
+                if (schemaVal instanceof Map) {
+                    node.setDataSchema((Map<String, Object>) schemaVal);
+                }
+            }
 
             result.add(node);
 

@@ -3,6 +3,10 @@ package com.ganizanisitara.moniker.resolver.controller;
 import com.ganizanisitara.moniker.resolver.catalog.CatalogNode;
 import com.ganizanisitara.moniker.resolver.catalog.CatalogRegistry;
 import com.ganizanisitara.moniker.resolver.service.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +18,7 @@ import java.util.*;
  * Main resolver controller handling core endpoints.
  */
 @RestController
+@Tag(name = "Moniker Resolver", description = "Resolve, describe, and browse monikers in the catalog")
 public class ResolverController {
 
     private final MonikerService monikerService;
@@ -21,15 +26,13 @@ public class ResolverController {
     private final String projectName;
 
     public ResolverController(MonikerService monikerService, CatalogRegistry catalog,
-                            @Value("${moniker.project-name:Open Moniker}") String projectName) {
+                            @Value("${moniker.project-name:Moniker Service}") String projectName) {
         this.monikerService = monikerService;
         this.catalog = catalog;
         this.projectName = projectName;
     }
 
-    /**
-     * Minimal ping endpoint for performance testing.
-     */
+    @Operation(summary = "Ping", description = "Minimal ping endpoint for performance testing")
     @GetMapping("/ping")
     public String ping() {
         // Log thread type on first request
@@ -41,9 +44,7 @@ public class ResolverController {
         return "pong";
     }
 
-    /**
-     * Health check endpoint.
-     */
+    @Operation(summary = "Health check", description = "Returns service health status and catalog size")
     @GetMapping("/health")
     public Map<String, Object> health() {
         Map<String, Object> response = new HashMap<>();
@@ -56,14 +57,18 @@ public class ResolverController {
         return response;
     }
 
-    /**
-     * Resolve a moniker.
-     */
-    @GetMapping("/resolve/{path:.*}")
-    public ResponseEntity<?> resolve(@PathVariable String path,
-                                     @RequestParam(required = false) String namespace,
-                                     @RequestParam(required = false) String version) {
+    @Operation(summary = "Resolve a moniker", description = "Resolve a moniker path to its underlying resource",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Successfully resolved"),
+                    @ApiResponse(responseCode = "404", description = "Moniker not found")
+            })
+    @GetMapping("/resolve/{*path}")
+    public ResponseEntity<?> resolve(
+            @Parameter(description = "Moniker path to resolve") @PathVariable String path,
+            @Parameter(description = "Optional namespace prefix") @RequestParam(required = false) String namespace,
+            @Parameter(description = "Optional version") @RequestParam(required = false) String version) {
         try {
+            if (path.startsWith("/")) path = path.substring(1);
             // Build full moniker string
             StringBuilder moniker = new StringBuilder();
             if (namespace != null) {
@@ -89,12 +94,16 @@ public class ResolverController {
         }
     }
 
-    /**
-     * Describe a catalog node.
-     */
-    @GetMapping("/describe/{path:.*}")
-    public ResponseEntity<?> describe(@PathVariable String path) {
+    @Operation(summary = "Describe a catalog node", description = "Get detailed metadata for a catalog node",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Node described"),
+                    @ApiResponse(responseCode = "404", description = "Node not found")
+            })
+    @GetMapping("/describe/{*path}")
+    public ResponseEntity<?> describe(
+            @Parameter(description = "Catalog path to describe") @PathVariable String path) {
         try {
+            if (path.startsWith("/")) path = path.substring(1);
             DescribeResult result = monikerService.describe(path);
             return ResponseEntity.ok(result);
 
@@ -110,12 +119,12 @@ public class ResolverController {
         }
     }
 
-    /**
-     * List children of a path.
-     */
-    @GetMapping("/list/{path:.*}")
-    public ResponseEntity<?> listChildren(@PathVariable String path) {
+    @Operation(summary = "List children", description = "List child nodes under a catalog path")
+    @GetMapping("/list/{*path}")
+    public ResponseEntity<?> listChildren(
+            @Parameter(description = "Parent path") @PathVariable String path) {
         try {
+            if (path.startsWith("/")) path = path.substring(1);
             List<String> children = monikerService.listChildren(path);
 
             Map<String, Object> response = new HashMap<>();
@@ -133,12 +142,12 @@ public class ResolverController {
         }
     }
 
-    /**
-     * Get lineage (ancestor chain) for a path.
-     */
-    @GetMapping("/lineage/{path:.*}")
-    public ResponseEntity<?> lineage(@PathVariable String path) {
+    @Operation(summary = "Get lineage", description = "Get the ancestor chain for a catalog path")
+    @GetMapping("/lineage/{*path}")
+    public ResponseEntity<?> lineage(
+            @Parameter(description = "Catalog path") @PathVariable String path) {
         try {
+            if (path.startsWith("/")) path = path.substring(1);
             List<Map<String, Object>> lineage = monikerService.getLineage(path);
 
             Map<String, Object> response = new HashMap<>();
@@ -156,13 +165,11 @@ public class ResolverController {
         }
     }
 
-    /**
-     * Get full catalog listing.
-     */
+    @Operation(summary = "List catalog", description = "Get paginated catalog listing")
     @GetMapping("/catalog")
     public ResponseEntity<?> catalog(
-            @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(defaultValue = "100") int limit) {
+            @Parameter(description = "Pagination offset") @RequestParam(defaultValue = "0") int offset,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "100") int limit) {
         try {
             List<CatalogNode> allNodes = catalog.getAllNodes();
 
@@ -187,12 +194,11 @@ public class ResolverController {
         }
     }
 
-    /**
-     * Search catalog.
-     */
+    @Operation(summary = "Search catalog", description = "Full-text search across catalog nodes")
     @GetMapping("/catalog/search")
-    public ResponseEntity<?> search(@RequestParam String q,
-                                    @RequestParam(defaultValue = "100") int limit) {
+    public ResponseEntity<?> search(
+            @Parameter(description = "Search query") @RequestParam String q,
+            @Parameter(description = "Max results") @RequestParam(defaultValue = "100") int limit) {
         try {
             List<CatalogNode> allNodes = catalog.getAllNodes();
             List<CatalogNode> matches = new ArrayList<>();
@@ -229,9 +235,7 @@ public class ResolverController {
         }
     }
 
-    /**
-     * Get catalog statistics.
-     */
+    @Operation(summary = "Catalog statistics", description = "Get aggregate statistics for the catalog")
     @GetMapping("/catalog/stats")
     public ResponseEntity<?> stats() {
         try {
@@ -246,9 +250,7 @@ public class ResolverController {
         }
     }
 
-    /**
-     * Cache status (stub).
-     */
+    @Operation(summary = "Cache status", description = "Cache status (stub)")
     @GetMapping("/cache/status")
     public Map<String, Object> cacheStatus() {
         Map<String, Object> response = new HashMap<>();
@@ -258,9 +260,7 @@ public class ResolverController {
         return response;
     }
 
-    /**
-     * Simple UI endpoint (returns HTML).
-     */
+    @Operation(summary = "UI", description = "Simple HTML landing page")
     @GetMapping(value = "/ui", produces = "text/html")
     public String ui() {
         return """

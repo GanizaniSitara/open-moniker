@@ -1,5 +1,5 @@
 """
-MCP Server for Open Moniker — exposes the moniker catalog, domains,
+MCP Server for Moniker Service — exposes the moniker catalog, domains,
 models, and request workflow over the Model Context Protocol.
 
 Transport: Streamable HTTP (network-accessible)
@@ -173,7 +173,7 @@ def _init() -> AppState:
         approve_token=APPROVE_TOKEN,
     )
 
-    logger.info(f"MCP Open Moniker server ready on {MCP_HOST}:{MCP_PORT}")
+    logger.info(f"MCP Moniker Service server ready on {MCP_HOST}:{MCP_PORT}")
     return state
 
 
@@ -201,7 +201,7 @@ def _check_approve_token(token: str) -> bool:
 mcp = FastMCP(
     name="open-moniker",
     instructions=(
-        "Open Moniker MCP Server — a unified data catalog and governance layer for firm-wide data access.\n\n"
+        "Moniker Service MCP Server — a unified data catalog and governance layer for firm-wide data access.\n\n"
 
         "## What is a Moniker?\n"
         "A moniker is a human-readable, hierarchical path that identifies a data asset. "
@@ -940,7 +940,7 @@ async def domains_list() -> str:
     "moniker://about",
     name="about",
     description=(
-        "Full self-description of Open Moniker: what it is, how monikers are structured, "
+        "Full self-description of Moniker Service: what it is, how monikers are structured, "
         "path conventions, segment filtering, and how to design a moniker hierarchy for your firm."
     ),
     mime_type="text/markdown",
@@ -958,10 +958,10 @@ async def about() -> str:
     domain_names = ", ".join(f"`{p}`" for p in top_level_paths[:12])
     source_summary = ", ".join(f"{v} {k}" for k, v in sorted(source_types.items(), key=lambda x: -x[1]))
 
-    return f"""# Open Moniker — Self-Description
+    return f"""# Moniker Service — Self-Description
 
-## What Is Open Moniker?
-Open Moniker is a unified data catalog and governance layer. It lets you access
+## What Is Moniker Service?
+Moniker Service is a unified data catalog and governance layer. It lets you access
 any data asset across the firm using a single, human-readable path (a "moniker")
 without knowing connection strings, credentials, SQL dialects, or API shapes.
 
@@ -1081,7 +1081,7 @@ async def naming_guide() -> str:
 
     # Build markdown table
     lines = [
-        "# Open Moniker — Live Naming Guide",
+        "# Moniker Service — Live Naming Guide",
         "",
         "This guide is generated from the live catalog and shows real moniker patterns.",
         "",
@@ -1259,7 +1259,7 @@ async def check_ownership_prompt(path: str) -> str:
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="MCP Server for Open Moniker")
+    parser = argparse.ArgumentParser(description="MCP Server for Moniker Service")
     parser.add_argument("--host", default=MCP_HOST, help="Bind address")
     parser.add_argument("--port", type=int, default=MCP_PORT, help="Port")
     parser.add_argument("--transport", choices=["stdio", "sse", "streamable-http"], default="streamable-http")

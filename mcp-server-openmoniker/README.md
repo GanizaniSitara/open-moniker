@@ -1,6 +1,6 @@
-# MCP Server for Open Moniker
+# MCP Server for Moniker Service
 
-An [MCP](https://modelcontextprotocol.io/) server that exposes the Open Moniker data catalog to AI coding assistants. Browse the catalog, resolve monikers, inspect ownership, search for data assets, and submit governance requests — all from your editor.
+An [MCP](https://modelcontextprotocol.io/) server that exposes the Moniker Service data catalog to AI coding assistants. Browse the catalog, resolve monikers, inspect ownership, search for data assets, and submit governance requests — all from your editor.
 
 ## Quick Start
 

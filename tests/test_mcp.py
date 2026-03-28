@@ -1,6 +1,6 @@
-"""MCP integration tests — run after deployment to verify /mcp/sse.
+"""MCP integration tests — run after deployment to verify /mcp.
 
-These tests connect to the monolith's embedded MCP server over SSE
+These tests connect to the monolith's embedded MCP server over streamable HTTP
 and exercise every read tool, resource, and prompt.
 
 Usage:
@@ -8,7 +8,7 @@ Usage:
     python -m pytest tests/test_mcp.py -v
 
     # Against a deployed instance:
-    MCP_URL=http://host:port/mcp/sse python -m pytest tests/test_mcp.py -v
+    MCP_URL=http://host:port/mcp python -m pytest tests/test_mcp.py -v
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ def _run_server():
 
 @pytest.fixture(scope="session")
 def mcp_url():
-    """Return the SSE URL, starting a local server if needed."""
+    """Return the MCP URL, starting a local server if needed."""
     url = os.environ.get("MCP_URL")
     if url:
         yield url
@@ -61,7 +61,7 @@ def mcp_url():
     proc = multiprocessing.Process(target=_run_server, daemon=True)
     proc.start()
 
-    base = f"http://127.0.0.1:{_TEST_PORT}/mcp/sse"
+    base = f"http://127.0.0.1:{_TEST_PORT}/mcp"
 
     import httpx
     for _ in range(30):
@@ -90,10 +90,10 @@ def mcp_url():
 async def mcp_session(url: str):
     """Async context manager that yields an initialised MCP ClientSession."""
     from mcp import ClientSession
-    from mcp.client.sse import sse_client
+    from mcp.client.streamable_http import streamable_http_client
 
-    async with sse_client(url) as streams:
-        async with ClientSession(*streams) as session:
+    async with streamable_http_client(url) as (read_stream, write_stream, _):
+        async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
             yield session
 
@@ -309,7 +309,7 @@ async def test_read_about(mcp_url):
     async with mcp_session(mcp_url) as session:
         result = await session.read_resource("moniker://about")
         text = result.contents[0].text if result.contents else ""
-        assert "Open Moniker" in text
+        assert "Moniker" in text
 
 
 @pytest.mark.asyncio

@@ -776,6 +776,9 @@ risk.cvar:
   description: CVaR tail risk measures by portfolio, currency, and security
   asset_class: risk
   ownership:
+    accountable_owner: risk-governance@firm.com
+    data_specialist: risk-quant@firm.com
+    support_channel: '#risk-analytics'
     adop: quant-research@firm.com
     ads: risk-data-steward@firm.com
     adal: risk-access-control@firm.com
@@ -821,6 +824,12 @@ risk.cvar:
     blocked_patterns:
     - ALL/ALL/ALL
     max_rows_warn: 10000000
+    max_rows_block: 100000000
+    base_row_count: 1000
+    cardinality_multipliers:
+    - 1000
+    - 50
+    - 200000
     denial_message: 'Query blocked: CVaR table is very large.
 
       You must specify at least one filter (portfolio, currency, or security).

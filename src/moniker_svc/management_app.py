@@ -8,8 +8,9 @@ This process serves only the management/control-plane endpoints:
 - /domains/*   — domain CRUD
 - /models/*    — business model CRUD
 - /requests/*  — request/approval workflow
-- /dashboard/* — observability dashboard
-- GET /        — landing page
+- /applications/* — application CRUD
+- /dashboard/*    — observability dashboard
+- GET /           — landing page
 
 It does NOT initialise InMemoryCache, RateLimiter,
 TelemetryEmitter, or Redis.  Resolver endpoints
@@ -38,7 +39,10 @@ from .config_ui import routes as config_ui_routes
 from .domains import routes as domain_routes
 from .models import routes as model_routes
 from .requests import routes as request_routes
+from .applications import routes as application_routes
 from .dashboard import routes as dashboard_routes
+from .community import routes as community_routes
+from .community import config_routes as community_config_routes
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +61,7 @@ async def lifespan(app: FastAPI):
     domain_registry, domains_yaml_path = bs.build_domain_registry()
     model_registry, models_yaml_path = bs.build_model_registry(config)
     request_registry, requests_yaml_path = bs.build_request_registry(config)
+    application_registry, applications_yaml_path = bs.build_application_registry()
 
     # Wire each management sub-router with its runtime dependencies.
     domain_routes.configure(
@@ -94,11 +99,31 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Request & approval workflow enabled")
 
+    application_routes.configure(
+        application_registry=application_registry,
+        applications_yaml_path=applications_yaml_path,
+    )
+    logger.info("Applications configuration enabled")
+
     dashboard_routes.configure(
         catalog_registry=catalog,
         request_registry=request_registry,
     )
     logger.info("Dashboard enabled")
+
+    if config.community.enabled:
+        community_registry, community_storage = bs.build_community_registry(config)
+        community_routes.configure(
+            registry=community_registry,
+            storage=community_storage,
+        )
+        from .catalog.serializer import CatalogSerializer
+        community_config_routes.configure(
+            storage=community_storage,
+            catalog=catalog,
+            serializer=CatalogSerializer(),
+        )
+        logger.info("Community contributions enabled (data_dir=%s)", config.community.data_dir)
 
     logger.info("Management service started")
     yield
@@ -119,8 +144,11 @@ app = FastAPI(
         {"name": "Config", "description": "Catalog configuration management"},
         {"name": "Domains", "description": "Domain governance and configuration"},
         {"name": "Models", "description": "Business models / measures"},
+        {"name": "Applications", "description": "Application registry and dataset/field mappings"},
         {"name": "Requests", "description": "Moniker request submission and approval workflow"},
         {"name": "Dashboard", "description": "Observability dashboard"},
+        {"name": "Community", "description": "Community contributions (flags, suggestions, annotations, discussions)"},
+        {"name": "Community Configs", "description": "Shared catalog config snapshots"},
         {"name": "Health", "description": "Landing page"},
     ],
 )
@@ -134,8 +162,11 @@ if _static_dir.exists():
 app.include_router(config_ui_routes.router)
 app.include_router(domain_routes.router)
 app.include_router(model_routes.router)
+app.include_router(application_routes.router)
 app.include_router(request_routes.router)
 app.include_router(dashboard_routes.router)
+app.include_router(community_routes.router)
+app.include_router(community_config_routes.config_router)
 
 
 # ---------------------------------------------------------------------------
@@ -298,20 +329,19 @@ async def root(request: Request):
                 <a href="/config/ui">Catalog Config UI</a>
             </div>
             <div class="card">
-                <h2>Catalog Browser</h2>
-                <p>Browse the moniker catalog hierarchy, view ownership and metadata for data assets.</p>
-                <a href="/ui">Open Catalog Browser</a>
-            </div>
-            <div class="card">
                 <h2>Business Models</h2>
                 <p>Manage business models (measures, metrics, fields) that appear across monikers.</p>
                 <a href="/models/ui">Models Browser</a>
             </div>
             <div class="card">
+                <h2>Applications</h2>
+                <p>Register applications and map them to the datasets and fields they consume.</p>
+                <a href="/applications/ui">Browse Applications</a>
+            </div>
+            <div class="card">
                 <h2>Review Queue</h2>
                 <p>Review and approve moniker requests. Manage the governance approval workflow.</p>
                 <a href="/requests/ui">Open Review Queue</a>
-                <a href="/docs" style="margin-left:12px">Swagger</a>
             </div>
         </div>
 
@@ -321,30 +351,6 @@ async def root(request: Request):
                 <h2>Swagger UI</h2>
                 <p>Interactive API documentation with try-it-out functionality.</p>
                 <a href="/docs">Open Swagger</a>
-            </div>
-        </div>
-
-        <h3 class="section-title">API Endpoints</h3>
-        <div class="grid">
-            <div class="card api">
-                <h2>Catalog Tree</h2>
-                <p>View full catalog hierarchy as JSON tree structure.</p>
-                <a href="/tree">View Tree API</a>
-            </div>
-            <div class="card api">
-                <h2>Domains</h2>
-                <p>List all configured data domains with governance info.</p>
-                <a href="/domains">Domains API</a>
-            </div>
-            <div class="card api">
-                <h2>Models</h2>
-                <p>List all business models with their moniker mappings.</p>
-                <a href="/models">Models API</a>
-            </div>
-            <div class="card api">
-                <h2>Catalog Paths</h2>
-                <p>List all registered catalog paths.</p>
-                <a href="/catalog">Catalog API</a>
             </div>
         </div>
     </div>

@@ -88,6 +88,9 @@ def build_domain_registry():
     if Path(domains_yaml_path).exists():
         domains = load_domains_from_yaml(domains_yaml_path, registry)
         logger.info("Loaded %d domains from %s", len(domains), domains_yaml_path)
+    elif Path("sample_domains.yaml").exists():
+        domains = load_domains_from_yaml("sample_domains.yaml", registry)
+        logger.info("Loaded %d domains from sample_domains.yaml", len(domains))
     else:
         logger.info(
             "No domains config found at %s, starting with empty registry",
@@ -259,6 +262,9 @@ def build_model_registry(config):
         if Path(models_yaml_path).exists():
             models = load_models_from_yaml(models_yaml_path, registry)
             logger.info("Loaded %d business models from %s", len(models), models_yaml_path)
+        elif Path("sample_models.yaml").exists():
+            models = load_models_from_yaml("sample_models.yaml", registry)
+            logger.info("Loaded %d business models from sample_models.yaml", len(models))
         else:
             logger.info(
                 "No models config found at %s, starting with empty registry",
@@ -297,6 +303,49 @@ def build_request_registry(config):
     else:
         logger.info("Request & approval workflow disabled")
     return registry, requests_yaml_path
+
+
+# ---------------------------------------------------------------------------
+# Community contributions
+# ---------------------------------------------------------------------------
+
+def build_community_registry(config):
+    """Load community registry from JSON files if enabled.
+
+    Returns ``(registry, storage)``.
+    """
+    from .community import CommunityRegistry, FileStorage
+
+    storage = FileStorage(config.community.data_dir)
+    registry = CommunityRegistry()
+    if config.community.enabled:
+        all_data = storage.load_all()
+        for (et, ek), contrib in all_data.items():
+            registry.load_entity(et, ek, contrib)
+        logger.info("Loaded community data for %d entities", len(all_data))
+    else:
+        logger.info("Community contributions disabled")
+    return registry, storage
+
+
+# ---------------------------------------------------------------------------
+# Shortlinks
+# ---------------------------------------------------------------------------
+
+def build_shortlink_store(config):
+    """Load shortlink store from JSON file.
+
+    Returns the ``ShortlinkStore`` instance.
+    """
+    from .shortlinks import ShortlinkStore
+
+    storage_file = os.environ.get("SHORTLINKS_FILE", config.shortlinks.storage_file)
+    store = ShortlinkStore(file_path=storage_file)
+    if Path(storage_file).exists():
+        store.load()
+    else:
+        logger.info("No shortlinks file at %s, starting empty", storage_file)
+    return store
 
 
 # ---------------------------------------------------------------------------

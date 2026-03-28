@@ -1,4 +1,4 @@
-module github.com/ganizanisitara/open-moniker-svc/resolver-go
+module github.com/ganizanisitara/open-moniker/resolver-go
 
 go 1.22
 

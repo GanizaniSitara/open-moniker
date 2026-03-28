@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/cache"
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/catalog"
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/config"
-	"github.com/ganizanisitara/open-moniker-svc/resolver-go/internal/moniker"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/cache"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/catalog"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/config"
+	"github.com/ganizanisitara/open-moniker/resolver-go/internal/moniker"
 )
 
 const maxSuccessorDepth = 5

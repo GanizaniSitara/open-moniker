@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Applications Browser</title>
+    <style>
+        :root {
+            --font-sans: Arial, Helvetica, sans-serif;
+            --c-navy: #022D5E;
+            --c-gray: #53565A;
+            --c-peacock: #005587;
+            --c-olive: #789D4A;
+            --c-green: #009639;
+            --c-teal: #00897B;
+            --c-red: #D0002B;
+            --color-bg: #f8f9fa;
+            --color-surface: #ffffff;
+            --color-text: #111111;
+            --border: rgba(83, 86, 90, 0.25);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-sans);
+            background: var(--color-bg);
+            color: var(--color-text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            background: var(--c-navy);
+            padding: 16px 24px;
+            border-bottom: 3px solid var(--c-peacock);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: white;
+            margin: 0;
+        }
+        .btn-home {
+            padding: 8px;
+            background: rgba(255,255,255,0.15);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            color: white;
+            text-decoration: none;
+        }
+        .btn-home:hover { background: rgba(255,255,255,0.25); }
+
+        .toolbar {
+            padding: 16px 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .toolbar input {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: var(--font-sans);
+            min-width: 260px;
+        }
+        .toolbar input:focus {
+            outline: none;
+            border-color: var(--c-peacock);
+            box-shadow: 0 0 0 3px rgba(0, 85, 135, 0.15);
+        }
+        .chip-bar { display: flex; gap: 6px; flex-wrap: wrap; }
+        .chip {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            border: 1px solid var(--border);
+            background: white;
+            cursor: pointer;
+            color: var(--c-gray);
+            font-weight: 700;
+            transition: all 0.15s;
+        }
+        .chip:hover { border-color: var(--c-peacock); color: var(--c-peacock); }
+        .chip.active { background: var(--c-peacock); border-color: var(--c-peacock); color: white; }
+
+        .main {
+            display: flex;
+            flex: 1;
+            padding: 0 24px 24px;
+            gap: 24px;
+            overflow: hidden;
+        }
+
+        /* Card list (left) */
+        .list-panel {
+            flex: 1;
+            max-width: 480px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 8px;
+        }
+        .app-card {
+            background: var(--color-surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: box-shadow 0.2s, transform 0.15s;
+            border-left: 4px solid var(--border);
+        }
+        .app-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transform: translateY(-1px);
+        }
+        .app-card.selected {
+            border-left-color: var(--c-peacock);
+            box-shadow: 0 2px 8px rgba(0, 85, 135, 0.15);
+        }
+        .app-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .app-card-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .app-card-name { font-weight: 700; font-size: 14px; color: var(--c-navy); }
+        .app-card-category {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 3px;
+            background: rgba(0, 85, 135, 0.1);
+            color: var(--c-peacock);
+            font-weight: 700;
+            margin-left: auto;
+        }
+        .app-card-desc {
+            font-size: 12px;
+            color: var(--c-gray);
+            line-height: 1.4;
+        }
+        .app-card-meta {
+            display: flex; gap: 12px; margin-top: 8px; font-size: 11px; color: var(--c-gray);
+        }
+        .status-dot {
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+        .status-dot.active { background: var(--c-green); }
+        .status-dot.planned { background: #F39C12; }
+        .status-dot.decommissioned { background: var(--c-red); }
+
+        /* Detail panel (right) */
+        .detail-panel {
+            flex: 2;
+            background: var(--color-surface);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            overflow-y: auto;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .detail-header {
+            background: var(--c-navy);
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 14px;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        .detail-content { padding: 20px; }
+
+        .detail-section { margin-bottom: 20px; }
+        .detail-section h3 {
+            font-size: 11px;
+            color: var(--c-navy);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .detail-row {
+            font-size: 13px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .detail-row span:first-child { color: var(--c-gray); flex-shrink: 0; }
+        .detail-row span:last-child { color: var(--c-navy); font-weight: 700; text-align: right; word-break: break-word; }
+        .empty { color: var(--c-gray); font-style: italic; }
+
+        .pattern-list { display: flex; flex-direction: column; gap: 4px; }
+        .pattern {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            background: var(--color-bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 6px 10px;
+            color: var(--c-navy);
+            font-weight: 700;
+        }
+
+        a { color: var(--c-peacock); text-decoration: none; font-weight: 700; }
+        a:hover { text-decoration: underline; }
+        .loading { text-align: center; padding: 40px; color: var(--c-gray); }
+        .count-badge {
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
+            font-weight: 400;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="btn-home" title="Home">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+        </a>
+        <h1>Applications Browser</h1>
+    </div>
+    <div class="toolbar">
+        <input type="text" id="search" placeholder="Filter applications..." oninput="applyFilters()">
+        <div class="chip-bar" id="category-chips"></div>
+    </div>
+    <div class="main">
+        <div class="list-panel" id="list"></div>
+        <div class="detail-panel">
+            <div class="detail-header">Application Details <span class="count-badge" id="count-badge"></span></div>
+            <div class="detail-content" id="details">
+                <p class="empty">Select an application to view details</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let apps = [];
+        let selectedKey = null;
+        let activeCategory = null;
+
+        async function loadApps() {
+            try {
+                const res = await fetch('/applications');
+                const data = await res.json();
+                apps = data.applications || [];
+                buildCategoryChips();
+                renderList();
+                document.getElementById('count-badge').textContent = apps.length + ' registered';
+            } catch (e) {
+                document.getElementById('list').innerHTML = '<div class="loading">Failed to load applications</div>';
+                console.error(e);
+            }
+        }
+
+        function buildCategoryChips() {
+            const cats = [...new Set(apps.map(a => a.category).filter(Boolean))].sort();
+            const bar = document.getElementById('category-chips');
+            bar.innerHTML = '<span class="chip active" onclick="setCategory(null, this)">All</span>' +
+                cats.map(c => `<span class="chip" onclick="setCategory('${c}', this)">${c}</span>`).join('');
+        }
+
+        function setCategory(cat, el) {
+            activeCategory = cat;
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const q = document.getElementById('search').value.toLowerCase().trim();
+            renderList(q, activeCategory);
+        }
+
+        function renderList(query, category) {
+            let filtered = apps;
+            if (category) filtered = filtered.filter(a => a.category === category);
+            if (query) filtered = filtered.filter(a =>
+                [a.key, a.display_name, a.description, a.category, a.owner].join(' ').toLowerCase().includes(query)
+            );
+
+            if (filtered.length === 0) {
+                document.getElementById('list').innerHTML = '<div class="loading">No applications match</div>';
+                return;
+            }
+
+            document.getElementById('list').innerHTML = filtered.map(a => `
+                <div class="app-card ${a.key === selectedKey ? 'selected' : ''}"
+                     style="border-left-color: ${a.key === selectedKey ? a.color : 'var(--border)'}"
+                     onclick="selectApp('${a.key}')">
+                    <div class="app-card-header">
+                        <span class="app-card-dot" style="background: ${a.color}"></span>
+                        <span class="app-card-name">${a.display_name || a.key}</span>
+                        ${a.category ? `<span class="app-card-category">${a.category}</span>` : ''}
+                    </div>
+                    ${a.description ? `<div class="app-card-desc">${a.description}</div>` : ''}
+                    <div class="app-card-meta">
+                        <span><span class="status-dot ${a.status}"></span>${a.status}</span>
+                        <span>${a.datasets.length} datasets</span>
+                        <span>${a.fields.length} fields</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectApp(key) {
+            selectedKey = key;
+            const a = apps.find(x => x.key === key);
+            if (!a) return;
+
+            applyFilters();
+
+            document.getElementById('details').innerHTML = `
+                <div class="detail-section">
+                    <h3>Basic Info</h3>
+                    ${row('Key', a.key)}
+                    ${row('Display Name', a.display_name || '-')}
+                    ${row('Description', a.description || '-')}
+                    ${row('Category', a.category || '-')}
+                    ${row('Status', '<span class="status-dot ' + a.status + '"></span>' + a.status)}
+                    ${row('Color', '<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:' + a.color + ';vertical-align:middle;margin-right:6px"></span>' + a.color)}
+                </div>
+
+                <div class="detail-section">
+                    <h3>Ownership</h3>
+                    ${row('Owner', a.owner || '-')}
+                    ${row('Tech Lead', a.tech_lead || '-')}
+                    ${row('Support Channel', a.support_channel || '-')}
+                </div>
+
+                ${a.datasets.length > 0 ? `
+                    <div class="detail-section">
+                        <h3>Dataset Patterns (${a.datasets.length})</h3>
+                        <div class="pattern-list">
+                            ${a.datasets.map(d => `<div class="pattern">${d}</div>`).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${a.fields.length > 0 ? `
+                    <div class="detail-section">
+                        <h3>Field References (${a.fields.length})</h3>
+                        <div class="pattern-list">
+                            ${a.fields.map(f => `<div class="pattern">${f}</div>`).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div class="detail-section">
+                    <h3>Links</h3>
+                    ${a.documentation_url ? `<div class="detail-row" style="border:none"><a href="${a.documentation_url}" target="_blank">Documentation</a></div>` : ''}
+                    ${a.wiki_link ? `<div class="detail-row" style="border:none"><a href="${a.wiki_link}" target="_blank">Wiki</a></div>` : ''}
+                    ${!a.documentation_url && !a.wiki_link ? '<p class="empty">No links configured</p>' : ''}
+                </div>
+
+                <div class="detail-section">
+                    <h3>API</h3>
+                    <div class="detail-row" style="border:none">
+                        <a href="/applications/${a.key}" target="_blank">/applications/${a.key}</a>
+                    </div>
+                </div>
+            `;
+        }
+
+        function row(label, value) {
+            return '<div class="detail-row"><span>' + label + '</span><span>' + value + '</span></div>';
+        }
+
+        loadApps();
+    </script>
+</body>
+</html>

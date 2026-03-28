@@ -104,6 +104,20 @@ class RequestsConfig:
 
 
 @dataclass
+class CommunityConfig:
+    """Community contributions configuration (file-based)."""
+    enabled: bool = True
+    data_dir: str = "community_data"
+
+
+@dataclass
+class ShortlinksConfig:
+    """Shortlink alias configuration."""
+    enabled: bool = True
+    storage_file: str = "shortlinks.json"
+
+
+@dataclass
 class GovernanceConfig:
     """Enterprise governance configuration."""
     rate_limiter_enabled: bool = True
@@ -117,7 +131,7 @@ class GovernanceConfig:
 class Config:
     """Main configuration container."""
     # Project branding
-    project_name: str = "Open Moniker"
+    project_name: str = "Moniker Service"
 
     server: ServerConfig = field(default_factory=ServerConfig)
     telemetry: TelemetryConfig = field(default_factory=TelemetryConfig)
@@ -129,6 +143,8 @@ class Config:
     deprecation: DeprecationConfig = field(default_factory=DeprecationConfig)
     models: ModelsConfig = field(default_factory=ModelsConfig)
     requests: RequestsConfig = field(default_factory=RequestsConfig)
+    community: CommunityConfig = field(default_factory=CommunityConfig)
+    shortlinks: ShortlinksConfig = field(default_factory=ShortlinksConfig)
     governance: GovernanceConfig = field(default_factory=GovernanceConfig)
 
     @classmethod
@@ -136,7 +152,7 @@ class Config:
         """Create config from dictionary."""
         auth_data = data.get("auth", {})
         return cls(
-            project_name=data.get("project_name", "Open Moniker"),
+            project_name=data.get("project_name", "Moniker Service"),
             server=ServerConfig(**data.get("server", {})),
             telemetry=TelemetryConfig(**data.get("telemetry", {})),
             cache=CacheConfig(**data.get("cache", {})),
@@ -147,6 +163,8 @@ class Config:
             deprecation=DeprecationConfig(**data.get("deprecation", {})),
             models=ModelsConfig(**data.get("models", {})),
             requests=RequestsConfig(**data.get("requests", {})),
+            community=CommunityConfig(**data.get("community", {})),
+            shortlinks=ShortlinksConfig(**data.get("shortlinks", {})),
             governance=GovernanceConfig(**data.get("governance", {})),
         )
 

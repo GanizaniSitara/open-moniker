@@ -11,7 +11,6 @@ This process serves only the data-plane endpoints:
 - /catalog/{path}/status, /catalog/{path}/audit
 - /telemetry/access
 - /health
-- /ui
 
 It does NOT initialise ModelRegistry, RequestRegistry, config_ui, or
 dashboard.  Management routes (/config/*, /domains/*, /models/*,

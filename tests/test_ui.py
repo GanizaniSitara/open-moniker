@@ -53,7 +53,6 @@ UI_ENDPOINTS = [
     "/domains/ui",
     "/models/ui",
     "/requests/ui",
-    "/ui",
 ]
 
 
@@ -166,10 +165,6 @@ class TestPageContent:
         text = soup.get_text()
         assert "Review Queue" in text
 
-    @pytest.mark.asyncio
-    async def test_main_ui_returns_200(self, client):
-        r = await client.get("/ui")
-        assert r.status_code == 200
 
 
 # ===================================================================

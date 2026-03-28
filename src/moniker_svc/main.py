@@ -52,6 +52,8 @@ from .models import routes as model_routes
 from .models import ModelRegistry, load_models_from_yaml
 from .requests import routes as request_routes
 from .requests import RequestRegistry, load_requests_from_yaml
+from .shortlinks import routes as shortlink_routes
+from .shortlinks import ShortlinkStore
 try:
     from .dashboard import routes as dashboard_routes
 except ImportError:
@@ -71,6 +73,9 @@ _application_registry: ApplicationRegistry | None = None
 
 # Request registry - global singleton
 _request_registry: RequestRegistry | None = None
+
+# Shortlink store - global singleton
+_shortlink_store: ShortlinkStore | None = None
 
 
 # Response models
@@ -168,7 +173,7 @@ class AccessReport(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
-    service: str = "Open Moniker"
+    service: str = "Moniker Service"
     telemetry: dict[str, Any]
     cache: dict[str, Any]
     rate_limiter: dict[str, Any] | None = None
@@ -969,11 +974,18 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Dashboard enabled")
 
+    # Shortlinks
+    global _shortlink_store
+    if config.shortlinks.enabled:
+        _shortlink_store = bs.build_shortlink_store(config)
+        shortlink_routes.configure(store=_shortlink_store)
+        logger.info("Shortlinks enabled (%d loaded)", _shortlink_store.count())
+
     _redis_cache = await bs.setup_redis(config)
 
-    # Mount read-only MCP server on /mcp (SSE transport)
-    from . import mcp as mcp_module
-    mcp_module.configure(
+    # Configure MCP shared state (app is mounted at module level for routing;
+    # session manager must be started here so its task group is alive)
+    _mcp_module.configure(
         catalog=catalog,
         service=_service,
         domain_registry=_domain_registry,
@@ -981,12 +993,12 @@ async def lifespan(app: FastAPI):
         request_registry=_request_registry,
         config=config,
     )
-    app.mount("/mcp", mcp_module.get_sse_app())
-    logger.info("MCP server mounted at /mcp/sse (read-only, SSE transport)")
+    logger.info("MCP server configured (read-only, streamable HTTP transport)")
 
     logger.info("Moniker resolution service started")
 
-    yield
+    async with _mcp_module.mcp.session_manager.run():
+        yield
 
     # Shutdown
     logger.info("Shutting down moniker resolution service...")
@@ -1060,8 +1072,16 @@ app.include_router(domain_routes.router)
 app.include_router(application_routes.router)
 app.include_router(model_routes.router)
 app.include_router(request_routes.router)
+app.include_router(shortlink_routes.router)
 if dashboard_routes:
     app.include_router(dashboard_routes.router)
+
+# Mount read-only MCP server (streamable HTTP transport).
+# Must be at module level so the sub-app's lifespan fires and the
+# StreamableHTTPSessionManager task group is initialised.
+from . import mcp as _mcp_module  # noqa: E402
+app.mount("/mcp", _mcp_module.get_streamable_http_app())
+
 # resolver_router is mounted AFTER all @resolver_router.xxx() decorators are processed
 # (see the app.include_router(resolver_router) call after the ui() handler below)
 
@@ -1140,7 +1160,7 @@ async def resolution_error_handler(request: Request, exc: ResolutionError):
 @resolver_router.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health():
     """Health check endpoint with telemetry, cache, rate limiter, and circuit breaker statistics."""
-    project_name = _config.project_name if _config else "Open Moniker"
+    project_name = _config.project_name if _config else "Moniker Service"
     return HealthResponse(
         status="healthy",
         service=project_name,
@@ -1189,9 +1209,22 @@ async def resolve_moniker(
     if full_path.startswith("/resolve/"):
         path = full_path[9:]  # Strip "/resolve/"
 
+    # Shortlink expansion: detect ~-prefixed segment and expand inline
+    shortlink_alias = None
+    if _shortlink_store:
+        try:
+            expanded, alias = _shortlink_store.try_expand_path(path)
+            if alias:
+                shortlink_alias = alias
+                path = expanded
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+
     # Build full moniker string
     moniker_str = f"moniker://{path}"
-    if request.query_params:
+    if not shortlink_alias and request.query_params:
+        # Only append client query params for non-shortlink requests
+        # (shortlinks have params baked in — the expand() already includes them)
         params = list(request.query_params.items())
         if params:
             moniker_str += "?" + "&".join(f"{k}={v}" for k, v in params)
@@ -1253,14 +1286,18 @@ async def resolve_moniker(
         redirected_from=result.redirected_from,
     )
 
+    # Override redirected_from if this was a shortlink expansion
+    if shortlink_alias:
+        response.redirected_from = shortlink_alias
+
     # Add deprecation/redirect headers
     headers = {}
     if status_val == "deprecated":
         headers["X-Moniker-Deprecated"] = deprecation_msg or "This moniker is deprecated"
     if successor:
         headers["X-Moniker-Successor"] = successor
-    if result.redirected_from:
-        headers["X-Moniker-Redirected-From"] = result.redirected_from
+    if response.redirected_from:
+        headers["X-Moniker-Redirected-From"] = response.redirected_from
 
     if headers:
         return JSONResponse(
@@ -2367,7 +2404,7 @@ _LANDING_HTML = """
 @app.get("/", response_class=HTMLResponse, tags=["Health"])
 async def root():
     """Landing page with links to all UIs and documentation."""
-    project_name = _config.project_name if _config else "Open Moniker"
+    project_name = _config.project_name if _config else "Moniker Service"
 
     # Generate dynamic HTML with project name
     html = _LANDING_HTML.replace("Moniker Service", project_name)

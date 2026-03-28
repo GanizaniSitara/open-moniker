@@ -6,7 +6,7 @@ its registries (no duplicate YAML loading).
 
 Write tools (submit/approve/reject) are intentionally excluded.
 
-Transport: SSE — endpoints are /mcp/sse (GET) and /mcp/messages/ (POST)
+Transport: Streamable HTTP — a single endpoint at /mcp/ (POST|GET|DELETE)
 when mounted at /mcp on the FastAPI app.
 """
 
@@ -74,8 +74,9 @@ def _require_state() -> _McpState:
 
 mcp = FastMCP(
     name="open-moniker",
+    streamable_http_path="/",
     instructions=(
-        "Open Moniker MCP Server — a unified data catalog and governance layer for firm-wide data access.\n\n"
+        "Moniker Service MCP Server — a unified data catalog and governance layer for firm-wide data access.\n\n"
 
         "## What is a Moniker?\n"
         "A moniker is a human-readable, hierarchical path that identifies a data asset. "
@@ -539,7 +540,7 @@ async def domains_list() -> str:
     "moniker://about",
     name="about",
     description=(
-        "Full self-description of Open Moniker: what it is, how monikers are structured, "
+        "Full self-description of Moniker Service: what it is, how monikers are structured, "
         "path conventions, segment filtering, and how to design a moniker hierarchy."
     ),
     mime_type="text/markdown",
@@ -558,9 +559,9 @@ async def about() -> str:
     source_summary = ", ".join(f"{v} {k}" for k, v in sorted(source_types.items(), key=lambda x: -x[1]))
 
     return (
-        "# Open Moniker — Self-Description\n\n"
-        "## What Is Open Moniker?\n"
-        "Open Moniker is a unified data catalog and governance layer. It lets you access\n"
+        "# Moniker Service — Self-Description\n\n"
+        "## What Is Moniker Service?\n"
+        "Moniker Service is a unified data catalog and governance layer. It lets you access\n"
         "any data asset across the firm using a single, human-readable path (a \"moniker\")\n"
         "without knowing connection strings, credentials, SQL dialects, or API shapes.\n\n"
         f"## This Catalog\n"
@@ -614,7 +615,7 @@ async def naming_guide() -> str:
     leaves.sort(key=lambda x: x["path"])
 
     lines = [
-        "# Open Moniker — Live Naming Guide",
+        "# Moniker Service — Live Naming Guide",
         "",
         "This guide is generated from the live catalog and shows real moniker patterns.",
         "",
@@ -755,11 +756,10 @@ async def check_ownership_prompt(path: str) -> str:
 # ASGI app factory — called from main.py to mount on /mcp
 # ---------------------------------------------------------------------------
 
-def get_sse_app():
-    """Return the MCP SSE Starlette ASGI app for mounting on FastAPI.
+def get_streamable_http_app():
+    """Return the MCP streamable HTTP Starlette ASGI app for mounting on FastAPI.
 
-    When mounted at ``/mcp`` on the FastAPI app the endpoints become:
-      GET  /mcp/sse        — SSE event stream
-      POST /mcp/messages/  — client message channel
+    When mounted at ``/mcp`` on the FastAPI app the endpoint becomes:
+      POST|GET|DELETE  /mcp/  — streamable HTTP transport
     """
-    return mcp.sse_app()
+    return mcp.streamable_http_app()

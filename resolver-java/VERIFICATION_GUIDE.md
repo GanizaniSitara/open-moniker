@@ -82,7 +82,7 @@ curl http://localhost:8054/health | jq
 ```json
 {
   "status": "healthy",
-  "project": "Open Moniker",
+  "project": "Moniker Service",
   "service": "resolver-java",
   "version": "0.1.0",
   "catalog_nodes": 123,
@@ -487,5 +487,5 @@ Once all verification passes:
 
 1. **Document Results**: Record actual performance numbers
 2. **Commit Code**: Push to MSubhan6/open-moniker.git
-3. **Create PR**: Open PR to ganizanisitara/open-moniker-svc
+3. **Create PR**: Open PR to ganizanisitara/open-moniker
 4. **Performance Report**: Create comparison document (Java vs Go vs Python)

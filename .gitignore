@@ -106,3 +106,6 @@ resolver-go/coverage.html
 *.dll
 *.so
 *.dylib
+catalog.yaml.bak
+catalog_large_test.yaml
+generate_large_catalog.py

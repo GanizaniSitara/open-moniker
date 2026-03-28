@@ -23,6 +23,15 @@ public class CatalogNode {
     // Domain mapping (for top-level nodes)
     private String domain;
 
+    // Vendor (e.g., bloomberg, refinitiv, msci)
+    private String vendor;
+
+    // Maturity level (e.g., governed, certified)
+    private String maturity;
+
+    // Extended description with technical details
+    private String technicalDescription;
+
     // Ownership (inherits from ancestors if not set)
     private Ownership ownership;
 

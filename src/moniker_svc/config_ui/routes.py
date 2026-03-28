@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import yaml
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import HTMLResponse
 
 from ..catalog.loader import load_catalog
@@ -23,6 +23,8 @@ from .models import (
     CreateNodeRequest,
     DeleteResponse,
     NodeListResponse,
+    NodeSummaryListResponse,
+    NodeSummaryModel,
     NodeWithOwnershipModel,
     OwnershipModel,
     ReloadResponse,
@@ -255,15 +257,64 @@ async def config_ui():
 # Node CRUD Endpoints
 # =============================================================================
 
-@router.get("/nodes", response_model=NodeListResponse)
-async def list_nodes():
-    """List all monikers."""
+@router.get("/nodes")
+async def list_nodes(
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=0, ge=0, le=50000),
+    summary: bool = Query(default=False),
+):
+    """List monikers with optional pagination and summary mode.
+
+    - **summary=true**: returns lightweight fields only (no source_binding, ownership, schema).
+      Ideal for listing pages.
+    - **offset/limit**: paginate results (limit=0 means return all — backwards compatible).
+    """
     catalog = _get_catalog()
-    nodes = catalog.all_nodes()
+    all_nodes = sorted(catalog.all_nodes(), key=lambda x: x.path)
+    total = len(all_nodes)
+
+    # Apply pagination
+    if limit > 0:
+        page = all_nodes[offset:offset + limit]
+    else:
+        page = all_nodes[offset:] if offset > 0 else all_nodes
+
+    if summary:
+        return NodeSummaryListResponse(
+            nodes=[
+                NodeSummaryModel(
+                    path=n.path,
+                    display_name=n.display_name,
+                    description=n.description,
+                    domain=n.domain,
+                    resolved_domain=(
+                        catalog.resolve_domain_with_fallback(n.path, _domain_registry)
+                        if catalog else n.domain
+                    ),
+                    vendor=n.vendor,
+                    classification=n.classification or "internal",
+                    maturity=n.maturity.value if n.maturity else "catalogued",
+                    is_leaf=n.is_leaf,
+                    status=n.status.value if hasattr(n.status, "value") else str(n.status),
+                    source_type=(
+                        n.source_binding.source_type.value
+                        if n.source_binding and hasattr(n.source_binding.source_type, "value")
+                        else str(n.source_binding.source_type) if n.source_binding else None
+                    ),
+                    tags=n.tags or [],
+                )
+                for n in page
+            ],
+            total=total,
+            offset=offset,
+            limit=limit if limit > 0 else None,
+        )
 
     return NodeListResponse(
-        nodes=[_node_to_model(n, catalog, _domain_registry) for n in sorted(nodes, key=lambda x: x.path)],
-        total=len(nodes),
+        nodes=[_node_to_model(n, catalog, _domain_registry) for n in page],
+        total=total,
+        offset=offset,
+        limit=limit if limit > 0 else None,
     )
 
 

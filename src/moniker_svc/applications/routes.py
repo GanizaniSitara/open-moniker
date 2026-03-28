@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import HTMLResponse
 
 from .types import Application
 from .registry import ApplicationRegistry
@@ -68,6 +69,20 @@ def _app_to_model(app: Application) -> ApplicationModel:
         documentation_url=app.documentation_url,
         wiki_link=app.wiki_link,
     )
+
+
+# =============================================================================
+# UI
+# =============================================================================
+
+@router.get("/ui", response_class=HTMLResponse)
+async def applications_ui():
+    """Serve the Applications Browser UI."""
+    static_dir = Path(__file__).parent / "static"
+    index_path = static_dir / "index.html"
+    if not index_path.exists():
+        raise HTTPException(status_code=404, detail="Applications UI not found")
+    return HTMLResponse(content=index_path.read_text(encoding="utf-8"), status_code=200)
 
 
 # =============================================================================

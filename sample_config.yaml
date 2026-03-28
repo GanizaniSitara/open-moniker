@@ -1,7 +1,7 @@
 # Service Configuration
 
 # Project branding
-project_name: "Open Moniker"
+project_name: "Moniker Service"
 
 server:
   host: "0.0.0.0"
@@ -148,3 +148,8 @@ config_ui:
   enabled: true
   yaml_output_path: "catalog_output.yaml"
   show_file_paths: false  # Show file paths in save success messages (useful for debugging)
+
+# Community contributions (flags, suggestions, annotations, discussions)
+community:
+  enabled: true
+  data_dir: "community_data"    # Directory for community JSON files (relative or absolute)

@@ -28,11 +28,12 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo apt-get update && sudo apt-get install -y libkrb5-dev
           pip install -e ".[dev,all]"
-          pip install "mcp>=1.0.0" pyyaml httpx
+          pip install "mcp>=1.0.0" pyyaml httpx python-dateutil asgi-lifespan beautifulsoup4
 
       - name: Unit & integration tests
-        run: pytest tests/ -v --tb=short -x --ignore=tests/test_mcp.py
+        run: pytest tests/ -v --tb=short -x --ignore=tests/test_mcp.py -m "not integration"
 
       - name: Start moniker service
         run: |
@@ -42,9 +43,9 @@ jobs:
             sleep 1
           done
 
-      - name: MCP SSE tests
+      - name: MCP tests
         env:
-          MCP_URL: http://127.0.0.1:8060/mcp/sse
+          MCP_URL: http://127.0.0.1:8060/mcp
         run: pytest tests/test_mcp.py -v --tb=short
 
   go-tests:
@@ -73,4 +74,7 @@ jobs:
 
       - name: Run Java tests
         working-directory: resolver-java
-        run: ./mvnw test -q
+        run: |
+          cp ../sample_config.yaml config.yaml
+          cp ../sample_catalog.yaml catalog.yaml
+          mvn test -q

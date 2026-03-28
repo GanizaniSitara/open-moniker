@@ -13,17 +13,22 @@ type CatalogYAML map[string]*CatalogNodeYAML
 
 // CatalogNodeYAML represents a node in the YAML file
 type CatalogNodeYAML struct {
-	DisplayName    string                 `yaml:"display_name"`
-	Description    string                 `yaml:"description"`
-	Domain         *string                `yaml:"domain"`
-	Ownership      *OwnershipYAML         `yaml:"ownership"`
-	SourceBinding  *SourceBindingYAML     `yaml:"source_binding"`
-	AccessPolicy   *AccessPolicyYAML      `yaml:"access_policy"`
-	Classification string                 `yaml:"classification"`
-	Tags           []string               `yaml:"tags"`
-	Status         string                 `yaml:"status"`
-	IsLeaf         bool                   `yaml:"is_leaf"`
-	Successor      *string                `yaml:"successor"`
+	DisplayName          string                 `yaml:"display_name"`
+	Description          string                 `yaml:"description"`
+	TechnicalDescription string                 `yaml:"technical_description"`
+	Domain               *string                `yaml:"domain"`
+	Vendor               *string                `yaml:"vendor"`
+	Maturity             *string                `yaml:"maturity"`
+	Ownership            *OwnershipYAML         `yaml:"ownership"`
+	SourceBinding        *SourceBindingYAML     `yaml:"source_binding"`
+	AccessPolicy         *AccessPolicyYAML      `yaml:"access_policy"`
+	Documentation        *Documentation         `yaml:"documentation"`
+	Schema               map[string]interface{} `yaml:"schema"`
+	Classification       string                 `yaml:"classification"`
+	Tags                 []string               `yaml:"tags"`
+	Status               string                 `yaml:"status"`
+	IsLeaf               bool                   `yaml:"is_leaf"`
+	Successor            *string                `yaml:"successor"`
 }
 
 // OwnershipYAML represents ownership in YAML
@@ -90,10 +95,70 @@ func convertYAMLToNode(path string, yaml *CatalogNodeYAML) *CatalogNode {
 		DisplayName:    yaml.DisplayName,
 		Description:    yaml.Description,
 		Domain:         yaml.Domain,
+		Vendor:         yaml.Vendor,
+		Maturity:       yaml.Maturity,
 		Classification: yaml.Classification,
 		Tags:           yaml.Tags,
 		IsLeaf:         yaml.IsLeaf,
 		Successor:      yaml.Successor,
+	}
+
+	// Set technical description
+	if yaml.TechnicalDescription != "" {
+		td := yaml.TechnicalDescription
+		node.TechnicalDescription = &td
+	}
+
+	// Set documentation
+	if yaml.Documentation != nil {
+		node.Documentation = yaml.Documentation
+	}
+
+	// Set node-level schema (separate from source_binding schema)
+	if yaml.Schema != nil {
+		node.DataSchema = &DataSchema{}
+		// Parse columns if present
+		if cols, ok := yaml.Schema["columns"]; ok {
+			if colList, ok := cols.([]interface{}); ok {
+				for _, c := range colList {
+					if cm, ok := c.(map[string]interface{}); ok {
+						col := ColumnSchema{
+							Name:        stringFromMap(cm, "name"),
+							DataType:    stringFromMap(cm, "type"),
+							Description: stringFromMap(cm, "description"),
+						}
+						if st, ok := cm["semantic_type"].(string); ok {
+							col.SemanticType = &st
+						}
+						if pk, ok := cm["primary_key"].(bool); ok {
+							col.PrimaryKey = pk
+						}
+						if fk, ok := cm["foreign_key"].(string); ok {
+							col.ForeignKey = &fk
+						}
+						node.DataSchema.Columns = append(node.DataSchema.Columns, col)
+					}
+				}
+			}
+		}
+		if tags, ok := yaml.Schema["semantic_tags"]; ok {
+			if tagList, ok := tags.([]interface{}); ok {
+				for _, t := range tagList {
+					if s, ok := t.(string); ok {
+						node.DataSchema.SemanticTags = append(node.DataSchema.SemanticTags, s)
+					}
+				}
+			}
+		}
+		if uc, ok := yaml.Schema["use_cases"]; ok {
+			if ucList, ok := uc.([]interface{}); ok {
+				for _, u := range ucList {
+					if s, ok := u.(string); ok {
+						node.DataSchema.UseCases = append(node.DataSchema.UseCases, s)
+					}
+				}
+			}
+		}
 	}
 
 	// Set default classification
@@ -138,6 +203,8 @@ func convertYAMLToNode(path string, yaml *CatalogNodeYAML) *CatalogNode {
 			Schema:            yaml.SourceBinding.Schema,
 			ReadOnly:          readOnly,
 		}
+		// Auto-detect leaf node when source_binding is present
+		node.IsLeaf = true
 	}
 
 	// Convert access policy
@@ -164,4 +231,14 @@ func convertYAMLToNode(path string, yaml *CatalogNodeYAML) *CatalogNode {
 	}
 
 	return node
+}
+
+// stringFromMap safely extracts a string value from a map
+func stringFromMap(m map[string]interface{}, key string) string {
+	if v, ok := m[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }
