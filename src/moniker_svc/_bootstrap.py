@@ -88,6 +88,9 @@ def build_domain_registry():
     if Path(domains_yaml_path).exists():
         domains = load_domains_from_yaml(domains_yaml_path, registry)
         logger.info("Loaded %d domains from %s", len(domains), domains_yaml_path)
+    elif Path("sample_domains.yaml").exists():
+        domains = load_domains_from_yaml("sample_domains.yaml", registry)
+        logger.info("Loaded %d domains from sample_domains.yaml", len(domains))
     else:
         logger.info(
             "No domains config found at %s, starting with empty registry",
@@ -259,6 +262,9 @@ def build_model_registry(config):
         if Path(models_yaml_path).exists():
             models = load_models_from_yaml(models_yaml_path, registry)
             logger.info("Loaded %d business models from %s", len(models), models_yaml_path)
+        elif Path("sample_models.yaml").exists():
+            models = load_models_from_yaml("sample_models.yaml", registry)
+            logger.info("Loaded %d business models from sample_models.yaml", len(models))
         else:
             logger.info(
                 "No models config found at %s, starting with empty registry",
