@@ -986,7 +986,10 @@ async def lifespan(app: FastAPI):
 
     logger.info("Moniker resolution service started")
 
-    yield
+    # Run MCP session manager lifecycle (mounted sub-apps don't get
+    # their lifespans triggered by FastAPI, so we run it explicitly).
+    async with mcp_module.get_session_manager().run():
+        yield
 
     # Shutdown
     logger.info("Shutting down moniker resolution service...")

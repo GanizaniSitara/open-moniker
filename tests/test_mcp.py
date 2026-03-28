@@ -89,10 +89,10 @@ def mcp_url():
 async def mcp_session(url: str):
     """Async context manager that yields an initialised MCP ClientSession."""
     from mcp import ClientSession
-    from mcp.client.streamable_http import StreamableHTTPTransport
+    from mcp.client.streamable_http import streamable_http_client
 
-    async with StreamableHTTPTransport(url) as transport:
-        async with ClientSession(transport.read_stream, transport.write_stream) as session:
+    async with streamable_http_client(url) as (read_stream, write_stream, _):
+        async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
             yield session
 

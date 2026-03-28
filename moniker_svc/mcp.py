@@ -761,5 +761,15 @@ def get_streamable_http_app():
 
     When mounted at ``/mcp`` on the FastAPI app the endpoint becomes:
       POST|GET|DELETE  /mcp/  — streamable HTTP transport
+
+    After calling this, use ``get_session_manager().run()`` as an async
+    context manager inside the main app lifespan so the MCP session
+    manager's task group is initialised (mounted sub-apps don't get
+    their lifespans triggered by FastAPI).
     """
     return mcp.streamable_http_app()
+
+
+def get_session_manager():
+    """Return the MCP session manager (available after ``get_streamable_http_app()``)."""
+    return mcp.session_manager
