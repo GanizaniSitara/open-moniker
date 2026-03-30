@@ -11,6 +11,7 @@ import {
   InputAdornment,
   Chip,
   Button,
+  CircularProgress,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
@@ -244,7 +245,11 @@ export default function CatalogBrowser() {
           )}
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {loaded ? `${displayedDatasets.length} datasets` : "Loading..."}
+            {loaded ? (
+              `${displayedDatasets.length} datasets`
+            ) : (
+              <CircularProgress size={16} sx={{ mr: 1 }} />
+            )}
           </Typography>
 
           {visibleDatasets.map((ds) => (

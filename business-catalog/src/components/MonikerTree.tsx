@@ -439,7 +439,7 @@ export default function MonikerTree() {
             placeholder="Filter monikers..."
             variant="outlined"
             size="small"
-            sx={{ flexGrow: 1, maxWidth: 360 }}
+            sx={{ flexGrow: 1 }}
             slotProps={{
               input: {
                 startAdornment: (
