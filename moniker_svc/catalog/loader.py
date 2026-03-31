@@ -53,7 +53,13 @@ class CatalogLoader:
 
         with open(path, "r", encoding="utf-8") as f:
             if path.suffix in (".yaml", ".yml"):
-                data = yaml.safe_load(f)
+                # Use C-based loader when available — significantly less
+                # memory and faster than the pure-Python SafeLoader.
+                try:
+                    Loader = yaml.CSafeLoader
+                except AttributeError:
+                    Loader = yaml.SafeLoader
+                data = yaml.load(f, Loader=Loader)
             else:
                 import json
                 data = json.load(f)
@@ -64,7 +70,12 @@ class CatalogLoader:
         """Load catalog from a dictionary."""
         registry = CatalogRegistry()
 
-        for path, node_data in data.items():
+        # Pop entries as we go so the raw dict is freed incrementally,
+        # avoiding holding both the full dict AND all CatalogNode objects
+        # in memory at the same time.
+        paths = list(data.keys())
+        for path in paths:
+            node_data = data.pop(path)
             node = self._parse_node(path, node_data)
             registry.register(node)
             logger.debug(f"Loaded catalog node: {path}")

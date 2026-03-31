@@ -1356,7 +1356,7 @@
 
         async function loadNodes() {
             try {
-                const data = await fetchJSON(`${API_BASE}/nodes`);
+                const data = await fetchJSON(`${API_BASE}/nodes?summary=true`);
                 nodes = data.nodes;
                 renderTree();
             } catch (e) {

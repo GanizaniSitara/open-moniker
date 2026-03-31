@@ -282,14 +282,19 @@ async def list_nodes(
     - **offset/limit**: paginate results (limit=0 means return all — backwards compatible).
     """
     catalog = _get_catalog()
-    all_nodes = sorted(catalog.all_nodes(), key=lambda x: x.path)
-    total = len(all_nodes)
 
-    # Apply pagination
+    # Use paginated_paths for O(1)-ish memory when only a slice is needed,
+    # but fall back to full sort when the caller genuinely wants everything
+    # (limit=0, the backwards-compatible default).
+    all_paths = sorted(catalog.all_paths())
+    total = len(all_paths)
+
     if limit > 0:
-        page = all_nodes[offset:offset + limit]
+        path_page = all_paths[offset:offset + limit]
     else:
-        page = all_nodes[offset:] if offset > 0 else all_nodes
+        path_page = all_paths[offset:] if offset > 0 else all_paths
+
+    page = [catalog.get(p) for p in path_page]
 
     if summary:
         return NodeSummaryListResponse(
@@ -342,37 +347,15 @@ async def search_nodes(q: str = ""):
     if not q or len(q) < 2:
         return {"results": [], "total": 0, "query": q}
 
-    query_lower = q.lower()
-    nodes = catalog.all_nodes()
-    results = []
+    # Use the registry's built-in search (iterates nodes without copying
+    # the full list) instead of pulling all_nodes() into a second list.
+    matched = catalog.search(q, limit=50)
+    results = [
+        {"path": n.path, "match": "search", "display_name": n.display_name or ""}
+        for n in matched
+    ]
 
-    for node in nodes:
-        # Search in path
-        if query_lower in node.path.lower():
-            results.append({"path": node.path, "match": "path", "display_name": node.display_name or ""})
-            continue
-
-        # Search in display_name
-        if node.display_name and query_lower in node.display_name.lower():
-            results.append({"path": node.path, "match": "display_name", "display_name": node.display_name})
-            continue
-
-        # Search in description
-        if node.description and query_lower in node.description.lower():
-            results.append({"path": node.path, "match": "description", "display_name": node.display_name or ""})
-            continue
-
-        # Search in tags
-        if node.tags:
-            for tag in node.tags:
-                if query_lower in tag.lower():
-                    results.append({"path": node.path, "match": "tag", "display_name": node.display_name or ""})
-                    break
-
-    # Sort by path
-    results.sort(key=lambda x: x["path"])
-
-    return {"results": results[:50], "total": len(results), "query": q}
+    return {"results": results, "total": len(results), "query": q}
 
 
 @router.get("/nodes/{path:path}", response_model=NodeWithOwnershipModel)
