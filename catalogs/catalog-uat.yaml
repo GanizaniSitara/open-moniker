@@ -1,0 +1,930 @@
+benchmarks:
+  display_name: Benchmarks
+  domain: benchmarks
+  vendor: msci
+  maturity: governed
+  description: Benchmark indices, constituents, and returns
+  ownership:
+    accountable_owner: indices-governance@firm.com
+    data_specialist: quant-research@firm.com
+    support_channel: '#benchmarks'
+  documentation:
+    glossary: https://confluence.firm.com/display/DATA/Benchmark+Glossary
+    runbook: https://confluence.firm.com/display/OPS/Benchmark+Runbook
+    data_dictionary: https://confluence.firm.com/display/DATA/Benchmark+Data+Dictionary
+benchmarks/constituents:
+  display_name: Benchmark Constituents
+  domain: benchmarks
+  vendor: ftse-russell
+  maturity: governed
+  description: Index membership and weights
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: BENCHMARKS
+      schema: CONSTITUENTS
+      query: "SELECT benchmark_id, security_id, weight, sector, country\nFROM BENCHMARK_CONSTITUENTS\n\
+        WHERE benchmark_id = '{segments[0]}'\n  AND as_of_date = TO_DATE('{segments[1]}',\
+        \ 'YYYYMMDD')\n"
+benchmarks/corporate:
+  display_name: Corporate Bond Indices
+  domain: benchmarks
+  vendor: barclays-indices
+  maturity: certified
+  description: Investment grade and high yield corporate bond indices
+  ownership:
+    data_specialist: credit-research@firm.com
+benchmarks/corporate/ig:
+  display_name: Investment Grade Corporate
+  domain: benchmarks
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: BENCHMARKS
+      schema: CORPORATE
+      query: 'SELECT index_id, sector, rating_bucket, spread, oas, duration
+
+        FROM IG_CORPORATE_INDICES
+
+        WHERE sector = ''{segments[0]}''
+
+        '
+benchmarks/returns:
+  display_name: Benchmark Returns
+  domain: benchmarks
+  vendor: msci
+  description: Daily, MTD, YTD returns for benchmarks
+  technical_description: Pulled from Snowflake BENCHMARKS.RETURNS_DAILY table. Returns are total-return (price + income) in local currency and USD. Calculated by MSCI end-of-day and loaded via nightly batch at 22:00 ET. Inception dates vary by index — most go back to 1999.
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: BENCHMARKS
+      schema: RETURNS
+      query: 'SELECT benchmark_id, as_of_date, return_1d, return_mtd, return_ytd
+
+        FROM BENCHMARK_RETURNS
+
+        WHERE benchmark_id = ''{segments[0]}''
+
+        '
+benchmarks/sovereign:
+  display_name: Sovereign Bond Indices
+  domain: benchmarks
+  vendor: ftse-russell
+  description: Government bond indices by region and currency
+benchmarks/sovereign/developed:
+  display_name: Developed Markets Sovereign
+  domain: benchmarks
+  description: DM government bond benchmarks
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: BENCHMARKS
+      schema: SOVEREIGN
+      query: "SELECT index_id, index_name, currency, weight, yield, duration, mod_duration\n\
+        FROM DM_SOVEREIGN_INDICES\nWHERE {filter[0]:index_family}\n  AND {filter[1]:currency}\n\
+        \  AND as_of_date = {version_date}\n"
+commodities:
+  display_name: Commodities
+  domain: commodities
+  description: Commodity futures, spot prices, and derivatives
+  ownership:
+    accountable_owner: commodities-desk@firm.com
+    data_specialist: commodities-quant@firm.com
+    support_channel: '#commodities-data'
+  documentation:
+    glossary: https://confluence.firm.com/display/DATA/Commodities+Glossary
+    data_dictionary: https://confluence.firm.com/display/DATA/Commodities+Data+Dictionary
+commodities.crypto:
+  display_name: Digital Assets
+  domain: commodities
+  vendor: refinitiv
+  description: Cryptocurrency spot and derivatives
+  ownership:
+    data_specialist: digital-assets@firm.com
+  source_binding:
+    type: rest
+    config:
+      base_url: https://crypto-data.internal.firm.com
+      path_template: /api/v3/assets/{segments[0]}
+      method: GET
+      auth_type: api_key
+commodities.energy:
+  display_name: Energy Commodities
+  domain: commodities
+  vendor: bloomberg
+  description: Crude oil, natural gas, and refined products
+  technical_description: Sourced from Bloomberg NEFA energy API. Prices are snapped at 16:00 ET from the composite feed. Contract roll follows the ICE front-month convention. Backfill from 2005 via batch load, daily updates via streaming ingest.
+  source_binding:
+    type: rest
+    config:
+      base_url: https://api.nefa.energy
+      path_template: /v2/commodities/energy/{segments[0]}/{segments[1]}
+      method: GET
+      auth_type: api_key
+      headers:
+        Accept: application/json
+        X-API-Version: '2.0'
+  schema:
+    columns:
+    - name: SYMBOL
+      type: string
+      description: Commodity symbol (CL=Crude, NG=NatGas)
+      semantic_type: identifier
+    - name: CONTRACT
+      type: string
+      description: Contract type (SPOT, F1, F2)
+      semantic_type: dimension
+    - name: PRICE
+      type: float
+      description: Price per unit (USD)
+      semantic_type: measure
+    - name: VOLUME
+      type: integer
+      description: Trading volume (contracts)
+      semantic_type: measure
+    semantic_tags:
+    - commodities
+    - energy
+    - crude-oil
+    - natural-gas
+    - futures
+commodities.metals:
+  display_name: Precious & Industrial Metals
+  domain: commodities
+  vendor: bloomberg
+  description: Gold, silver, copper, and other metals
+  source_binding:
+    type: rest
+    config:
+      base_url: https://api.nefa.energy
+      path_template: /v2/commodities/metals/{segments[0]}/{segments[1]}
+      method: GET
+      auth_type: api_key
+fixed.income:
+  display_name: Fixed Income
+  domain: fixed_income
+  vendor: bloomberg
+  description: Government bonds, corporates, and structured products
+  ownership:
+    accountable_owner: fixed-income-governance@firm.com
+    data_specialist: fi-desk@firm.com
+    support_channel: '#fixed-income'
+    adop: fi-trading-head@firm.com
+    ads: fi-data-steward@firm.com
+  documentation:
+    glossary: https://confluence.firm.com/display/FI/Fixed+Income+Glossary
+    data_dictionary: https://confluence.firm.com/display/FI/Bond+Data+Dictionary
+fixed.income/govies:
+  display_name: Government Bonds
+  vendor: bloomberg
+  description: Sovereign debt securities and yields
+fixed.income/govies/sovereign:
+  display_name: International Sovereign Bonds
+  vendor: bloomberg
+  description: Non-US government bonds (Bunds, Gilts, JGBs, etc.)
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: MARKET_DATA_WH
+      database: FIXED_INCOME
+      schema: GOVIES
+      query: "SELECT asof_date, isin, country, tenor, yield, spread_vs_usd, price,\
+        \ duration\nFROM SOVEREIGN_BONDS\nWHERE ('{segments[0]}' = 'ALL' OR country\
+        \ = '{segments[0]}')\n  AND ('{segments[1]}' = 'ALL' OR tenor = '{segments[1]}')\n\
+        ORDER BY asof_date DESC, country, tenor\n"
+fixed.income/govies/treasury:
+  display_name: US Treasury Securities
+  vendor: fred
+  description: US Treasury bills, notes, and bonds with yields and pricing
+  technical_description: Loaded from Snowflake FIXED_INCOME.GOVIES.US_TREASURIES table. Yields sourced from FRED H.15 release, prices computed using standard discounting. Updated daily at 18:00 ET after the Fed publishes the daily yield curve. Historical data back to 1962.
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: MARKET_DATA_WH
+      database: FIXED_INCOME
+      schema: GOVIES
+      query: "SELECT asof_date, cusip, tenor, coupon, yield, price, duration, convexity\n\
+        FROM TREASURY_SECURITIES\nWHERE ('{segments[0]}' = 'ALL' OR tenor = '{segments[0]}')\n\
+        \  AND ('{segments[1]}' = 'ALL' OR cusip = '{segments[1]}')\nORDER BY asof_date\
+        \ DESC, tenor\n"
+  schema:
+    columns:
+    - name: ASOF_DATE
+      type: date
+      description: Pricing date
+      semantic_type: timestamp
+      primary_key: true
+    - name: CUSIP
+      type: string
+      description: CUSIP identifier
+      semantic_type: identifier
+      primary_key: true
+    - name: TENOR
+      type: string
+      description: Maturity tenor (3M, 6M, 1Y, 2Y, 5Y, 10Y, 30Y)
+      semantic_type: dimension
+    - name: YIELD
+      type: float
+      description: Yield to maturity (decimal)
+      semantic_type: measure
+    - name: DURATION
+      type: float
+      description: Modified duration (years)
+      semantic_type: measure
+    semantic_tags:
+    - treasury
+    - fixed-income
+    - yield-curve
+    - risk-free-rate
+    use_cases:
+    - Build yield curve for discounting
+    - Calculate duration and convexity
+    - Benchmark against risk-free rate
+fixed.income/mbs:
+  display_name: Mortgage-Backed Securities
+  vendor: black-knight
+  description: Agency MBS pool data and prepayment analytics
+  ownership:
+    data_specialist: mbs-research@firm.com
+    support_channel: '#mortgage-data'
+  classification: confidential
+fixed.income/mbs/pools:
+  display_name: MBS Pool Data
+  vendor: intex
+  description: Agency MBS pool characteristics and analytics
+  source_binding:
+    type: excel
+    config:
+      base_path: /data/mbs/pools
+      file_pattern: '{segments[0]}_{segments[1]}_pools.xlsx'
+      sheet: PoolData
+      header_row: 2
+  schema:
+    columns:
+    - name: POOL_ID
+      type: string
+      description: Pool identifier (CUSIP)
+      semantic_type: identifier
+    - name: AGENCY
+      type: string
+      description: Issuing agency (FNMA, FHLMC, GNMA)
+      semantic_type: dimension
+    - name: WAC
+      type: float
+      description: Weighted average coupon
+      semantic_type: measure
+    - name: WAM
+      type: integer
+      description: Weighted average maturity (months)
+      semantic_type: measure
+    - name: CPR_1M
+      type: float
+      description: 1-month conditional prepayment rate
+      semantic_type: measure
+    - name: OAS
+      type: float
+      description: Option-adjusted spread (bps)
+      semantic_type: measure
+    semantic_tags:
+    - mortgages
+    - mbs
+    - agency
+    - prepayment
+    - fixed-income
+fixed.income/mbs/prepay:
+  display_name: Prepayment Projections
+  vendor: corelogic
+  description: MBS prepayment model outputs
+  source_binding:
+    type: excel
+    config:
+      base_path: /data/mbs/prepay
+      file_pattern: '{segments[0]}_{segments[1]}_prepay.xlsx'
+      sheet: Projections
+      header_row: 1
+flows:
+  display_name: Fund Flows
+  domain: flows
+  description: Subscriptions, redemptions, and AUM
+  ownership:
+    accountable_owner: transfer-agency@firm.com
+    data_specialist: flows-ops@firm.com
+    support_channel: '#fund-flows'
+  classification: confidential
+flows.aum:
+  display_name: Assets Under Management
+  domain: flows
+  vendor: factset
+  description: Daily AUM by fund and strategy
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: TA_WH
+      database: FLOWS
+      schema: AUM
+      query: 'SELECT fund_id, as_of_date, aum, aum_change_1d, net_flows_mtd
+
+        FROM DAILY_AUM
+
+        WHERE (''{segments[0]}'' = ''ALL'' OR fund_id = ''{segments[0]}'')
+
+        '
+flows.redemptions:
+  display_name: Redemptions
+  domain: flows
+  vendor: factset
+  description: Money out of funds
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: TA_WH
+      database: FLOWS
+      schema: TRANSACTIONS
+      query: 'SELECT fund_id, trade_date, settle_date, amount, shares, investor_type
+
+        FROM REDEMPTIONS
+
+        WHERE fund_id = ''{segments[0]}''
+
+        '
+flows.subscriptions:
+  display_name: Subscriptions
+  domain: flows
+  vendor: factset
+  description: New money into funds
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: TA_WH
+      database: FLOWS
+      schema: TRANSACTIONS
+      query: 'SELECT fund_id, trade_date, settle_date, amount, shares, investor_type
+
+        FROM SUBSCRIPTIONS
+
+        WHERE fund_id = ''{segments[0]}''
+
+        '
+nav:
+  display_name: NAV
+  domain: nav
+  maturity: governed
+  description: Net Asset Value and fund accounting
+  ownership:
+    accountable_owner: fund-accounting@firm.com
+    data_specialist: nav-ops@firm.com
+    support_channel: '#nav-support'
+  classification: confidential
+nav.estimated:
+  display_name: Estimated NAV
+  domain: nav
+  vendor: factset
+  description: Intraday estimated NAV
+  source_binding:
+    type: rest
+    config:
+      base_url: https://nav-service.internal.firm.com
+      path_template: /api/v1/estimated/{segments[0]}
+      method: GET
+      auth_type: bearer
+nav.official:
+  display_name: Official NAV
+  domain: nav
+  vendor: factset
+  maturity: governed
+  description: End of day official NAV per share
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ACCOUNTING_WH
+      database: NAV
+      schema: OFFICIAL
+      query: "SELECT fund_id, as_of_date, nav_per_share, total_nav, shares_outstanding\n\
+        FROM OFFICIAL_NAV\nWHERE fund_id = '{segments[0]}'\n  AND ('{segments[1]}'\
+        \ = 'ALL' OR as_of_date = TO_DATE('{segments[1]}', 'YYYYMMDD'))\n"
+portfolios:
+  display_name: Portfolios
+  domain: portfolios
+  maturity: governed
+  description: Portfolio master, holdings, performance, and attribution
+  ownership:
+    accountable_owner: portfolio-ops@firm.com
+    data_specialist: portfolio-management@firm.com
+    support_channel: '#portfolios'
+  documentation:
+    glossary: https://confluence.firm.com/display/PM/Portfolio+Glossary
+    runbook: https://confluence.firm.com/display/OPS/Portfolio+System+Runbook
+    onboarding: https://confluence.firm.com/display/PM/Portfolio+Data+Onboarding
+    data_dictionary: https://confluence.firm.com/display/PM/Portfolio+Data+Dictionary
+  classification: confidential
+portfolios.attribution:
+  display_name: Performance Attribution
+  domain: portfolios
+  vendor: factset
+  description: Return attribution by factor, sector, security
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: PORTFOLIOS
+      schema: ATTRIBUTION
+      query: "SELECT portfolio_id, as_of_date, dimension, bucket,\n       allocation_effect,\
+        \ selection_effect, interaction_effect, total_effect\nFROM RETURN_ATTRIBUTION\n\
+        WHERE portfolio_id = '{segments[0]}'\n  AND as_of_date = TO_DATE('{segments[1]}',\
+        \ 'YYYYMMDD')\n"
+portfolios.exposures:
+  display_name: Exposure Analysis
+  domain: portfolios
+  vendor: bloomberg
+  description: Portfolio exposure breakdown by dimension
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: PORTFOLIOS
+      schema: ANALYTICS
+      query: "SELECT portfolio_id, dimension, bucket, exposure_pct, notional\nFROM\
+        \ EXPOSURE_BREAKDOWN\nWHERE as_of_date = TO_DATE('{segments[1]}', 'YYYYMMDD')\n\
+        \  AND portfolio_id = '{segments[0]}'\n"
+portfolios.holdings:
+  display_name: Portfolio Holdings
+  domain: portfolios
+  vendor: refinitiv
+  description: End of day positions by portfolio and date
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: POSITIONS_WH
+      database: PORTFOLIOS
+      schema: HOLDINGS
+      query: "SELECT portfolio_id, security_id, quantity, market_value,\n       cost_basis,\
+        \ unrealized_pnl, currency\nFROM DAILY_POSITIONS\nWHERE as_of_date = TO_DATE('{segments[1]}',\
+        \ 'YYYYMMDD')\n  AND portfolio_id = '{segments[0]}'\n"
+portfolios.performance:
+  display_name: Portfolio Performance
+  domain: portfolios
+  vendor: factset
+  description: Returns, TWR, attribution by portfolio
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: ANALYTICS_WH
+      database: PORTFOLIOS
+      schema: PERFORMANCE
+      query: "SELECT portfolio_id, as_of_date, twr_1d, twr_mtd, twr_ytd,\n       benchmark_id,\
+        \ excess_return, tracking_error\nFROM PORTFOLIO_PERFORMANCE\nWHERE portfolio_id\
+        \ = '{segments[0]}'\n  AND ('{segments[1]}' = 'ALL' OR as_of_date >= TO_DATE('{segments[1]}',\
+        \ 'YYYYMMDD'))\n"
+prices:
+  display_name: Prices
+  domain: prices
+  maturity: certified
+  description: Real-time and historical security prices
+  ownership:
+    accountable_owner: market-data-governance@firm.com
+    data_specialist: market-data-ops@firm.com
+    support_channel: '#market-data'
+  documentation:
+    glossary: https://confluence.firm.com/display/MKTDATA/Pricing+Glossary
+    runbook: https://confluence.firm.com/display/OPS/Market+Data+Runbook
+    onboarding: https://confluence.firm.com/display/MKTDATA/Market+Data+Onboarding
+    data_dictionary: https://confluence.firm.com/display/MKTDATA/Price+Fields+Dictionary
+prices.equity:
+  display_name: Equity Prices
+  domain: prices
+  vendor: refinitiv
+  maturity: certified
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: MARKET_DATA_WH
+      database: PRICES
+      schema: EQUITY
+      query: "SELECT symbol, open_price, high_price, low_price, close_price, volume,\
+        \ vwap\nFROM EQUITY_EOD\nWHERE {filter[0]:symbol}\n  AND trade_date = CASE\n\
+        \    WHEN {is_latest} = 'true' THEN (SELECT MAX(trade_date) FROM EQUITY_EOD)\n\
+        \    ELSE {version_date}\n  END\n"
+prices.fixed.income:
+  display_name: Fixed Income Prices
+  domain: prices
+  vendor: ice
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: MARKET_DATA_WH
+      database: PRICES
+      schema: FIXED_INCOME
+      query: 'SELECT security_id, bid_price, ask_price, mid_price, yield_to_maturity,
+        spread
+
+        FROM BOND_PRICES
+
+        WHERE security_id = ''{segments[0]}''
+
+        '
+prices.fx:
+  display_name: FX Rates
+  domain: prices
+  vendor: refinitiv
+  source_binding:
+    type: rest
+    config:
+      base_url: https://fx-service.internal.firm.com
+      path_template: /api/v1/rates/{segments[0]}/{segments[1]}
+      method: GET
+      auth_type: bearer
+rates:
+  display_name: Interest Rates
+  domain: rates
+  maturity: certified
+  description: Interest rate curves, swaps, and money market rates
+  ownership:
+    accountable_owner: rates-governance@firm.com
+    data_specialist: rates-quant@firm.com
+    support_channel: '#rates-data'
+    adop: rates-trading-head@firm.com
+    ads: rates-data-steward@firm.com
+    adal: rates-access-control@firm.com
+  documentation:
+    glossary: https://confluence.firm.com/display/RATES/Interest+Rates+Glossary
+    runbook: https://confluence.firm.com/display/OPS/Rates+Data+Runbook
+    data_dictionary: https://confluence.firm.com/display/RATES/Swap+Rates+Dictionary
+    additional:
+      sofr_transition: https://confluence.firm.com/display/RATES/SOFR+Transition+Guide
+      curve_construction: https://confluence.firm.com/display/QUANT/Yield+Curve+Methodology
+rates.curves:
+  display_name: Yield Curves
+  domain: rates
+  vendor: bloomberg
+  maturity: governed
+  description: Constructed yield curves by currency
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: MARKET_DATA_WH
+      database: RATES
+      schema: CURVES
+      query: "SELECT asof_date, currency, tenor, zero_rate, discount_factor\nFROM\
+        \ YIELD_CURVES\nWHERE currency = '{segments[0]}'\n  AND asof_date = TO_DATE('{segments[1]}',\
+        \ 'YYYYMMDD')\n"
+rates.sofr:
+  display_name: SOFR Rates
+  domain: rates
+  vendor: fred
+  maturity: certified
+  description: Secured Overnight Financing Rate and term SOFR
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: MARKET_DATA_WH
+      database: RATES
+      schema: BENCHMARKS
+      query: 'SELECT asof_date, ''USD'' as currency, rate_type, rate
+
+        FROM SOFR_RATES
+
+        WHERE (''{segments[0]}'' = ''ALL'' OR rate_type = ''{segments[0]}'')
+
+        ORDER BY asof_date DESC
+
+        '
+  schema:
+    columns:
+    - name: ASOF_DATE
+      type: date
+      description: Rate date
+      semantic_type: timestamp
+    - name: RATE_TYPE
+      type: string
+      description: SOFR type (ON, 30D_AVG, 90D_AVG, TERM_1M, TERM_3M)
+      semantic_type: dimension
+    - name: RATE
+      type: float
+      description: Rate value (decimal)
+      semantic_type: measure
+    semantic_tags:
+    - sofr
+    - risk-free-rate
+    - overnight
+    - benchmark
+    - interest-rates
+rates.swap:
+  display_name: Interest Rate Swaps
+  domain: rates
+  vendor: bloomberg
+  description: Par swap rates across currencies and tenors
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: MARKET_DATA_WH
+      database: RATES
+      schema: SWAPS
+      segment_names: currency,tenor,date
+      query: |
+        SELECT asof_date, currency, tenor, par_rate, spread_vs_govt, dv01
+        FROM SWAP_RATES
+        WHERE ('{segments[0]}' = 'ALL' OR currency = '{segments[0]}')
+          AND ('{segments[1]}' = 'ALL' OR tenor = '{segments[1]}')
+          AND ('{segments[2]}' = 'ALL' OR asof_date = TO_DATE('{segments[2]}', 'YYYYMMDD'))
+        ORDER BY asof_date DESC, currency, tenor
+reference:
+  display_name: Reference Data
+  domain: reference
+  maturity: certified
+  description: Calendars, classifications, and static reference
+  ownership:
+    accountable_owner: ref-data-governance@firm.com
+    data_specialist: ref-data-ops@firm.com
+    support_channel: '#reference-data'
+  documentation:
+    glossary: https://confluence.firm.com/display/DATA/Reference+Data+Glossary
+    data_dictionary: https://confluence.firm.com/display/DATA/Reference+Data+Dictionary
+reference.calendars:
+  display_name: Trading Calendars
+  domain: reference
+  vendor: refinitiv
+  maturity: governed
+  description: Exchange and settlement calendars
+reference.calendars/exchange:
+  display_name: Exchange Calendars
+  domain: reference
+  source_binding:
+    type: static
+    config:
+      base_path: /data/reference/calendars/exchange
+      file_pattern: '{segments[0]}.json'
+      format: json
+reference.calendars/settlement:
+  display_name: Settlement Calendars
+  domain: reference
+  source_binding:
+    type: static
+    config:
+      base_path: /data/reference/calendars/settlement
+      file_pattern: '{segments[0]}.csv'
+      format: csv
+reference.classifications:
+  display_name: Classifications
+  domain: reference
+  vendor: msci
+  description: Industry, sector, and other classification schemes
+reference.classifications/gics:
+  display_name: GICS Codes
+  domain: reference
+  vendor: msci
+  description: Global Industry Classification Standard
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: REF_DATA_WH
+      database: REFERENCE
+      schema: CLASSIFICATIONS
+      query: 'SELECT gics_code, sector, industry_group, industry, sub_industry
+
+        FROM GICS_HIERARCHY
+
+        WHERE (''{segments[0]}'' = ''ALL'' OR gics_code LIKE ''{segments[0]}%'')
+
+        '
+reports:
+  display_name: Reports
+  domain: reports
+  description: Generated reports and regulatory filings
+  ownership:
+    accountable_owner: reporting-ops@firm.com
+    data_specialist: report-dev@firm.com
+    support_channel: '#reporting'
+reports.client:
+  display_name: Client Reports
+  domain: reports
+  description: Client-facing reports and statements
+  source_binding:
+    type: static
+    config:
+      base_path: /data/reports/client
+      file_pattern: '{segments[0]}/{segments[1]}.pdf'
+      format: binary
+  classification: confidential
+reports.daily:
+  display_name: Daily Reports
+  domain: reports
+  source_binding:
+    type: static
+    config:
+      base_path: /data/reports/daily
+      file_pattern: '{segments[0]}/{segments[1]}.pdf'
+      format: binary
+reports.regulatory:
+  display_name: Regulatory Reports
+  domain: reports
+  vendor: sp-global
+  source_binding:
+    type: excel
+    config:
+      base_path: /data/reports/regulatory
+      file_pattern: '{segments[0]}/{segments[1]}.xlsx'
+      sheet: Summary
+  classification: restricted
+risk:
+  display_name: Risk
+  domain: risk
+  description: VaR, CVaR, stress testing, and risk measures
+  ownership:
+    accountable_owner: risk-governance@firm.com
+    data_specialist: risk-quant@firm.com
+    support_channel: '#risk-analytics'
+  documentation:
+    glossary: https://confluence.firm.com/display/RISK/Risk+Measures+Glossary
+    runbook: https://confluence.firm.com/display/OPS/Proteus+Risk+Engine+Runbook
+    data_dictionary: https://confluence.firm.com/display/RISK/Risk+Data+Dictionary
+    additional:
+      regulatory_guide: https://confluence.firm.com/display/RISK/BCBS239+Compliance+Guide
+      methodology: https://confluence.firm.com/display/QUANT/Risk+Methodology
+  classification: confidential
+risk.cvar:
+  display_name: Conditional Value at Risk
+  domain: risk
+  vendor: bloomberg
+  description: CVaR tail risk measures by portfolio, currency, and security
+  ownership:
+    accountable_owner: risk-governance@firm.com
+    data_specialist: risk-quant@firm.com
+    support_channel: '#risk-analytics'
+    adop: quant-research@firm.com
+    ads: risk-data-steward@firm.com
+    adal: risk-access-control@firm.com
+  source_binding:
+    type: oracle
+    config:
+      dsn: proteus.firm.com:1521/RISKDB
+      query: "SELECT asof_date, port_no, port_type, ssm_id, base_currency,\n     \
+        \  acct_key, lt_id, cvar_coeff, cvar\nFROM proteus_2_own.te_stress_tail_risk_pnl\n\
+        WHERE ('{segments[0]}' = 'ALL' OR port_no || '-' || port_type = '{segments[0]}')\n\
+        \  AND ('{segments[1]}' = 'ALL' OR base_currency = '{segments[1]}')\n  AND\
+        \ ('{segments[2]}' = 'ALL' OR ssm_id = '{segments[2]}')\nORDER BY asof_date\
+        \ DESC, port_no, ssm_id\n"
+  schema:
+    columns:
+    - name: ASOF_DATE
+      type: date
+      description: Business date (T+1)
+      semantic_type: timestamp
+      primary_key: true
+    - name: PORT_NO
+      type: string
+      description: Portfolio number
+      semantic_type: identifier
+      primary_key: true
+    - name: SSM_ID
+      type: string
+      description: Security master ID
+      semantic_type: identifier
+      foreign_key: securities/lookup
+    - name: CVAR
+      type: float
+      description: Conditional Value at Risk
+      semantic_type: measure
+    semantic_tags:
+    - risk
+    - cvar
+    - tail-risk
+    - portfolio-analytics
+    - regulatory
+  access_policy:
+    min_filters: 1
+    blocked_patterns:
+    - ALL/ALL/ALL
+    max_rows_warn: 10000000
+    max_rows_block: 100000000
+    base_row_count: 1000
+    cardinality_multipliers:
+    - 1000
+    - 50
+    - 200000
+    denial_message: 'Query blocked: CVaR table is very large.
+
+      You must specify at least one filter (portfolio, currency, or security).
+
+      Example: risk.cvar/758-A/USD/ALL
+
+      '
+risk.greeks:
+  display_name: Greeks
+  domain: risk
+  vendor: bloomberg
+  description: Delta, gamma, vega, theta by portfolio
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: RISK_WH
+      database: RISK
+      schema: GREEKS
+      query: "SELECT portfolio_id, security_id, delta, gamma, vega, theta, rho\nFROM\
+        \ POSITION_GREEKS\nWHERE portfolio_id = '{segments[0]}'\n  AND as_of_date\
+        \ = TO_DATE('{segments[1]}', 'YYYYMMDD')\n"
+risk.limits:
+  display_name: Risk Limits
+  domain: risk
+  vendor: moodys
+  description: Limit utilization and breaches
+  source_binding:
+    type: snowflake
+    config:
+      account: firm-prod.us-east-1
+      warehouse: RISK_WH
+      database: RISK
+      schema: LIMITS
+      query: 'SELECT portfolio_id, limit_type, limit_value, current_value, utilization_pct
+
+        FROM LIMIT_UTILIZATION
+
+        WHERE portfolio_id = ''{segments[0]}''
+
+        '
+risk.stress:
+  display_name: Stress Testing
+  domain: risk
+  vendor: bloomberg
+  description: Scenario analysis and stress test results
+  source_binding:
+    type: rest
+    config:
+      base_url: https://risk-engine.internal.firm.com
+      path_template: /api/v2/stress/{segments[0]}/{segments[1]}
+      method: GET
+      auth_type: bearer
+risk.var:
+  display_name: Value at Risk
+  domain: risk
+  vendor: bloomberg
+  description: Daily VaR by portfolio
+  source_binding:
+    type: rest
+    config:
+      base_url: https://risk-engine.internal.firm.com
+      path_template: /api/v2/var/{segments[0]}/{segments[1]}
+      method: GET
+      auth_type: bearer
+securities:
+  display_name: Securities
+  domain: securities
+  description: Security master lookup by any identifier
+  ownership:
+    accountable_owner: ref-data-governance@firm.com
+    data_specialist: security-ops@firm.com
+    support_channel: '#securities'
+  documentation:
+    glossary: https://confluence.firm.com/display/DATA/Security+Glossary
+    data_dictionary: https://confluence.firm.com/display/DATA/Security+Master+Dictionary
+securities/lookup:
+  display_name: Security Lookup
+  domain: securities
+  vendor: cusip-global
+  description: Lookup security by ISIN, CUSIP, SEDOL, or ticker
+  source_binding:
+    type: oracle
+    config:
+      dsn: secmaster.firm.com:1521/SECMASTER
+      query: "SELECT isin, cusip, sedol, ticker, issuer_name,\n       country_code,\
+        \ currency, security_type, active_flag\nFROM SECURITY_MASTER\nWHERE isin =\
+        \ '{segments[0]}'\n   OR cusip = '{segments[0]}'\n   OR sedol = '{segments[0]}'\n\
+        \   OR ticker = '{segments[0]}'\n"
+securities/terms:
+  display_name: Security Terms
+  domain: securities
+  vendor: dtcc
+  description: Detailed security attributes and terms
+  source_binding:
+    type: opensearch
+    config:
+      hosts:
+      - https://search.internal.firm.com:9200
+      index: instruments-v2
+      query: "{\n  \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\"term\"\
+        : {\"security_id\": \"{segments[0]}\"}}\n      ]\n    }\n  }\n}\n"

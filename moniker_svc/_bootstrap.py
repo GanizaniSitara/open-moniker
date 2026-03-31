@@ -14,6 +14,17 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
+def _expand_env_vars(s: str) -> str:
+    """Expand ``${VAR}`` and ``${VAR:-default}`` in *s* from the environment."""
+    import re
+
+    def _replace(m):
+        name, default = m.group(1), m.group(3)
+        return os.environ.get(name, default if default is not None else m.group(0))
+
+    return re.sub(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(:-(.*?))?\}", _replace, s)
+
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
@@ -53,7 +64,8 @@ def build_catalog_registry(config, config_path: str):
     catalog_definition_path: Path | None = None
     if config.catalog.definition_file:
         config_dir = Path(config_path).parent.resolve()
-        catalog_definition_path = (config_dir / config.catalog.definition_file).resolve()
+        definition_file = _expand_env_vars(config.catalog.definition_file)
+        catalog_definition_path = (config_dir / definition_file).resolve()
         logger.info("Loading catalog from: %s", catalog_definition_path)
         catalog = load_catalog(str(catalog_definition_path))
         catalog_dir = catalog_definition_path.parent
