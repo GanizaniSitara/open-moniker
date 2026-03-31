@@ -231,9 +231,10 @@ class TestSegmentId:
         assert "positions@ACC001" in m.full_path
         assert m.full_path == "holdings/positions@ACC001/summary@latest/v2"
 
-    def test_segment_id_canonical_path(self):
+    def test_segment_id_canonical_path_is_clean(self):
+        """canonical_path is for catalog lookup — no @id."""
         m = parse_moniker("holdings/positions@ACC001/summary")
-        assert m.canonical_path == "holdings/positions@ACC001/summary"
+        assert m.canonical_path == "holdings/positions/summary"
 
     def test_segment_id_catalog_path_clean(self):
         """str(moniker.path) must remain clean (no @id) for catalog lookup."""

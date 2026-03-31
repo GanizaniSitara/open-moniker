@@ -213,8 +213,8 @@ class Moniker:
 
     @property
     def canonical_path(self) -> str:
-        """The path with @id identity but without namespace, version, or params."""
-        return self._path_with_segment_id()
+        """The clean path for catalog lookup (without @id, namespace, version, or params)."""
+        return str(self.path)
 
     @property
     def full_path(self) -> str:
