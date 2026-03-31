@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import yaml
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from ..catalog.loader import load_catalog
@@ -21,6 +21,7 @@ from ..catalog.types import (
 from .models import (
     CatalogNodeModel,
     CreateNodeRequest,
+    CreateShortlinkRequest,
     DeleteResponse,
     NodeListResponse,
     NodeSummaryListResponse,
@@ -30,11 +31,14 @@ from .models import (
     ReloadResponse,
     ResolvedOwnershipModel,
     SaveResponse,
+    ShortlinkListResponse,
+    ShortlinkModel,
     SourceBindingModel,
     SourceTypeInfo,
     SourceTypesResponse,
     UpdateNodeRequest,
 )
+from .shortlinks import ShortlinkRegistry
 
 if TYPE_CHECKING:
     from ..domains.registry import DomainRegistry
@@ -51,6 +55,7 @@ _catalog_definition_file: str | None = None
 _service_cache = None  # Optional cache to clear on changes
 _show_file_paths: bool = False  # Show file paths in save messages
 _domain_registry: "DomainRegistry | None" = None  # For ownership inheritance
+_shortlink_registry: ShortlinkRegistry | None = None
 
 
 def configure(
@@ -60,6 +65,7 @@ def configure(
     service_cache=None,
     show_file_paths: bool = False,
     domain_registry: "DomainRegistry | None" = None,
+    shortlinks_path: str | None = None,
 ) -> None:
     """Configure the Config UI routes.
 
@@ -70,14 +76,20 @@ def configure(
         service_cache: Optional cache to clear when catalog changes
         show_file_paths: Show file paths in save success messages
         domain_registry: Optional domain registry for ownership inheritance
+        shortlinks_path: Path to the shortlinks JSON persistence file
     """
-    global _catalog, _yaml_output_path, _catalog_definition_file, _service_cache, _show_file_paths, _domain_registry
+    global _catalog, _yaml_output_path, _catalog_definition_file, _service_cache, _show_file_paths, _domain_registry, _shortlink_registry
     _catalog = catalog
     _yaml_output_path = yaml_output_path
     _catalog_definition_file = catalog_definition_file
     _service_cache = service_cache
     _show_file_paths = show_file_paths
     _domain_registry = domain_registry
+
+    # Default shortlinks file next to the catalog definition
+    if shortlinks_path is None and catalog_definition_file:
+        shortlinks_path = str(Path(catalog_definition_file).parent / "shortlinks.json")
+    _shortlink_registry = ShortlinkRegistry(shortlinks_path)
 
 
 def _clear_cache():
@@ -704,3 +716,92 @@ async def list_source_types():
         ))
 
     return SourceTypesResponse(source_types=source_types)
+
+
+# =============================================================================
+# Shortlink Endpoints
+# =============================================================================
+
+def _get_shortlink_registry() -> ShortlinkRegistry:
+    """Get the shortlink registry, raising if not configured."""
+    if _shortlink_registry is None:
+        raise HTTPException(status_code=503, detail="Shortlinks not initialized")
+    return _shortlink_registry
+
+
+def _link_to_model(link, request: Request) -> ShortlinkModel:
+    """Convert a Shortlink to its API model, populating the short_url."""
+    base = str(request.base_url).rstrip("/")
+    return ShortlinkModel(
+        short_id=link.short_id,
+        filters=link.filters,
+        path_prefix=link.path_prefix,
+        label=link.label,
+        created_at=link.created_at,
+        created_by=link.created_by,
+        short_url=f"{base}/config/m/{link.short_id}",
+    )
+
+
+@router.post("/shortlinks", response_model=ShortlinkModel, status_code=201)
+async def create_shortlink(request: Request, body: CreateShortlinkRequest):
+    """Create a shortlink that encodes a filter-state snapshot.
+
+    Returns the generated short ID and the short URL that can be shared.
+    """
+    registry = _get_shortlink_registry()
+    link = registry.create(
+        filters=body.filters,
+        path_prefix=body.path_prefix,
+        label=body.label,
+    )
+    return _link_to_model(link, request)
+
+
+@router.get("/shortlinks", response_model=ShortlinkListResponse)
+async def list_shortlinks(request: Request):
+    """List all shortlinks (newest first)."""
+    registry = _get_shortlink_registry()
+    links = registry.all()
+    return ShortlinkListResponse(
+        shortlinks=[_link_to_model(link, request) for link in links],
+        total=registry.count(),
+    )
+
+
+@router.get("/shortlinks/{short_id}", response_model=ShortlinkModel)
+async def get_shortlink(request: Request, short_id: str):
+    """Resolve a short ID to its stored filter state."""
+    registry = _get_shortlink_registry()
+    link = registry.get(short_id)
+    if link is None:
+        raise HTTPException(status_code=404, detail=f"Shortlink not found: {short_id}")
+    return _link_to_model(link, request)
+
+
+@router.delete("/shortlinks/{short_id}")
+async def delete_shortlink(short_id: str):
+    """Delete a shortlink."""
+    registry = _get_shortlink_registry()
+    if not registry.delete(short_id):
+        raise HTTPException(status_code=404, detail=f"Shortlink not found: {short_id}")
+    return {"success": True, "short_id": short_id, "message": "Shortlink deleted"}
+
+
+@router.get("/m/{short_id}")
+async def resolve_short_url(request: Request, short_id: str):
+    """Resolve a short URL to the full filter state (JSON).
+
+    Clients (e.g. the Config UI) can GET this endpoint and use the
+    returned ``path_prefix`` + ``filters`` to reconstruct the original view.
+    """
+    registry = _get_shortlink_registry()
+    link = registry.get(short_id)
+    if link is None:
+        raise HTTPException(status_code=404, detail=f"Shortlink not found: {short_id}")
+    return {
+        "short_id": link.short_id,
+        "path_prefix": link.path_prefix,
+        "filters": link.filters,
+        "label": link.label,
+    }

@@ -325,3 +325,31 @@ class DeleteResponse(BaseModel):
     success: bool
     path: str
     message: str = ""
+
+
+# =============================================================================
+# Shortlink Models
+# =============================================================================
+
+class CreateShortlinkRequest(BaseModel):
+    """Request to create a short link for a filter-state snapshot."""
+    filters: dict[str, Any]
+    path_prefix: str = ""
+    label: str = ""
+
+
+class ShortlinkModel(BaseModel):
+    """A shortlink entry."""
+    short_id: str
+    filters: dict[str, Any]
+    path_prefix: str = ""
+    label: str = ""
+    created_at: float = 0.0
+    created_by: str = ""
+    short_url: str = ""  # Populated by the route handler
+
+
+class ShortlinkListResponse(BaseModel):
+    """List of all shortlinks."""
+    shortlinks: list[ShortlinkModel]
+    total: int
