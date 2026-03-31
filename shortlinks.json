@@ -1,0 +1,50 @@
+{
+  "PsvdNet": {
+    "id": "PsvdNet",
+    "base_path": "benchmarks.returns",
+    "filter_segments": [
+      "equity",
+      "sp500"
+    ],
+    "version": "latest",
+    "params": {},
+    "label": "S&P 500 returns",
+    "created_by": "",
+    "created_at": "2026-03-31T17:33:03.102720+00:00"
+  },
+  "KdRyLx6": {
+    "id": "KdRyLx6",
+    "base_path": "test.dedup",
+    "filter_segments": [
+      "A",
+      "B"
+    ],
+    "version": null,
+    "params": {},
+    "label": "",
+    "created_by": "",
+    "created_at": "2026-03-31T17:33:03.106709+00:00"
+  },
+  "M0aqkTH": {
+    "id": "M0aqkTH",
+    "base_path": "test.get",
+    "filter_segments": [
+      "X"
+    ],
+    "version": null,
+    "params": {},
+    "label": "",
+    "created_by": "",
+    "created_at": "2026-03-31T17:33:03.120727+00:00"
+  },
+  "zuwljDa": {
+    "id": "zuwljDa",
+    "base_path": "benchmarks.returns",
+    "filter_segments": [],
+    "version": "latest",
+    "params": {},
+    "label": "",
+    "created_by": "",
+    "created_at": "2026-03-31T17:33:03.166719+00:00"
+  }
+}

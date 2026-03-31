@@ -1,0 +1,33 @@
+[
+  {
+    "short_id": "QLkpaqqd",
+    "filters": {
+      "domain": "finance",
+      "category": "bonds"
+    },
+    "path_prefix": "prices",
+    "label": "Finance bonds",
+    "created_at": 1774969027.3361907,
+    "created_by": ""
+  },
+  {
+    "short_id": "vSNStp0-",
+    "filters": {
+      "x": 1
+    },
+    "path_prefix": "",
+    "label": "",
+    "created_at": 1774969027.34423,
+    "created_by": ""
+  },
+  {
+    "short_id": "5zNnXdc9",
+    "filters": {
+      "rating": "AA+"
+    },
+    "path_prefix": "bonds/sovereign",
+    "label": "",
+    "created_at": 1774969027.3822262,
+    "created_by": ""
+  }
+]

@@ -1,0 +1,3198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moniker Catalog Config</title>
+    <style>
+        /* Corporate Design Tokens */
+        :root {
+            --font-sans: Arial, Helvetica, sans-serif;
+            --fs-900: 20px;
+            --fs-800: 18px;
+            --fs-700: 16px;
+            --fs-600: 14px;
+            --fs-500: 12px;
+            --fs-400: 11px;
+            --fw-regular: 400;
+            --fw-bold: 700;
+            --lh-tight: 1.15;
+            --lh-normal: 1.45;
+
+            --sp-1: 4px;
+            --sp-2: 8px;
+            --sp-3: 12px;
+            --sp-4: 16px;
+            --sp-5: 24px;
+            --sp-6: 32px;
+
+            --radius-1: 4px;
+            --radius-2: 8px;
+
+            --c-navy: #022D5E;
+            --c-gray: #53565A;
+            --c-peacock: #005587;
+            --c-olive: #789D4A;
+            --c-wine: #621244;
+            --c-cerulean: #008BCD;
+            --c-teal: #00897B;
+            --c-red: #D0002B;
+            --c-yellow: #FFD100;
+            --c-green: #009639;
+
+            --color-bg: #f8f9fa;
+            --color-surface: #ffffff;
+            --color-text: #111111;
+            --color-muted: var(--c-gray);
+            --border: rgba(83, 86, 90, 0.25);
+            --focus-ring: 0 0 0 3px rgba(0, 85, 135, 0.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-sans);
+            font-size: var(--fs-600);
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: var(--lh-normal);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: var(--c-navy);
+            padding: var(--sp-4) var(--sp-5);
+            border-bottom: 3px solid var(--c-peacock);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: var(--fs-900);
+            font-weight: var(--fw-bold);
+            color: white;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: var(--sp-3);
+        }
+
+        /* Buttons */
+        .btn {
+            background: var(--c-peacock);
+            color: white;
+            border: none;
+            padding: var(--sp-2) var(--sp-4);
+            border-radius: var(--radius-1);
+            cursor: pointer;
+            font-size: var(--fs-600);
+            font-weight: var(--fw-bold);
+            font-family: var(--font-sans);
+            transition: filter 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp-2);
+            text-decoration: none;
+        }
+
+        .btn:hover { filter: brightness(0.9); }
+        .btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+        .btn-secondary { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--border); }
+        .btn-success { background: var(--c-green); }
+        .btn-danger { background: var(--c-red); }
+        .btn-danger.btn-outlined {
+            background: transparent;
+            color: var(--c-red);
+            border: 1px solid var(--c-red);
+        }
+        .btn-danger.btn-outlined:hover {
+            background: rgba(208, 0, 43, 0.1);
+        }
+        .btn-sm { padding: var(--sp-1) var(--sp-3); font-size: var(--fs-500); }
+
+        /* Main layout */
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Tree panel */
+        .tree-panel {
+            width: clamp(250px, 25vw, 350px);
+            background: var(--color-surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            background: var(--c-navy);
+            padding: var(--sp-3) var(--sp-4);
+            font-weight: var(--fw-bold);
+            font-size: var(--fs-600);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header-actions {
+            display: flex;
+            gap: var(--sp-2);
+        }
+
+        .tree-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--sp-3);
+        }
+
+        /* Tree styles */
+        .tree { font-size: var(--fs-600); }
+        .tree ul { list-style: none; padding-left: 18px; }
+        .tree > ul { padding-left: 0; }
+        .tree li { position: relative; }
+        .tree li::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 0;
+            border-left: 1px solid var(--border);
+            height: 100%;
+        }
+        .tree li::after {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 12px;
+            border-top: 1px solid var(--border);
+            width: 8px;
+        }
+        .tree li:last-child::before { height: 12px; }
+        .tree > ul > li::before, .tree > ul > li::after { display: none; }
+
+        .node {
+            cursor: pointer;
+            padding: var(--sp-1) var(--sp-2);
+            border-radius: var(--radius-1);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp-2);
+            transition: background 0.15s;
+            max-width: 100%;
+        }
+
+        .node:hover { background: rgba(0, 85, 135, 0.08); }
+        .node.selected { background: var(--c-peacock); color: white; }
+        .node-name { font-weight: var(--fw-bold); color: var(--c-navy); white-space: nowrap; }
+        .node.selected .node-name { color: white; }
+
+        .node-badge {
+            font-size: var(--fs-400);
+            padding: 1px 5px;
+            border-radius: 3px;
+            background: rgba(0, 150, 57, 0.15);
+            color: var(--c-green);
+            font-weight: var(--fw-bold);
+        }
+        .node.selected .node-badge { background: rgba(255,255,255,0.2); color: white; }
+
+        /* Domain badge */
+        .domain-badge {
+            font-size: var(--fs-400);
+            padding: 1px 5px;
+            border-radius: 3px;
+            background: rgba(0, 85, 135, 0.15);
+            color: var(--c-peacock);
+            font-weight: var(--fw-bold);
+        }
+        .node.selected .domain-badge { background: rgba(255,255,255,0.2); color: white; }
+
+        /* Missing domain warning (red underline) */
+        .node.missing-domain .node-name {
+            color: var(--c-red);
+            text-decoration: underline wavy var(--c-red);
+        }
+        .node.selected.missing-domain .node-name {
+            color: white;
+            text-decoration: underline wavy rgba(255,255,255,0.7);
+        }
+
+        /* Category filter chips */
+        .category-bar {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            background: var(--color-bg);
+        }
+        .category-chip {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            border: 1px solid var(--border);
+            background: white;
+            cursor: pointer;
+            white-space: nowrap;
+            color: var(--c-gray);
+            transition: all 0.15s;
+        }
+        .category-chip:hover {
+            border-color: var(--c-peacock);
+            color: var(--c-peacock);
+        }
+        .category-chip.active {
+            background: var(--c-peacock);
+            border-color: var(--c-peacock);
+            color: white;
+        }
+        .category-chip.all {
+            background: var(--c-navy);
+            border-color: var(--c-navy);
+            color: white;
+        }
+        .category-chip.all:not(.active) {
+            background: white;
+            color: var(--c-navy);
+            border-color: var(--c-navy);
+        }
+
+        /* Filtered out nodes — two independent classes so filters compose */
+        li.category-hidden {
+            display: none;
+        }
+        li.search-hidden {
+            display: none;
+        }
+        li.filter-match > .node .node-name {
+            background: rgba(255, 209, 0, 0.3);
+            padding: 0 4px;
+            border-radius: 2px;
+        }
+
+        /* Domain info banner in form */
+        .domain-info {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            padding: var(--sp-3) var(--sp-4);
+            margin-bottom: var(--sp-4);
+            border-radius: var(--radius-1);
+            font-size: var(--fs-600);
+        }
+        .domain-info.domain-exists {
+            background: rgba(0, 150, 57, 0.1);
+            border-left: 3px solid var(--c-green);
+        }
+        .domain-info.domain-missing {
+            background: rgba(208, 0, 43, 0.1);
+            border-left: 3px solid var(--c-red);
+        }
+        .domain-info-label {
+            font-weight: var(--fw-bold);
+            color: var(--c-navy);
+        }
+        .domain-info-name {
+            font-family: 'Consolas', 'Monaco', monospace;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-weight: var(--fw-bold);
+        }
+        .domain-exists .domain-info-name {
+            background: var(--c-green);
+            color: white;
+        }
+        .domain-missing .domain-info-name {
+            background: var(--c-red);
+            color: white;
+        }
+        .domain-info-status {
+            font-size: var(--fs-500);
+            color: var(--c-gray);
+        }
+        .domain-info .btn {
+            margin-left: auto;
+        }
+
+        .toggle {
+            display: inline-block;
+            width: 14px;
+            text-align: center;
+            color: var(--c-gray);
+            cursor: pointer;
+            user-select: none;
+            font-size: 10px;
+        }
+        .toggle:hover { color: var(--c-peacock); }
+        .collapsed > ul { display: none; }
+        .collapsed > .node .toggle::before { content: '\25B6'; }
+        li:not(.collapsed) > .node .toggle::before { content: '\25BC'; }
+        li.leaf > .node .toggle { visibility: hidden; }
+
+        /* Form panel */
+        .form-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .form-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--sp-4);
+        }
+
+        .form-actions {
+            padding: var(--sp-3) var(--sp-4);
+            border-top: 1px solid var(--border);
+            background: var(--color-surface);
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: var(--sp-3);
+        }
+
+        /* Form styles */
+        .form-section {
+            margin-bottom: var(--sp-4);
+            background: var(--color-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-2);
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: var(--color-bg);
+            padding: var(--sp-3) var(--sp-4);
+            font-weight: var(--fw-bold);
+            font-size: var(--fs-500);
+            color: var(--c-navy);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .section-header:hover { background: rgba(0, 85, 135, 0.05); }
+        .section-toggle { color: var(--c-gray); font-size: 10px; }
+        .form-section.collapsed .section-content { display: none; }
+        .form-section.collapsed .section-toggle::before { content: '\25B6'; }
+        .form-section:not(.collapsed) .section-toggle::before { content: '\25BC'; }
+
+        .section-content {
+            padding: var(--sp-3);
+        }
+
+        .form-row {
+            margin-bottom: var(--sp-3);
+        }
+
+        .form-row:last-child { margin-bottom: 0; }
+
+        .form-row label {
+            display: block;
+            font-size: var(--fs-500);
+            font-weight: var(--fw-bold);
+            color: var(--c-navy);
+            margin-bottom: var(--sp-1);
+            text-transform: uppercase;
+        }
+
+        .form-row input,
+        .form-row textarea,
+        .form-row select {
+            width: 100%;
+            padding: var(--sp-2) var(--sp-3);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-1);
+            font-family: var(--font-sans);
+            font-size: var(--fs-600);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-row input:focus,
+        .form-row textarea:focus,
+        .form-row select:focus {
+            outline: none;
+            border-color: var(--c-peacock);
+            box-shadow: var(--focus-ring);
+        }
+
+        .form-row textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .form-row input[readonly] {
+            background: var(--color-bg);
+            color: var(--c-gray);
+        }
+
+        .form-hint {
+            font-size: var(--fs-500);
+            color: var(--c-gray);
+            margin-top: var(--sp-1);
+        }
+
+        /* Ownership inheritance display */
+        .inherited-value {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            margin-top: var(--sp-1);
+        }
+
+        .inherited-badge {
+            font-size: var(--fs-400);
+            padding: 1px 6px;
+            border-radius: 3px;
+            background: rgba(0, 85, 135, 0.1);
+            color: var(--c-peacock);
+        }
+
+        .inherited-source {
+            font-size: var(--fs-500);
+            color: var(--c-gray);
+        }
+
+        /* Tags input */
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--sp-2);
+            padding: var(--sp-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-1);
+            min-height: 36px;
+            cursor: text;
+        }
+
+        .tags-container:focus-within {
+            border-color: var(--c-peacock);
+            box-shadow: var(--focus-ring);
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp-1);
+            padding: 2px var(--sp-2);
+            background: var(--c-peacock);
+            color: white;
+            border-radius: var(--radius-1);
+            font-size: var(--fs-500);
+        }
+
+        .tag-remove {
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        .tag-remove:hover { opacity: 1; }
+
+        .tags-input {
+            border: none;
+            outline: none;
+            flex: 1;
+            min-width: 100px;
+            font-family: var(--font-sans);
+            font-size: var(--fs-600);
+        }
+
+        /* Two column layout for forms */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--sp-3);
+        }
+
+        @media (max-width: 900px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Dynamic config fields */
+        .config-field {
+            margin-bottom: var(--sp-4);
+        }
+
+        .config-field:last-child { margin-bottom: 0; }
+
+        .config-field label {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            margin-bottom: var(--sp-2);
+        }
+
+        .config-field .required::after {
+            content: '*';
+            color: var(--c-red);
+        }
+
+        .config-field input,
+        .config-field textarea,
+        .config-field select {
+            width: 100%;
+            padding: var(--sp-3) var(--sp-4);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-1);
+            font-family: var(--font-sans);
+            font-size: var(--fs-600);
+        }
+
+        .config-field input:focus,
+        .config-field textarea:focus,
+        .config-field select:focus {
+            outline: none;
+            border-color: var(--c-peacock);
+            box-shadow: var(--focus-ring);
+        }
+
+        .config-field textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        /* Execution mode banner */
+        .execution-mode-banner {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            padding: var(--sp-3) var(--sp-4);
+            margin-bottom: var(--sp-4);
+            border-radius: var(--radius-1);
+            font-size: var(--fs-200);
+        }
+
+        .execution-mode-banner.client-mode {
+            background: rgba(var(--c-peacock-rgb, 0, 128, 128), 0.15);
+            border-left: 3px solid var(--c-peacock);
+        }
+
+        .execution-mode-banner.server-mode {
+            background: rgba(var(--c-purple-rgb, 128, 0, 128), 0.1);
+            border-left: 3px solid var(--c-purple);
+        }
+
+        .exec-badge {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: var(--sp-1) var(--sp-2);
+            border-radius: var(--radius-1);
+        }
+
+        .client-mode .exec-badge {
+            background: var(--c-peacock);
+            color: white;
+        }
+
+        .server-mode .exec-badge {
+            background: var(--c-purple);
+            color: white;
+        }
+
+        .exec-hint {
+            color: var(--fg-muted);
+        }
+
+        /* Path display */
+        .path-display {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: var(--fs-800);
+            background: var(--c-navy);
+            color: white;
+            padding: var(--sp-4) var(--sp-5);
+            border-radius: var(--radius-1);
+            word-break: break-all;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Empty state */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--c-gray);
+            text-align: center;
+            padding: var(--sp-6);
+        }
+
+        .empty-state h3 {
+            color: var(--c-navy);
+            margin-bottom: var(--sp-2);
+        }
+
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: var(--sp-5);
+            z-index: 1000;
+        }
+
+        .toast {
+            background: var(--c-navy);
+            color: white;
+            padding: var(--sp-3) var(--sp-4);
+            border-radius: var(--radius-2);
+            margin-bottom: var(--sp-2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success { background: var(--c-green); }
+        .toast.error { background: var(--c-red); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: var(--sp-6);
+            color: var(--c-gray);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: var(--color-surface);
+            border-radius: var(--radius-2);
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            background: var(--c-navy);
+            color: white;
+            padding: var(--sp-4);
+            font-weight: var(--fw-bold);
+            border-radius: var(--radius-2) var(--radius-2) 0 0;
+        }
+
+        .modal-body { padding: var(--sp-5); }
+        .modal-footer {
+            padding: var(--sp-4);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--sp-2);
+        }
+
+        /* Form panel wrapper for side panel support */
+        .form-panel-wrapper {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Placeholder Reference Side Panel */
+        .placeholder-panel {
+            width: clamp(280px, 28vw, 400px);
+            background: var(--color-surface);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .placeholder-panel .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--sp-3);
+        }
+
+        /* Placeholder toggle button */
+        .placeholder-toggle-btn {
+            background: var(--c-peacock);
+            color: white;
+            border: none;
+            padding: var(--sp-1) var(--sp-3);
+            border-radius: var(--radius-1);
+            cursor: pointer;
+            font-size: var(--fs-500);
+            font-weight: var(--fw-bold);
+            margin-left: var(--sp-2);
+        }
+        .placeholder-toggle-btn:hover { filter: brightness(0.9); }
+
+        /* Enhanced SQL Query Editor */
+        .sql-editor-container {
+            position: relative;
+        }
+
+        .sql-textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: var(--sp-3);
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: var(--fs-600);
+            line-height: 1.5;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-1);
+            resize: vertical;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            tab-size: 2;
+        }
+
+        .sql-textarea:focus {
+            outline: none;
+            border-color: var(--c-peacock);
+            box-shadow: var(--focus-ring);
+        }
+
+        .sql-textarea::placeholder {
+            color: #6a6a6a;
+        }
+
+        /* Segment mapping display */
+        .segment-mapping {
+            margin-top: var(--sp-3);
+            padding: var(--sp-3);
+            background: var(--color-bg);
+            border-radius: var(--radius-1);
+            border: 1px solid var(--border);
+        }
+
+        .segment-mapping-title {
+            font-weight: var(--fw-bold);
+            font-size: var(--fs-500);
+            color: var(--c-navy);
+            margin-bottom: var(--sp-2);
+            text-transform: uppercase;
+        }
+
+        .segment-mapping-item {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            padding: var(--sp-1) 0;
+            font-size: var(--fs-500);
+        }
+
+        .segment-placeholder {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: var(--c-peacock);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: var(--fs-500);
+        }
+
+        .segment-placeholder:hover {
+            filter: brightness(0.9);
+        }
+
+        .segment-arrow {
+            color: var(--c-gray);
+        }
+
+        .segment-name {
+            color: var(--c-navy);
+            font-weight: var(--fw-bold);
+        }
+
+        /* Placeholder categories */
+        .placeholder-category {
+            margin-bottom: var(--sp-4);
+        }
+
+        .placeholder-category-header {
+            font-weight: var(--fw-bold);
+            font-size: var(--fs-500);
+            color: var(--c-navy);
+            text-transform: uppercase;
+            padding-bottom: var(--sp-2);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: var(--sp-2);
+        }
+
+        .placeholder-item {
+            padding: var(--sp-2);
+            border-radius: var(--radius-1);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .placeholder-item:hover {
+            background: rgba(0, 85, 135, 0.08);
+        }
+
+        .placeholder-code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: var(--c-peacock);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: var(--fs-500);
+            white-space: nowrap;
+        }
+
+        .placeholder-desc {
+            font-size: var(--fs-500);
+            color: var(--c-gray);
+            margin-top: var(--sp-1);
+        }
+
+        .placeholder-example {
+            font-size: var(--fs-400);
+            color: var(--c-gray);
+            font-style: italic;
+            margin-top: var(--sp-1);
+        }
+
+        /* Copy feedback toast */
+        .copy-feedback {
+            position: fixed;
+            bottom: var(--sp-5);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--c-green);
+            color: white;
+            padding: var(--sp-2) var(--sp-4);
+            border-radius: var(--radius-2);
+            animation: fadeInOut 1.5s ease forwards;
+            z-index: 1001;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+        }
+        /* Debug panel */
+        .debug-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            z-index: 1000;
+            transition: height 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+        .debug-panel.collapsed { height: 32px; }
+        .debug-panel:not(.collapsed) { height: 220px; }
+        .debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 12px;
+            background: #2d2d2d;
+            border-top: 2px solid var(--c-peacock);
+            cursor: pointer;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .debug-header span.debug-title { font-weight: var(--fw-bold); color: #569cd6; }
+        .debug-header .debug-stats { color: #6a9955; font-weight: 400; }
+        .debug-body { flex: 1; overflow-y: auto; padding: 4px 0; }
+        .debug-entry { padding: 3px 12px; border-bottom: 1px solid #333; display: flex; gap: 12px; align-items: baseline; }
+        .debug-entry:hover { background: #2a2a2a; }
+        .debug-method { color: #dcdcaa; font-weight: var(--fw-bold); min-width: 36px; }
+        .debug-url { color: #ce9178; flex: 1; }
+        .debug-status { min-width: 40px; text-align: right; }
+        .debug-status.ok { color: #6a9955; }
+        .debug-status.err { color: #f44747; }
+        .debug-status.pending { color: #d7ba7d; }
+        .debug-time { color: #b5cea8; min-width: 55px; text-align: right; }
+        .debug-ts { color: #666; min-width: 65px; }
+        .debug-clear { background: none; border: 1px solid #555; color: #d4d4d4; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; }
+        .debug-clear:hover { background: #444; }
+
+        /* Tab navigation in left panel */
+        .panel-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: var(--c-navy);
+        }
+        .panel-tab {
+            flex: 1;
+            padding: 8px 4px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            border: none;
+            background: none;
+            border-bottom: 2px solid transparent;
+            transition: all 0.15s;
+            font-family: var(--font-sans);
+        }
+        .panel-tab:hover { color: rgba(255,255,255,0.85); }
+        .panel-tab.active { color: white; border-bottom-color: var(--c-cerulean); }
+
+        #tab-catalog {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Shared list item styles for Domains/Fields/Apps tabs */
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.15s;
+        }
+        .list-item:hover { background: rgba(0, 85, 135, 0.08); }
+        .list-item.selected { background: var(--c-peacock); color: white; }
+        .list-item.selected .list-item-meta { color: rgba(255,255,255,0.7); }
+        .list-item-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .list-item-name { font-weight: 700; font-size: 13px; color: var(--c-navy); flex: 1; }
+        .list-item.selected .list-item-name { color: white; }
+        .list-item-meta { font-size: 11px; color: var(--c-gray); white-space: nowrap; }
+        .list-container { padding: 8px; overflow-y: auto; flex: 1; }
+        .list-search-box {
+            padding: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .list-search-box input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: var(--font-sans);
+        }
+        .list-search-box input:focus {
+            outline: none;
+            border-color: var(--c-peacock);
+            box-shadow: var(--focus-ring);
+        }
+
+        /* Read-only detail view styling */
+        .detail-field {
+            margin-bottom: var(--sp-3);
+        }
+        .detail-field:last-child { margin-bottom: 0; }
+        .detail-field label {
+            display: block;
+            font-size: var(--fs-500);
+            font-weight: var(--fw-bold);
+            color: var(--c-navy);
+            margin-bottom: var(--sp-1);
+            text-transform: uppercase;
+        }
+        .detail-field .detail-value {
+            font-size: var(--fs-600);
+            color: var(--color-text);
+            padding: var(--sp-2) var(--sp-3);
+            background: var(--color-bg);
+            border-radius: var(--radius-1);
+            border: 1px solid var(--border);
+            min-height: 32px;
+            word-break: break-word;
+        }
+        .detail-field .detail-value:empty::after {
+            content: '\2014';
+            color: var(--c-gray);
+        }
+        .detail-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--sp-2);
+        }
+        .detail-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px var(--sp-2);
+            background: var(--c-peacock);
+            color: white;
+            border-radius: var(--radius-1);
+            font-size: var(--fs-500);
+        }
+        .detail-link {
+            color: var(--c-peacock);
+            font-weight: var(--fw-bold);
+            text-decoration: none;
+        }
+        .detail-link:hover { text-decoration: underline; }
+    </style>
+    <script src="/static/shared.js"></script>
+</head>
+<body>
+    <div class="header">
+        <div style="display: flex; align-items: center; gap: var(--sp-3);">
+            <a href="/" class="btn btn-secondary" title="Home" style="padding: var(--sp-2);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+            </a>
+            <h1>Moniker Catalog Config</h1>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="reloadFromYaml()">Reload</button>
+            <button class="btn btn-success" onclick="showNewNodeModal()">+ New Node</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="tree-panel">
+            <div class="panel-tabs">
+                <button class="panel-tab active" data-tab="catalog" onclick="switchTab('catalog')">Catalog</button>
+                <button class="panel-tab" data-tab="domains" onclick="switchTab('domains')">Domains</button>
+                <button class="panel-tab" data-tab="fields" onclick="switchTab('fields')">Fields</button>
+                <button class="panel-tab" data-tab="apps" onclick="switchTab('apps')">Apps</button>
+            </div>
+            <div id="panel-header-actions-bar" class="panel-header" style="padding: 4px var(--sp-4); background: var(--color-bg); border-bottom: 1px solid var(--border);">
+                <span></span>
+                <div class="panel-header-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="expandAll()">Expand</button>
+                    <button class="btn btn-sm btn-secondary" onclick="collapseAll()">Collapse</button>
+                </div>
+            </div>
+
+            <!-- Tab: Catalog (existing tree) -->
+            <div id="tab-catalog">
+                <div id="category-bar" class="category-bar" style="display: none;">
+                    <!-- Categories populated by JS -->
+                </div>
+                <div class="search-box" style="padding: 8px; border-bottom: 1px solid var(--border);">
+                    <input type="text" id="search-input" placeholder="Search catalog... (Enter to filter)"
+                           style="width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px;"
+                           oninput="handleSearch(this.value)"
+                           onkeydown="handleSearchKeydown(event)">
+                    <div id="search-results" style="display: none; max-height: 200px; overflow-y: auto; margin-top: 4px; background: white; border: 1px solid var(--border); border-radius: 4px;"></div>
+                </div>
+                <div id="filter-indicator" style="display: none; padding: 6px 12px; background: rgba(255, 209, 0, 0.15); border-bottom: 1px solid var(--border); font-size: 13px; color: var(--c-gray); justify-content: space-between; align-items: center;">
+                    <span>Filtered: <strong id="filter-term"></strong> (<span id="filter-count"></span> matches)</span>
+                    <button onclick="clearFilter()" style="background: none; border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Clear</button>
+                </div>
+                <div class="tree-container">
+                    <div id="tree" class="tree"><div class="loading">Loading...</div></div>
+                </div>
+            </div>
+
+            <!-- Tab: Domains -->
+            <div id="tab-domains" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+                <div class="list-search-box">
+                    <input type="text" id="domains-search" placeholder="Search domains..." oninput="filterDomainsList(this.value)">
+                </div>
+                <div class="list-container" id="domains-list">
+                    <div class="loading">Switch to this tab to load domains</div>
+                </div>
+            </div>
+            <div id="filter-indicator" style="display: none; padding: 6px 12px; background: rgba(255, 209, 0, 0.15); border-bottom: 1px solid var(--border); font-size: 13px; color: var(--c-gray); align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span id="filter-summary"></span>
+                <span style="margin-left: auto; display: flex; gap: 4px;">
+                    <button id="clear-search-btn" onclick="clearSearch()" style="display: none; background: none; border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Clear search</button>
+                    <button onclick="clearAllFilters()" style="background: none; border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Clear all</button>
+                </span>
+            </div>
+
+            <!-- Tab: Fields -->
+            <div id="tab-fields" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+                <div class="list-search-box">
+                    <input type="text" id="fields-search" placeholder="Search fields..." oninput="filterFieldsList(this.value)">
+                </div>
+                <div class="list-container" id="fields-list">
+                    <div class="loading">Switch to this tab to load fields</div>
+                </div>
+            </div>
+
+            <!-- Tab: Apps -->
+            <div id="tab-apps" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+                <div class="list-search-box">
+                    <input type="text" id="apps-search" placeholder="Search applications..." oninput="filterAppsList(this.value)">
+                </div>
+                <div class="list-container" id="apps-list">
+                    <div class="loading">Switch to this tab to load applications</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-panel-wrapper">
+            <div class="form-panel">
+                <div class="panel-header">
+                    <span id="form-title">Node Details</span>
+                    <div style="display: flex; gap: var(--sp-2); align-items: center;">
+                        <button class="btn btn-sm btn-secondary" id="expand-all-sections-btn" onclick="expandAllSections()" style="display: none;">Expand All</button>
+                        <button class="btn btn-sm btn-secondary" id="collapse-all-sections-btn" onclick="collapseAllSections()" style="display: none;">Collapse All</button>
+                        <button class="placeholder-toggle-btn" id="placeholder-panel-toggle"
+                                onclick="togglePlaceholderPanel()" style="display: none;">
+                            Placeholders
+                        </button>
+                    </div>
+                </div>
+                <div class="form-container" id="form-container">
+                    <div class="empty-state">
+                        <h3>Select a Node</h3>
+                        <p>Click on a node in the tree to view and edit its configuration</p>
+                    </div>
+                </div>
+                <div class="form-actions" id="form-actions" style="display: none;">
+                    <button class="btn btn-danger btn-outlined" onclick="deleteNode()">Delete</button>
+                    <button class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
+                    <button class="btn btn-success" onclick="saveNode()">Save Node</button>
+                </div>
+            </div>
+
+            <div class="placeholder-panel" id="placeholder-panel" style="display: none;">
+                <div class="panel-header">
+                    <span>Placeholder Reference</span>
+                    <button class="btn btn-sm btn-secondary" onclick="togglePlaceholderPanel()">Close</button>
+                </div>
+                <div class="panel-content" id="placeholder-panel-content">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Panel -->
+    <div class="debug-panel collapsed" id="debug-panel">
+        <div class="debug-header" onclick="toggleDebug()">
+            <span class="debug-title">Network Traffic <span id="debug-count" class="debug-stats"></span></span>
+            <div style="display:flex;gap:8px;align-items:center">
+                <button class="debug-clear" onclick="event.stopPropagation();clearDebug()">Clear</button>
+                <span id="debug-toggle-icon" style="color:#888">&#9650;</span>
+            </div>
+        </div>
+        <div class="debug-body" id="debug-body"></div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <div class="modal-overlay" id="new-node-modal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">Create New Node</div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <label for="new-node-path">Path</label>
+                    <input type="text" id="new-node-path" placeholder="e.g., market-data/prices/equity">
+                    <div class="form-hint">Use / to create hierarchy. Parent nodes will be created automatically.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideNewNodeModal()">Cancel</button>
+                <button class="btn btn-success" onclick="createNode()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== Debug Panel: intercept all fetch() calls =====
+        const _origFetch = window.fetch;
+        const _debugLog = [];
+        let _debugReqId = 0;
+
+        window.fetch = async function(...args) {
+            const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+            const method = args[1]?.method || 'GET';
+            const id = ++_debugReqId;
+            const start = performance.now();
+            const ts = new Date().toLocaleTimeString();
+
+            addDebugEntry(id, { method, url, ts, status: '...', time: '-' });
+
+            try {
+                const res = await _origFetch.apply(this, args);
+                const elapsed = Math.round(performance.now() - start);
+                updateDebugEntry(id, { status: res.status, time: elapsed + 'ms', ok: res.ok });
+                return res;
+            } catch (err) {
+                const elapsed = Math.round(performance.now() - start);
+                updateDebugEntry(id, { status: 'ERR', time: elapsed + 'ms', ok: false });
+                throw err;
+            }
+        };
+
+        function addDebugEntry(id, info) {
+            _debugLog.push({ id, ...info });
+            const body = document.getElementById('debug-body');
+            if (!body) return;
+            const el = document.createElement('div');
+            el.className = 'debug-entry';
+            el.id = 'debug-' + id;
+            el.innerHTML = `
+                <span class="debug-ts">${info.ts}</span>
+                <span class="debug-method">${info.method}</span>
+                <span class="debug-url">${info.url}</span>
+                <span class="debug-status pending" id="debug-status-${id}">${info.status}</span>
+                <span class="debug-time" id="debug-time-${id}">${info.time}</span>
+            `;
+            body.appendChild(el);
+            body.scrollTop = body.scrollHeight;
+            updateDebugCount();
+        }
+
+        function updateDebugEntry(id, info) {
+            const statusEl = document.getElementById('debug-status-' + id);
+            const timeEl = document.getElementById('debug-time-' + id);
+            if (statusEl) {
+                statusEl.textContent = info.status;
+                statusEl.className = 'debug-status ' + (info.ok ? 'ok' : 'err');
+            }
+            if (timeEl) timeEl.textContent = info.time;
+            updateDebugCount();
+        }
+
+        function updateDebugCount() {
+            const total = _debugLog.length;
+            const errors = document.querySelectorAll('.debug-status.err').length;
+            let text = total + ' request' + (total !== 1 ? 's' : '');
+            if (errors > 0) text += ', ' + errors + ' failed';
+            const el = document.getElementById('debug-count');
+            if (el) el.textContent = '(' + text + ')';
+        }
+
+        function toggleDebug() {
+            const panel = document.getElementById('debug-panel');
+            panel.classList.toggle('collapsed');
+            document.getElementById('debug-toggle-icon').innerHTML = panel.classList.contains('collapsed') ? '&#9650;' : '&#9660;';
+        }
+
+        function clearDebug() {
+            _debugLog.length = 0;
+            document.getElementById('debug-body').innerHTML = '';
+            updateDebugCount();
+        }
+
+        const API_BASE = '/config';
+
+        let nodes = [];
+        let sourceTypes = [];
+        let selectedPath = null;
+        let originalNode = null;
+
+        // Domain state (for domain badge rendering and category filtering)
+        let domainsData = [];  // Full domain objects sorted by category, then name
+        let activeCategory = null;  // Active category filter
+        let activeSearchQuery = null;  // Active text search filter
+
+        // Placeholder state
+        let placeholderPanelVisible = false;
+        let currentSegmentNames = [];
+
+        // Placeholder reference data (from dialect/placeholders.py)
+        const PLACEHOLDERS = {
+            raw: [
+                { name: 'path', desc: 'Full sub-path after the catalog binding', example: 'equity/AAPL' },
+                { name: 'segments[N]', desc: 'Specific path segment by index (0-based)', example: '{segments[0]} = first segment' },
+                { name: 'version', desc: 'Raw version string from @suffix', example: '3M, 20260115, latest' },
+                { name: 'revision', desc: 'Revision number from /vN suffix', example: '2' },
+                { name: 'namespace', desc: 'Namespace prefix if provided', example: 'prod' },
+                { name: 'sub_resource', desc: 'Sub-resource path after @version', example: 'details.corporate' },
+            ],
+            version: [
+                { name: 'version_type', desc: 'Semantic type: date, latest, lookback, all', example: 'lookback' },
+                { name: 'is_date', desc: "'true' if version is YYYYMMDD format", example: 'true/false' },
+                { name: 'is_latest', desc: "'true' if version is 'latest'", example: 'true/false' },
+                { name: 'is_lookback', desc: "'true' if lookback period (3M, 1Y, etc.)", example: 'true/false' },
+                { name: 'is_all', desc: "'true' if version is 'all'", example: 'true/false' },
+                { name: 'lookback_value', desc: 'Numeric part of lookback period', example: '3 from 3M' },
+                { name: 'lookback_unit', desc: 'Unit: Y, M, W, D', example: 'M from 3M' },
+            ],
+            dialect: [
+                { name: 'current_date', desc: 'Dialect-specific current date SQL', example: 'CURRENT_DATE() / SYSDATE' },
+                { name: 'version_date', desc: 'Dialect-specific version date SQL', example: "TO_DATE('20260115', 'YYYYMMDD')" },
+                { name: 'lookback_start_sql', desc: 'Lookback start date SQL', example: "DATEADD('MONTH', -3, CURRENT_DATE())" },
+                { name: 'date_filter:COL', desc: 'Complete WHERE clause for date column', example: 'trade_date >= ...' },
+            ],
+            segment: [
+                { name: 'filter[N]:COL', desc: "SQL filter for segment N on column COL. 'ALL' becomes 1=1", example: "sector = 'tech'" },
+                { name: 'is_all[N]', desc: "'true' if segment N is 'ALL'", example: 'true/false' },
+            ],
+        };
+
+        // =============================================================================
+        // API Functions
+        // =============================================================================
+
+        async function fetchJSON(url, options = {}) {
+            const resp = await fetch(url, {
+                headers: { 'Content-Type': 'application/json' },
+                ...options,
+            });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+                throw new Error(err.detail || 'Request failed');
+            }
+            return resp.json();
+        }
+
+        async function loadNodes() {
+            try {
+                const data = await fetchJSON(`${API_BASE}/nodes?summary=true`);
+                nodes = data.nodes;
+                renderTree();
+            } catch (e) {
+                showToast('Failed to load nodes: ' + e.message, 'error');
+            }
+        }
+
+        async function loadSourceTypes() {
+            try {
+                const data = await fetchJSON(`${API_BASE}/source-types`);
+                sourceTypes = data.source_types;
+            } catch (e) {
+                console.error('Failed to load source types:', e);
+            }
+        }
+
+        async function loadDomains() {
+            try {
+                const data = await fetchJSON('/domains');
+                // Sort by category first, then by name within category
+                domainsData = (data.domains || []).sort((a, b) => {
+                    const catA = (a.data_category || '').toLowerCase();
+                    const catB = (b.data_category || '').toLowerCase();
+                    if (catA !== catB) return catA.localeCompare(catB);
+                    return (a.name || '').localeCompare(b.name || '');
+                });
+
+                // Build category bar using shared utility
+                const categories = MonikerUtils.buildCategoryMap(domainsData);
+
+                // Render category chips if we have multiple categories
+                if (categories.size > 1) {
+                    const bar = document.getElementById('category-bar');
+                    bar.innerHTML = MonikerUtils.renderCategoryChips(categories);
+                    bar.style.display = 'flex';
+                }
+            } catch (e) {
+                console.error('Failed to load domains:', e);
+                domainsData = [];
+            }
+        }
+
+        function filterByCategory(category) {
+            activeCategory = category;
+
+            // Update chip styles using shared utility
+            MonikerUtils.updateCategoryChipStyles(category);
+
+            // Build set of allowed domains for this category using shared utility
+            const allowedDomains = category !== null
+                ? MonikerUtils.getDomainsInCategory(domainsData, category)
+                : null;
+
+            // Filter top-level tree nodes and cascade to all descendants
+            document.querySelectorAll('#tree > ul > li').forEach(li => {
+                const path = li.dataset.path;
+                if (!path) return;
+
+                const node = nodes.find(n => n.path === path);
+                const nodeDomain = MonikerUtils.getDomain(node, path);
+                const hidden = allowedDomains !== null && !allowedDomains.has(nodeDomain);
+
+                // Apply to this top-level node and all its descendants
+                const subtree = [li, ...li.querySelectorAll('li')];
+                subtree.forEach(el => {
+                    if (hidden) {
+                        el.classList.add('category-hidden');
+                    } else {
+                        el.classList.remove('category-hidden');
+                    }
+                });
+            });
+
+            // Re-apply text search if one is active (it needs to recount visible matches)
+            if (activeSearchQuery) {
+                filterTree(activeSearchQuery);
+            }
+
+            updateFilterIndicator();
+        }
+
+        async function loadNode(path) {
+            try {
+                const data = await fetchJSON(`${API_BASE}/nodes/${encodeURIComponent(path)}`);
+                originalNode = data;
+                renderForm(data);
+                selectedPath = path;
+                document.getElementById('form-actions').style.display = 'flex';
+                // Show section expand/collapse buttons
+                document.getElementById('expand-all-sections-btn').style.display = 'inline-flex';
+                document.getElementById('collapse-all-sections-btn').style.display = 'inline-flex';
+            } catch (e) {
+                showToast('Failed to load node: ' + e.message, 'error');
+            }
+        }
+
+        async function saveNode() {
+            if (!selectedPath) return;
+
+            const formData = collectFormData();
+
+            try {
+                await fetchJSON(`${API_BASE}/nodes/${encodeURIComponent(selectedPath)}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(formData),
+                });
+                // Auto-persist to YAML
+                const saveResult = await fetchJSON(`${API_BASE}/save`, { method: 'POST' });
+                showToast(saveResult.message, 'success');
+                await loadNodes();
+                await loadNode(selectedPath);
+            } catch (e) {
+                showToast('Failed to save: ' + e.message, 'error');
+            }
+        }
+
+        async function deleteNode() {
+            if (!selectedPath) return;
+            const nodeName = selectedPath.split('/').pop();
+            if (!confirm(`Delete node "${nodeName}"?`)) return;
+
+            try {
+                await fetchJSON(`${API_BASE}/nodes/${encodeURIComponent(selectedPath)}`, {
+                    method: 'DELETE',
+                });
+                // Auto-persist to YAML
+                await fetchJSON(`${API_BASE}/save`, { method: 'POST' });
+                showToast(`Deleted: ${nodeName}`, 'success');
+                selectedPath = null;
+                originalNode = null;
+                document.getElementById('form-container').innerHTML = `
+                    <div class="empty-state">
+                        <h3>Node Deleted</h3>
+                        <p>Select another node from the tree</p>
+                    </div>
+                `;
+                document.getElementById('form-actions').style.display = 'none';
+                await loadNodes();
+            } catch (e) {
+                showToast('Failed to delete: ' + e.message, 'error');
+            }
+        }
+
+        async function createNode() {
+            const path = document.getElementById('new-node-path').value.trim();
+            if (!path) {
+                showToast('Path is required', 'error');
+                return;
+            }
+
+            try {
+                await fetchJSON(`${API_BASE}/nodes`, {
+                    method: 'POST',
+                    body: JSON.stringify({ path }),
+                });
+                // Auto-persist to YAML
+                await fetchJSON(`${API_BASE}/save`, { method: 'POST' });
+                showToast('Node created', 'success');
+                hideNewNodeModal();
+                await loadNodes();
+                selectNode(path);
+            } catch (e) {
+                showToast('Failed to create: ' + e.message, 'error');
+            }
+        }
+
+        async function saveToYaml() {
+            try {
+                const data = await fetchJSON(`${API_BASE}/save`, { method: 'POST' });
+                showToast(data.message, 'success');
+            } catch (e) {
+                showToast('Failed to save: ' + e.message, 'error');
+            }
+        }
+
+        async function reloadFromYaml() {
+            if (!confirm('Reload catalog from YAML? Unsaved changes will be lost.')) return;
+
+            try {
+                const data = await fetchJSON(`${API_BASE}/reload`, { method: 'POST' });
+                showToast(data.message, 'success');
+                await loadNodes();
+                if (selectedPath) {
+                    await loadNode(selectedPath);
+                }
+            } catch (e) {
+                showToast('Failed to reload: ' + e.message, 'error');
+            }
+        }
+
+        // =============================================================================
+        // Tree Rendering
+        // =============================================================================
+
+        function buildTree(nodes) {
+            const tree = {};
+            const nodeMap = {};
+
+            // Index nodes by path
+            nodes.forEach(n => { nodeMap[n.path] = n; });
+
+            // Build hierarchy
+            nodes.forEach(n => {
+                const parts = n.path.split('/');
+                let current = tree;
+
+                parts.forEach((part, i) => {
+                    const partialPath = parts.slice(0, i + 1).join('/');
+                    if (!current[part]) {
+                        current[part] = {
+                            _path: partialPath,
+                            _node: nodeMap[partialPath] || null,
+                            _children: {},
+                        };
+                    }
+                    current = current[part]._children;
+                });
+            });
+
+            return tree;
+        }
+
+        function renderTree() {
+            const tree = buildTree(nodes);
+            const container = document.getElementById('tree');
+
+            if (Object.keys(tree).length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No Nodes</h3>
+                        <p>Click "+ New Node" to create one</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '<ul>' + renderTreeLevel(tree, true) + '</ul>';
+
+            // Re-apply active filters after tree rebuild
+            if (activeCategory !== null) {
+                filterByCategory(activeCategory);  // also re-applies search if active
+            } else if (activeSearchQuery) {
+                filterTree(activeSearchQuery);
+            }
+        }
+
+        function renderTreeLevel(level, isTopLevel = false) {
+            return Object.entries(level)
+                .sort(([a], [b]) => a.toLowerCase().localeCompare(b.toLowerCase()))
+                .map(([name, data]) => {
+                    const hasChildren = Object.keys(data._children).length > 0;
+                    const node = data._node;
+                    const isSelected = data._path === selectedPath;
+                    const hasSource = node && node.source_binding;
+
+                    // Check domain mapping — use resolved_domain (includes inheritance)
+                    const isTopLevelNode = !data._path.includes('/');
+                    const effectiveDomain = node?.resolved_domain || node?.domain || null;
+                    const domainInfo = effectiveDomain ? domainsData.find(d => d.name === effectiveDomain) : null;
+                    const hasDomain = !!domainInfo;
+                    const missingDomain = isTopLevelNode && !hasDomain;
+
+                    // Build badges
+                    let badges = '';
+                    if (hasDomain) {
+                        const badgeLabel = domainInfo.short_code || effectiveDomain;
+                        badges += `<span class="domain-badge" title="Domain: ${effectiveDomain}">${badgeLabel}</span>`;
+                    }
+                    if (hasSource) {
+                        badges += `<span class="node-badge">${node.source_binding.type}</span>`;
+                    }
+
+                    const childrenHtml = hasChildren
+                        ? '<ul>' + renderTreeLevel(data._children, false) + '</ul>'
+                        : '';
+
+                    const liClasses = [
+                        hasChildren ? '' : 'leaf',
+                    ].filter(Boolean).join(' ');
+
+                    const nodeClasses = [
+                        'node',
+                        isSelected ? 'selected' : '',
+                        missingDomain ? 'missing-domain' : '',
+                    ].filter(Boolean).join(' ');
+
+                    return `
+                        <li class="${liClasses}" data-path="${data._path}">
+                            <span class="${nodeClasses}" onclick="selectNode('${data._path}')" ${missingDomain ? 'title="No domain mapping configured for this path"' : ''}>
+                                <span class="toggle" onclick="toggleTreeNode(event, this)"></span>
+                                <span class="node-name">${name}/</span>
+                                ${badges}
+                            </span>
+                            ${childrenHtml}
+                        </li>
+                    `;
+                })
+                .join('');
+        }
+
+        function toggleTreeNode(e, el) {
+            e.stopPropagation();
+            el.closest('li').classList.toggle('collapsed');
+        }
+
+        function selectNode(path) {
+            // Clear other tab selections
+            selectedDomainName = null;
+            selectedFieldPath = null;
+            selectedAppKey = null;
+
+            // Update tree selection
+            document.querySelectorAll('.tree .node.selected').forEach(el => el.classList.remove('selected'));
+            const li = document.querySelector(`.tree li[data-path="${path}"]`);
+            if (li) {
+                li.querySelector('.node').classList.add('selected');
+            }
+
+            loadNode(path);
+        }
+
+        function expandAll() {
+            document.querySelectorAll('.tree li.collapsed').forEach(el => el.classList.remove('collapsed'));
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.tree li').forEach(el => {
+                if (el.querySelector('ul')) el.classList.add('collapsed');
+            });
+        }
+
+        // =============================================================================
+        // Search Functions
+        // =============================================================================
+
+        let searchTimeout = null;
+
+        async function handleSearch(query) {
+            const resultsDiv = document.getElementById('search-results');
+
+            // Clear previous timeout
+            if (searchTimeout) clearTimeout(searchTimeout);
+
+            // Hide results if query too short
+            if (!query || query.length < 2) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+
+            // Debounce search
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const data = await fetchJSON(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+
+                    if (data.results && data.results.length > 0) {
+                        resultsDiv.innerHTML = data.results.map(r => `
+                            <div class="search-result" onclick="selectSearchResult('${escapeHtml(r.path)}')"
+                                 style="padding: 6px 10px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 12px;"
+                                 onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='white'">
+                                <div style="font-weight: 500;">${escapeHtml(r.display_name || r.path.split('/').pop())}</div>
+                                <div style="color: #666; font-size: 11px;">${escapeHtml(r.path)}</div>
+                            </div>
+                        `).join('');
+                        resultsDiv.style.display = 'block';
+                    } else {
+                        resultsDiv.innerHTML = '<div style="padding: 8px; color: #666; font-size: 12px;">No results found</div>';
+                        resultsDiv.style.display = 'block';
+                    }
+                } catch (e) {
+                    console.error('Search failed:', e);
+                }
+            }, 200);
+        }
+
+        function selectSearchResult(path) {
+            document.getElementById('search-input').value = '';
+            document.getElementById('search-results').style.display = 'none';
+
+            // Expand tree to show the node
+            expandToPath(path);
+
+            // Select the node
+            selectNode(path);
+        }
+
+        function expandToPath(path) {
+            // Expand all parent nodes
+            const parts = path.split('/');
+            let currentPath = '';
+            for (let i = 0; i < parts.length - 1; i++) {
+                currentPath = currentPath ? currentPath + '/' + parts[i] : parts[i];
+                const node = document.querySelector(`.tree li[data-path="${currentPath}"]`);
+                if (node) node.classList.remove('collapsed');
+            }
+        }
+
+        // Filter functionality (Enter key)
+        function handleSearchKeydown(e) {
+            if (e.key === 'Enter') {
+                const query = e.target.value.trim();
+                if (query.length >= 2) {
+                    filterTree(query);
+                    document.getElementById('search-results').style.display = 'none';
+                }
+            } else if (e.key === 'Escape') {
+                clearFilter();
+                e.target.value = '';
+                document.getElementById('search-results').style.display = 'none';
+            }
+        }
+
+        function filterTree(query) {
+            activeSearchQuery = query;
+            const queryLower = query.toLowerCase();
+            const allNodes = document.querySelectorAll('.tree li');
+            let matchCount = 0;
+
+            // First pass: mark all as search-hidden, find matches
+            // Skip nodes already category-hidden (they stay hidden regardless)
+            allNodes.forEach(li => {
+                li.classList.add('search-hidden');
+                li.classList.remove('filter-match');
+
+                if (li.classList.contains('category-hidden')) return;
+
+                const path = li.dataset.path || '';
+                const nodeData = nodes.find(n => n.path === path);
+                const searchText = [
+                    path,
+                    nodeData?.display_name || '',
+                    nodeData?.description || '',
+                    (nodeData?.tags || []).join(' ')
+                ].join(' ').toLowerCase();
+
+                if (searchText.includes(queryLower)) {
+                    li.classList.add('filter-match');
+                    matchCount++;
+                }
+            });
+
+            // Second pass: show matches and their ancestors
+            document.querySelectorAll('.tree li.filter-match').forEach(li => {
+                li.classList.remove('search-hidden');
+                li.classList.remove('collapsed');
+
+                // Show all ancestors (unless category-hidden)
+                let parent = li.parentElement;
+                while (parent) {
+                    if (parent.tagName === 'LI' && !parent.classList.contains('category-hidden')) {
+                        parent.classList.remove('search-hidden');
+                        parent.classList.remove('collapsed');
+                    }
+                    parent = parent.parentElement;
+                }
+
+                // Also show direct children (unless category-hidden)
+                li.querySelectorAll(':scope > ul > li').forEach(child => {
+                    if (!child.classList.contains('category-hidden')) {
+                        child.classList.remove('search-hidden');
+                    }
+                });
+            });
+
+            updateFilterIndicator();
+        }
+
+        function updateFilterIndicator() {
+            const indicator = document.getElementById('filter-indicator');
+            const summary = document.getElementById('filter-summary');
+            const clearSearchBtn = document.getElementById('clear-search-btn');
+
+            if (!activeCategory && !activeSearchQuery) {
+                indicator.style.display = 'none';
+                return;
+            }
+
+            const parts = [];
+            if (activeCategory) {
+                parts.push(`<strong>${activeCategory}</strong>`);
+            }
+            if (activeSearchQuery) {
+                const matchCount = document.querySelectorAll('.tree li.filter-match').length;
+                parts.push(`'${activeSearchQuery}' (${matchCount} matches)`);
+                clearSearchBtn.style.display = 'inline-block';
+            } else {
+                clearSearchBtn.style.display = 'none';
+            }
+
+            summary.innerHTML = 'Filtered: ' + parts.join(' &rsaquo; ');
+            indicator.style.display = 'flex';
+        }
+
+        function clearSearch() {
+            activeSearchQuery = null;
+            document.querySelectorAll('.tree li').forEach(li => {
+                li.classList.remove('search-hidden');
+                li.classList.remove('filter-match');
+            });
+            document.getElementById('search-input').value = '';
+            updateFilterIndicator();
+        }
+
+        function clearAllFilters() {
+            activeCategory = null;
+            activeSearchQuery = null;
+            document.querySelectorAll('.tree li').forEach(li => {
+                li.classList.remove('category-hidden');
+                li.classList.remove('search-hidden');
+                li.classList.remove('filter-match');
+            });
+            MonikerUtils.updateCategoryChipStyles(null);
+            document.getElementById('search-input').value = '';
+            document.getElementById('filter-indicator').style.display = 'none';
+        }
+
+        // Legacy alias — kept for handleSearchKeydown Escape
+        function clearFilter() {
+            clearAllFilters();
+        }
+
+        // =============================================================================
+        // Domain Functions
+        // =============================================================================
+
+        function renderDomainInfo(path, currentDomain, resolvedDomain) {
+            // Build domain options grouped by category (domainsData is pre-sorted by category, then name)
+            const hasDomain = currentDomain && domainsData.some(d => d.name === currentDomain);
+            const hasInherited = !currentDomain && resolvedDomain && domainsData.some(d => d.name === resolvedDomain);
+
+            // Group domains by category for optgroup display
+            let optionsHtml = '<option value="">-- None --</option>';
+            let currentCategory = null;
+
+            for (const d of domainsData) {
+                const category = d.data_category || 'Uncategorized';
+                if (category !== currentCategory) {
+                    if (currentCategory !== null) {
+                        optionsHtml += '</optgroup>';
+                    }
+                    optionsHtml += `<optgroup label="${escapeHtml(category)}">`;
+                    currentCategory = category;
+                }
+                const displayLabel = d.display_name || d.name;
+                const isSelected = currentDomain === d.name ? 'selected' : '';
+                optionsHtml += `<option value="${escapeHtml(d.name)}" ${isSelected}>${escapeHtml(displayLabel)}</option>`;
+            }
+            if (currentCategory !== null) {
+                optionsHtml += '</optgroup>';
+            }
+
+            const statusClass = hasDomain ? 'domain-exists' : (hasInherited ? 'domain-exists' : 'domain-missing');
+            const statusText = hasDomain ? 'Configured' : (hasInherited ? `Inherited: ${resolvedDomain}` : 'Not mapped');
+
+            return `
+                <div class="domain-info ${statusClass}">
+                    <span class="domain-info-label">Domain:</span>
+                    <select id="node_domain" class="domain-select" style="min-width: 150px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border);">
+                        ${optionsHtml}
+                    </select>
+                    <span class="domain-info-status">${statusText}</span>
+                    <a href="/domains/ui" class="btn btn-sm btn-secondary" target="_blank">Manage Domains</a>
+                </div>
+            `;
+        }
+
+        // =============================================================================
+        // Form Rendering
+        // =============================================================================
+
+        function renderForm(data) {
+            const node = data.node;
+            const resolved = data.resolved_ownership;
+
+            document.getElementById('form-title').textContent = node.path;
+
+            const container = document.getElementById('form-container');
+            container.innerHTML = `
+                <div class="path-display">moniker://${node.path}</div>
+
+                ${renderDomainInfo(node.path, node.domain, node.resolved_domain)}
+
+                ${node.status === 'pending_review' ? `
+                <div style="background:rgba(242,169,0,0.1);border:1px solid rgba(242,169,0,0.3);border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:13px">
+                    <strong style="color:#B87D00">Pending Review</strong> &mdash;
+                    <a href="/requests/ui" style="color:#005587;font-weight:700;text-decoration:none">View in Review Queue &rarr;</a>
+                </div>` : ''}
+
+                <!-- Basic Info -->
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Basic Info</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-row">
+                            <label>Path</label>
+                            <input type="text" value="${node.path}" readonly>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="display_name">Display Name</label>
+                                <input type="text" id="display_name" value="${escapeHtml(node.display_name || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="classification">Classification</label>
+                                <select id="classification">
+                                    <option value="public" ${node.classification === 'public' ? 'selected' : ''}>Public</option>
+                                    <option value="internal" ${node.classification === 'internal' ? 'selected' : ''}>Internal</option>
+                                    <option value="confidential" ${node.classification === 'confidential' ? 'selected' : ''}>Confidential</option>
+                                    <option value="restricted" ${node.classification === 'restricted' ? 'selected' : ''}>Restricted</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <label for="maturity">Maturity</label>
+                                <select id="maturity">
+                                    <option value="cataloged" ${(node.maturity || 'cataloged') === 'cataloged' ? 'selected' : ''}>🥉 Cataloged</option>
+                                    <option value="governed" ${node.maturity === 'governed' ? 'selected' : ''}>🥈 Governed</option>
+                                    <option value="certified" ${node.maturity === 'certified' ? 'selected' : ''}>🥇 Certified</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <label for="description">Description</label>
+                            <textarea id="description">${escapeHtml(node.description || '')}</textarea>
+                        </div>
+                        <div class="form-row">
+                            <label>Tags</label>
+                            <div class="tags-container" id="tags-container" onclick="focusTagInput()">
+                                ${(node.tags || []).map(t => `<span class="tag">${escapeHtml(t)}<span class="tag-remove" onclick="removeTag(this, event)">&times;</span></span>`).join('')}
+                                <input type="text" class="tags-input" id="tags-input" placeholder="Add tag..." onkeydown="handleTagInput(event)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ownership -->
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Ownership</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-grid">
+                            ${renderOwnershipField('accountable_owner', 'Accountable Owner', node.ownership, resolved)}
+                            ${renderOwnershipField('data_specialist', 'Data Specialist', node.ownership, resolved)}
+                            ${renderOwnershipField('support_channel', 'Support Channel', node.ownership, resolved)}
+                            ${renderOwnershipField('adop', 'ADOP', node.ownership, resolved)}
+                            ${renderOwnershipField('ads', 'ADS', node.ownership, resolved)}
+                            ${renderOwnershipField('adal', 'ADAL', node.ownership, resolved)}
+                            ${renderOwnershipField('ui', 'UI Link', node.ownership, resolved)}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Source Binding -->
+                <div class="form-section ${node.source_binding ? '' : 'collapsed'}">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Source Binding</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-row">
+                            <label for="source_type">Source Type</label>
+                            <select id="source_type" onchange="renderSourceConfig()">
+                                <option value="">-- None --</option>
+                                ${sourceTypes.map(st => `<option value="${st.type}" ${node.source_binding?.type === st.type ? 'selected' : ''}>${st.display_name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div id="source-config-fields">
+                            ${node.source_binding ? renderSourceConfigFields(node.source_binding.type, node.source_binding.config) : ''}
+                        </div>
+                        <div class="form-row">
+                            <label>
+                                <input type="checkbox" id="read_only" ${node.source_binding?.read_only !== false ? 'checked' : ''}>
+                                Read Only
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Quality -->
+                <div class="form-section collapsed">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Data Quality</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-hint">Data quality monitoring configuration</div>
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="dq_owner">DQ Owner</label>
+                                <input type="text" id="dq_owner" value="${escapeHtml(node.data_quality?.dq_owner || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="quality_score">Quality Score</label>
+                                <input type="number" id="quality_score" min="0" max="100" value="${node.data_quality?.quality_score || ''}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SLA -->
+                <div class="form-section collapsed">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>SLA</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="sla_freshness">Freshness</label>
+                                <input type="text" id="sla_freshness" placeholder="e.g., T+1, 15min, real-time" value="${escapeHtml(node.sla?.freshness || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="sla_availability">Availability</label>
+                                <input type="text" id="sla_availability" placeholder="e.g., 99.9%" value="${escapeHtml(node.sla?.availability || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="sla_support_hours">Support Hours</label>
+                                <input type="text" id="sla_support_hours" placeholder="e.g., 24/7, business hours ET" value="${escapeHtml(node.sla?.support_hours || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="sla_escalation">Escalation Contact</label>
+                                <input type="text" id="sla_escalation" value="${escapeHtml(node.sla?.escalation_contact || '')}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documentation -->
+                <div class="form-section collapsed">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Documentation</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="doc_glossary">Glossary URL</label>
+                                <input type="url" id="doc_glossary" value="${escapeHtml(node.documentation?.glossary || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="doc_runbook">Runbook URL</label>
+                                <input type="url" id="doc_runbook" value="${escapeHtml(node.documentation?.runbook || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="doc_onboarding">Onboarding URL</label>
+                                <input type="url" id="doc_onboarding" value="${escapeHtml(node.documentation?.onboarding || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="doc_contact">Contact URL</label>
+                                <input type="url" id="doc_contact" value="${escapeHtml(node.documentation?.contact || '')}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Access Policy -->
+                <div class="form-section collapsed">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Access Policy</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-hint">Query guardrails to prevent expensive operations</div>
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="ap_min_filters">Min Filters Required</label>
+                                <input type="number" id="ap_min_filters" min="0" value="${node.access_policy?.min_filters || 0}">
+                            </div>
+                            <div class="form-row">
+                                <label for="ap_base_rows">Base Row Count</label>
+                                <input type="number" id="ap_base_rows" min="1" value="${node.access_policy?.base_row_count || 100}">
+                            </div>
+                            <div class="form-row">
+                                <label for="ap_max_warn">Max Rows (Warn)</label>
+                                <input type="number" id="ap_max_warn" min="0" value="${node.access_policy?.max_rows_warn || ''}">
+                            </div>
+                            <div class="form-row">
+                                <label for="ap_max_block">Max Rows (Block)</label>
+                                <input type="number" id="ap_max_block" min="0" value="${node.access_policy?.max_rows_block || ''}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Schema -->
+                <div class="form-section collapsed">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Data Schema</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-row">
+                            <label for="schema_description">Schema Description</label>
+                            <textarea id="schema_description">${escapeHtml(node.data_schema?.description || '')}</textarea>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="schema_granularity">Granularity</label>
+                                <input type="text" id="schema_granularity" placeholder="e.g., daily, per-security" value="${escapeHtml(node.data_schema?.granularity || '')}">
+                            </div>
+                            <div class="form-row">
+                                <label for="schema_row_count">Typical Row Count</label>
+                                <input type="text" id="schema_row_count" placeholder="e.g., 1K-10K, 1M-10M" value="${escapeHtml(node.data_schema?.typical_row_count || '')}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderOwnershipField(field, label, ownership, resolved) {
+            const localValue = ownership?.[field] || '';
+            const resolvedValue = resolved?.[field] || '';
+            const resolvedSource = resolved?.[field + '_source'] || '';
+            const isInherited = !localValue && resolvedValue;
+
+            return `
+                <div class="form-row">
+                    <label for="own_${field}">${label}</label>
+                    <input type="text" id="own_${field}" value="${escapeHtml(localValue)}" placeholder="${isInherited ? 'Inherited: ' + resolvedValue : ''}">
+                    ${isInherited ? `
+                        <div class="inherited-value">
+                            <span class="inherited-badge">inherited</span>
+                            <span class="inherited-source">from: ${resolvedSource}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderSourceConfigFields(sourceType, config) {
+            if (!sourceType) {
+                // Hide placeholder toggle when no source type
+                document.getElementById('placeholder-panel-toggle').style.display = 'none';
+                return '';
+            }
+
+            const typeInfo = sourceTypes.find(st => st.type === sourceType);
+            if (!typeInfo) return '';
+
+            const schema = typeInfo.config_schema;
+            const hasSqlField = Object.entries(schema).some(([key, fieldDef]) => fieldDef.type === 'sql');
+
+            // Show/hide placeholder toggle based on whether there's a SQL field
+            const toggle = document.getElementById('placeholder-panel-toggle');
+            if (toggle) {
+                toggle.style.display = hasSqlField ? 'inline-block' : 'none';
+            }
+
+            // Parse segment names if available
+            if (config?.segment_names) {
+                currentSegmentNames = config.segment_names.split(',').map(s => s.trim()).filter(Boolean);
+            } else {
+                currentSegmentNames = [];
+            }
+
+            // Execution mode banner
+            const execMode = typeInfo.execution_mode || 'server';
+            const execHint = typeInfo.execution_hint || '';
+            const isClientMode = execMode === 'client';
+            const execBanner = `
+                <div class="execution-mode-banner ${isClientMode ? 'client-mode' : 'server-mode'}">
+                    <span class="exec-badge">${isClientMode ? 'CLIENT EXECUTES' : 'SERVER PROXIES'}</span>
+                    ${execHint ? `<span class="exec-hint">${execHint}</span>` : ''}
+                </div>
+            `;
+
+            const fields = Object.entries(schema).map(([key, fieldDef]) => {
+                const value = config?.[key] || '';
+                const displayValue = typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
+
+                let inputHtml;
+
+                if (fieldDef.type === 'sql') {
+                    // Enhanced SQL editor
+                    inputHtml = `
+                        <div class="sql-editor-container">
+                            <textarea
+                                id="src_${key}"
+                                class="sql-textarea"
+                                rows="10"
+                                placeholder="SELECT * FROM table WHERE {filter[0]:column}..."
+                                onfocus="showPlaceholderPanel()"
+                                spellcheck="false"
+                            >${escapeHtml(displayValue)}</textarea>
+                        </div>
+                    `;
+                } else if (key === 'segment_names') {
+                    // Special handling for segment_names field
+                    inputHtml = `
+                        <input
+                            type="text"
+                            id="src_${key}"
+                            value="${escapeHtml(displayValue)}"
+                            placeholder="date,account,security"
+                            oninput="updateSegmentNames()"
+                        >
+                        <div id="segment-mapping-display" class="segment-mapping">
+                            ${currentSegmentNames.length > 0 ? '' : '<div class="form-hint">Enter segment names above to see the mapping</div>'}
+                        </div>
+                    `;
+                    // Trigger initial mapping display after render
+                    setTimeout(updateSegmentMappingDisplay, 0);
+                } else if (fieldDef.type === 'text' || fieldDef.type === 'json') {
+                    inputHtml = `<textarea id="src_${key}" rows="3">${escapeHtml(displayValue)}</textarea>`;
+                } else if (fieldDef.type === 'select' && fieldDef.options) {
+                    inputHtml = `<select id="src_${key}">
+                        ${fieldDef.options.map(opt => `<option value="${opt}" ${value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                    </select>`;
+                } else if (fieldDef.type === 'number') {
+                    inputHtml = `<input type="number" id="src_${key}" value="${displayValue}">`;
+                } else {
+                    inputHtml = `<input type="text" id="src_${key}" value="${escapeHtml(displayValue)}">`;
+                }
+
+                return `
+                    <div class="config-field">
+                        <label for="src_${key}" class="${fieldDef.required ? 'required' : ''}">${key}</label>
+                        ${inputHtml}
+                        ${fieldDef.description ? `<div class="form-hint">${fieldDef.description}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            return execBanner + fields;
+        }
+
+        function renderSourceConfig() {
+            const sourceType = document.getElementById('source_type').value;
+            const container = document.getElementById('source-config-fields');
+            container.innerHTML = renderSourceConfigFields(sourceType, {});
+
+            // Reset segment names when changing source type
+            currentSegmentNames = [];
+
+            // Hide placeholder panel when source type changes
+            const panel = document.getElementById('placeholder-panel');
+            if (panel) {
+                panel.style.display = 'none';
+                placeholderPanelVisible = false;
+            }
+        }
+
+        function toggleSection(header) {
+            header.closest('.form-section').classList.toggle('collapsed');
+        }
+
+        function expandAllSections() {
+            document.querySelectorAll('#form-container .form-section.collapsed').forEach(s => s.classList.remove('collapsed'));
+        }
+
+        function collapseAllSections() {
+            document.querySelectorAll('#form-container .form-section').forEach(s => {
+                s.classList.add('collapsed');
+            });
+        }
+
+        // =============================================================================
+        // Placeholder Panel
+        // =============================================================================
+
+        function togglePlaceholderPanel() {
+            const panel = document.getElementById('placeholder-panel');
+            const toggle = document.getElementById('placeholder-panel-toggle');
+
+            placeholderPanelVisible = !placeholderPanelVisible;
+
+            if (placeholderPanelVisible) {
+                panel.style.display = 'flex';
+                toggle.textContent = 'Hide Placeholders';
+                renderPlaceholderPanel();
+            } else {
+                panel.style.display = 'none';
+                toggle.textContent = 'Placeholders';
+            }
+        }
+
+        function showPlaceholderPanel() {
+            const panel = document.getElementById('placeholder-panel');
+            const toggle = document.getElementById('placeholder-panel-toggle');
+
+            if (!placeholderPanelVisible) {
+                placeholderPanelVisible = true;
+                panel.style.display = 'flex';
+                toggle.textContent = 'Hide Placeholders';
+                renderPlaceholderPanel();
+            }
+        }
+
+        function renderPlaceholderPanel() {
+            const container = document.getElementById('placeholder-panel-content');
+
+            // Build segment mapping section if segment names are defined
+            let segmentMappingHtml = '';
+            if (currentSegmentNames.length > 0) {
+                segmentMappingHtml = `
+                    <div class="placeholder-category">
+                        <div class="placeholder-category-header">Your Segment Mapping</div>
+                        ${currentSegmentNames.map((name, i) => `
+                            <div class="placeholder-item" onclick="copyPlaceholder('{segments[${i}]}')">
+                                <div>
+                                    <span class="placeholder-code">{segments[${i}]}</span>
+                                    <span class="segment-arrow">-></span>
+                                    <span class="segment-name">${escapeHtml(name)}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                        <div style="margin-top: var(--sp-2);">
+                            ${currentSegmentNames.map((name, i) => `
+                                <div class="placeholder-item" onclick="copyPlaceholder('{filter[${i}]:${name.toUpperCase()}}')">
+                                    <div>
+                                        <span class="placeholder-code">{filter[${i}]:${name.toUpperCase()}}</span>
+                                        <div class="placeholder-desc">Filter for ${escapeHtml(name)} (ALL -> 1=1)</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Build standard categories
+            const categoryLabels = {
+                raw: 'Raw Value Placeholders',
+                version: 'Version Type Placeholders',
+                dialect: 'Dialect-Aware SQL',
+                segment: 'Segment Filters',
+            };
+
+            const categoriesHtml = Object.entries(PLACEHOLDERS).map(([category, items]) => `
+                <div class="placeholder-category">
+                    <div class="placeholder-category-header">${categoryLabels[category]}</div>
+                    ${items.map(item => `
+                        <div class="placeholder-item" onclick="copyPlaceholder('{${item.name}}')">
+                            <div>
+                                <span class="placeholder-code">{${item.name}}</span>
+                                <div class="placeholder-desc">${item.desc}</div>
+                                <div class="placeholder-example">Ex: ${item.example}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+
+            container.innerHTML = segmentMappingHtml + categoriesHtml;
+        }
+
+        function copyPlaceholder(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showCopyFeedback(`Copied: ${text}`);
+
+                // Focus the query textarea if it exists
+                const queryTextarea = document.getElementById('src_query');
+                if (queryTextarea) {
+                    queryTextarea.focus();
+                }
+            });
+        }
+
+        function showCopyFeedback(message) {
+            // Remove existing feedback
+            const existing = document.querySelector('.copy-feedback');
+            if (existing) existing.remove();
+
+            const feedback = document.createElement('div');
+            feedback.className = 'copy-feedback';
+            feedback.textContent = message;
+            document.body.appendChild(feedback);
+
+            setTimeout(() => feedback.remove(), 1500);
+        }
+
+        function updateSegmentNames() {
+            const segmentNamesInput = document.getElementById('src_segment_names');
+            if (segmentNamesInput && segmentNamesInput.value) {
+                currentSegmentNames = segmentNamesInput.value.split(',').map(s => s.trim()).filter(Boolean);
+            } else {
+                currentSegmentNames = [];
+            }
+
+            // Update the segment mapping display in the form
+            updateSegmentMappingDisplay();
+
+            // Re-render placeholder panel if visible
+            if (placeholderPanelVisible) {
+                renderPlaceholderPanel();
+            }
+        }
+
+        function updateSegmentMappingDisplay() {
+            const container = document.getElementById('segment-mapping-display');
+            if (!container) return;
+
+            if (currentSegmentNames.length === 0) {
+                container.innerHTML = '<div class="form-hint">Enter segment names above to see the mapping</div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="segment-mapping-title">Segment Mapping</div>
+                ${currentSegmentNames.map((name, i) => `
+                    <div class="segment-mapping-item">
+                        <span class="segment-placeholder" onclick="copyPlaceholder('{segments[${i}]}')">{segments[${i}]}</span>
+                        <span class="segment-arrow">-></span>
+                        <span class="segment-name">${escapeHtml(name)}</span>
+                    </div>
+                `).join('')}
+                <div class="form-hint" style="margin-top: var(--sp-2);">Click a placeholder to copy</div>
+            `;
+        }
+
+        // =============================================================================
+        // Form Data Collection
+        // =============================================================================
+
+        function collectFormData() {
+            const data = {
+                display_name: document.getElementById('display_name')?.value || '',
+                description: document.getElementById('description')?.value || '',
+                classification: document.getElementById('classification')?.value || 'internal',
+                maturity: document.getElementById('maturity')?.value || 'cataloged',
+                tags: collectTags(),
+            };
+
+            // Domain (can be set on any node)
+            const domainSelect = document.getElementById('node_domain');
+            if (domainSelect) {
+                data.domain = domainSelect.value || null;
+            }
+
+            // Ownership
+            const ownership = {};
+            ['accountable_owner', 'data_specialist', 'support_channel', 'adop', 'ads', 'adal', 'ui'].forEach(field => {
+                const val = document.getElementById(`own_${field}`)?.value;
+                if (val) ownership[field] = val;
+            });
+            if (Object.keys(ownership).length > 0) {
+                data.ownership = ownership;
+            }
+
+            // Source binding
+            const sourceType = document.getElementById('source_type')?.value;
+            if (sourceType) {
+                const config = collectSourceConfig(sourceType);
+                data.source_binding = {
+                    type: sourceType,
+                    config: config,
+                    read_only: document.getElementById('read_only')?.checked !== false,
+                };
+            } else {
+                data.source_binding = null;
+            }
+
+            // SLA
+            const sla = {};
+            if (document.getElementById('sla_freshness')?.value) sla.freshness = document.getElementById('sla_freshness').value;
+            if (document.getElementById('sla_availability')?.value) sla.availability = document.getElementById('sla_availability').value;
+            if (document.getElementById('sla_support_hours')?.value) sla.support_hours = document.getElementById('sla_support_hours').value;
+            if (document.getElementById('sla_escalation')?.value) sla.escalation_contact = document.getElementById('sla_escalation').value;
+            if (Object.keys(sla).length > 0) data.sla = sla;
+
+            // Documentation
+            const doc = {};
+            if (document.getElementById('doc_glossary')?.value) doc.glossary = document.getElementById('doc_glossary').value;
+            if (document.getElementById('doc_runbook')?.value) doc.runbook = document.getElementById('doc_runbook').value;
+            if (document.getElementById('doc_onboarding')?.value) doc.onboarding = document.getElementById('doc_onboarding').value;
+            if (document.getElementById('doc_contact')?.value) doc.contact = document.getElementById('doc_contact').value;
+            if (Object.keys(doc).length > 0) data.documentation = doc;
+
+            // Access policy
+            const ap = {};
+            const minFilters = parseInt(document.getElementById('ap_min_filters')?.value);
+            if (minFilters > 0) ap.min_filters = minFilters;
+            const baseRows = parseInt(document.getElementById('ap_base_rows')?.value);
+            if (baseRows && baseRows !== 100) ap.base_row_count = baseRows;
+            const maxWarn = parseInt(document.getElementById('ap_max_warn')?.value);
+            if (maxWarn) ap.max_rows_warn = maxWarn;
+            const maxBlock = parseInt(document.getElementById('ap_max_block')?.value);
+            if (maxBlock) ap.max_rows_block = maxBlock;
+            if (Object.keys(ap).length > 0) data.access_policy = ap;
+
+            // Schema
+            const schema = {};
+            if (document.getElementById('schema_description')?.value) schema.description = document.getElementById('schema_description').value;
+            if (document.getElementById('schema_granularity')?.value) schema.granularity = document.getElementById('schema_granularity').value;
+            if (document.getElementById('schema_row_count')?.value) schema.typical_row_count = document.getElementById('schema_row_count').value;
+            if (Object.keys(schema).length > 0) data.schema = schema;
+
+            return data;
+        }
+
+        function collectTags() {
+            const tags = [];
+            document.querySelectorAll('#tags-container .tag').forEach(el => {
+                const text = el.childNodes[0].textContent.trim();
+                if (text) tags.push(text);
+            });
+            return tags;
+        }
+
+        function collectSourceConfig(sourceType) {
+            const typeInfo = sourceTypes.find(st => st.type === sourceType);
+            if (!typeInfo) return {};
+
+            const config = {};
+            Object.keys(typeInfo.config_schema).forEach(key => {
+                const el = document.getElementById(`src_${key}`);
+                if (el) {
+                    let value = el.value;
+                    const fieldDef = typeInfo.config_schema[key];
+
+                    // Parse JSON fields
+                    if ((fieldDef.type === 'json' || fieldDef.type === 'text') && value) {
+                        try {
+                            value = JSON.parse(value);
+                        } catch (e) {
+                            // Keep as string if not valid JSON
+                        }
+                    }
+
+                    // Parse number fields
+                    if (fieldDef.type === 'number' && value) {
+                        value = parseInt(value) || parseFloat(value) || value;
+                    }
+
+                    if (value !== '' && value !== null) {
+                        config[key] = value;
+                    }
+                }
+            });
+            return config;
+        }
+
+        // =============================================================================
+        // Tags Input
+        // =============================================================================
+
+        function focusTagInput() {
+            document.getElementById('tags-input').focus();
+        }
+
+        function handleTagInput(e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                const input = e.target;
+                const value = input.value.trim().replace(',', '');
+                if (value) {
+                    const tag = document.createElement('span');
+                    tag.className = 'tag';
+                    tag.innerHTML = `${escapeHtml(value)}<span class="tag-remove" onclick="removeTag(this, event)">&times;</span>`;
+                    input.parentNode.insertBefore(tag, input);
+                    input.value = '';
+                }
+            } else if (e.key === 'Backspace' && !e.target.value) {
+                const tags = e.target.parentNode.querySelectorAll('.tag');
+                if (tags.length > 0) {
+                    tags[tags.length - 1].remove();
+                }
+            }
+        }
+
+        function removeTag(el, e) {
+            e.stopPropagation();
+            el.closest('.tag').remove();
+        }
+
+        // =============================================================================
+        // UI Helpers
+        // =============================================================================
+
+        function cancelEdit() {
+            if (originalNode) {
+                renderForm(originalNode);
+            }
+        }
+
+        function showNewNodeModal() {
+            document.getElementById('new-node-path').value = '';
+            document.getElementById('new-node-modal').style.display = 'flex';
+            document.getElementById('new-node-path').focus();
+        }
+
+        function hideNewNodeModal() {
+            document.getElementById('new-node-modal').style.display = 'none';
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // =============================================================================
+        // Tab Navigation
+        // =============================================================================
+
+        let activeTab = 'catalog';
+        let domainsListLoaded = false;
+        let fieldsLoaded = false;
+        let appsLoaded = false;
+        let fieldsData = [];
+        let appsData = [];
+        let selectedDomainName = null;
+        let selectedFieldPath = null;
+        let selectedAppKey = null;
+
+        function switchTab(tab) {
+            activeTab = tab;
+            ['catalog', 'domains', 'fields', 'apps'].forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                if (el) el.style.display = t === tab ? '' : 'none';
+                const btn = document.querySelector(`[data-tab="${t}"]`);
+                if (btn) btn.classList.toggle('active', t === tab);
+            });
+
+            // Show/hide expand/collapse buttons (only for catalog tab)
+            const actionsBar = document.getElementById('panel-header-actions-bar');
+            if (actionsBar) actionsBar.style.display = tab === 'catalog' ? '' : 'none';
+
+            // Fix flex display for non-catalog tabs
+            if (tab !== 'catalog') {
+                const el = document.getElementById(`tab-${tab}`);
+                if (el) el.style.display = 'flex';
+            }
+
+            // Lazy-load data on first switch
+            if (tab === 'domains' && !domainsListLoaded) renderDomainsList();
+            if (tab === 'fields' && !fieldsLoaded) loadFieldsList();
+            if (tab === 'apps' && !appsLoaded) loadAppsList();
+        }
+
+        // =============================================================================
+        // Domains List Tab
+        // =============================================================================
+
+        function renderDomainsList() {
+            domainsListLoaded = true;
+            const container = document.getElementById('domains-list');
+
+            if (!domainsData || domainsData.length === 0) {
+                container.innerHTML = '<div class="empty-state"><h3>No Domains</h3><p>No domains have been configured yet.</p></div>';
+                return;
+            }
+
+            container.innerHTML = domainsData.map(d => {
+                const color = d.color || '#005587';
+                const meta = d.data_category || '';
+                return `<div class="list-item" data-domain="${escapeHtml(d.name)}" onclick="showDomainDetail('${escapeHtml(d.name)}')">
+                    <span class="list-item-dot" style="background:${escapeHtml(color)}"></span>
+                    <span class="list-item-name">${escapeHtml(d.display_name || d.name)}</span>
+                    <span class="list-item-meta">${escapeHtml(meta)}</span>
+                </div>`;
+            }).join('');
+        }
+
+        function filterDomainsList(query) {
+            const q = query.toLowerCase();
+            document.querySelectorAll('#domains-list .list-item').forEach(el => {
+                const name = el.querySelector('.list-item-name')?.textContent.toLowerCase() || '';
+                const meta = el.querySelector('.list-item-meta')?.textContent.toLowerCase() || '';
+                el.style.display = (name.includes(q) || meta.includes(q)) ? '' : 'none';
+            });
+        }
+
+        function showDomainDetail(domainName) {
+            selectedDomainName = domainName;
+            selectedFieldPath = null;
+            selectedAppKey = null;
+
+            // Highlight selected item
+            document.querySelectorAll('#domains-list .list-item').forEach(el => {
+                el.classList.toggle('selected', el.dataset.domain === domainName);
+            });
+
+            const domain = domainsData.find(d => d.name === domainName);
+            if (!domain) return;
+
+            // Hide form actions (save/delete not applicable)
+            document.getElementById('form-actions').style.display = 'none';
+            document.getElementById('expand-all-sections-btn').style.display = 'none';
+            document.getElementById('collapse-all-sections-btn').style.display = 'none';
+            const phToggle = document.getElementById('placeholder-panel-toggle');
+            if (phToggle) phToggle.style.display = 'none';
+
+            document.getElementById('form-title').textContent = domain.display_name || domain.name;
+
+            const container = document.getElementById('form-container');
+            container.innerHTML = `
+                <div class="path-display" style="display:flex;align-items:center;gap:12px;">
+                    <span class="list-item-dot" style="background:${escapeHtml(domain.color || '#005587')};width:12px;height:12px;border-radius:50%;flex-shrink:0;"></span>
+                    <span>${escapeHtml(domain.display_name || domain.name)}</span>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Domain Info</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-grid">
+                            <div class="detail-field">
+                                <label>Name</label>
+                                <div class="detail-value">${escapeHtml(domain.name)}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Display Name</label>
+                                <div class="detail-value">${escapeHtml(domain.display_name || '')}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Owner</label>
+                                <div class="detail-value">${escapeHtml(domain.owner || '')}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Business Steward</label>
+                                <div class="detail-value">${escapeHtml(domain.business_steward || '')}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Tech Custodian</label>
+                                <div class="detail-value">${escapeHtml(domain.tech_custodian || '')}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Data Category</label>
+                                <div class="detail-value">${escapeHtml(domain.data_category || '')}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Confidentiality</label>
+                                <div class="detail-value">${escapeHtml(domain.confidentiality || '')}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Help Channel</label>
+                                <div class="detail-value">${escapeHtml(domain.help_channel || '')}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="padding: var(--sp-3); text-align: center;">
+                    <a href="/domains/ui" class="btn btn-secondary" target="_blank">Edit Domains in Domain Manager</a>
+                </div>
+            `;
+        }
+
+        // =============================================================================
+        // Fields (Models) List Tab
+        // =============================================================================
+
+        async function loadFieldsList() {
+            fieldsLoaded = true;
+            const container = document.getElementById('fields-list');
+            container.innerHTML = '<div class="loading">Loading fields...</div>';
+
+            try {
+                const data = await fetchJSON('/models');
+                fieldsData = data.models || [];
+                renderFieldsList();
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state"><h3>Error</h3><p>Failed to load fields: ' + escapeHtml(e.message) + '</p></div>';
+            }
+        }
+
+        function renderFieldsList() {
+            const container = document.getElementById('fields-list');
+
+            if (!fieldsData || fieldsData.length === 0) {
+                container.innerHTML = '<div class="empty-state"><h3>No Fields</h3><p>No field models have been configured yet.</p></div>';
+                return;
+            }
+
+            container.innerHTML = fieldsData.map(m => {
+                const meta = m.unit || m.data_type || '';
+                return `<div class="list-item" data-field="${escapeHtml(m.path)}" onclick="showFieldDetail('${escapeHtml(m.path)}')">
+                    <span class="list-item-name">${escapeHtml(m.display_name || m.path)}</span>
+                    <span class="list-item-meta">${escapeHtml(meta)}</span>
+                </div>`;
+            }).join('');
+        }
+
+        function filterFieldsList(query) {
+            const q = query.toLowerCase();
+            document.querySelectorAll('#fields-list .list-item').forEach(el => {
+                const name = el.querySelector('.list-item-name')?.textContent.toLowerCase() || '';
+                const meta = el.querySelector('.list-item-meta')?.textContent.toLowerCase() || '';
+                el.style.display = (name.includes(q) || meta.includes(q)) ? '' : 'none';
+            });
+        }
+
+        function showFieldDetail(fieldPath) {
+            selectedFieldPath = fieldPath;
+            selectedDomainName = null;
+            selectedAppKey = null;
+
+            // Highlight selected item
+            document.querySelectorAll('#fields-list .list-item').forEach(el => {
+                el.classList.toggle('selected', el.dataset.field === fieldPath);
+            });
+
+            const model = fieldsData.find(m => m.path === fieldPath);
+            if (!model) return;
+
+            // Hide form actions
+            document.getElementById('form-actions').style.display = 'none';
+            document.getElementById('expand-all-sections-btn').style.display = 'none';
+            document.getElementById('collapse-all-sections-btn').style.display = 'none';
+            const phToggle = document.getElementById('placeholder-panel-toggle');
+            if (phToggle) phToggle.style.display = 'none';
+
+            document.getElementById('form-title').textContent = model.display_name || model.path;
+
+            const tagsHtml = (model.tags || []).length > 0
+                ? `<div class="detail-chips">${(model.tags || []).map(t => `<span class="detail-chip">${escapeHtml(t)}</span>`).join('')}</div>`
+                : '';
+
+            const semanticTagsHtml = (model.semantic_tags || []).length > 0
+                ? `<div class="detail-chips">${(model.semantic_tags || []).map(t => `<span class="detail-chip" style="background:var(--c-teal)">${escapeHtml(t)}</span>`).join('')}</div>`
+                : '';
+
+            const appearsInHtml = (model.appears_in || []).length > 0
+                ? `<div class="detail-chips">${(model.appears_in || []).map(p => `<span class="detail-chip" style="background:var(--c-olive)">${escapeHtml(p)}</span>`).join('')}</div>`
+                : '';
+
+            const aliasesHtml = (model.aliases || []).length > 0
+                ? `<div class="detail-chips">${(model.aliases || []).map(a => `<span class="detail-chip" style="background:var(--c-gray)">${escapeHtml(a)}</span>`).join('')}</div>`
+                : '';
+
+            const container = document.getElementById('form-container');
+            container.innerHTML = `
+                <div class="path-display">${escapeHtml(model.path)}</div>
+
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Field Info</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-grid">
+                            <div class="detail-field">
+                                <label>Display Name</label>
+                                <div class="detail-value">${escapeHtml(model.display_name || '')}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Path</label>
+                                <div class="detail-value" style="font-family:'Consolas','Monaco',monospace;font-size:12px;">${escapeHtml(model.path)}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Data Type</label>
+                                <div class="detail-value">${escapeHtml(model.data_type || '')}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Unit</label>
+                                <div class="detail-value">${escapeHtml(model.unit || '')}</div>
+                            </div>
+                        </div>
+                        <div class="detail-field">
+                            <label>Description</label>
+                            <div class="detail-value">${escapeHtml(model.description || '')}</div>
+                        </div>
+                        <div class="detail-field">
+                            <label>Formula</label>
+                            <div class="detail-value" style="font-family:'Consolas','Monaco',monospace;font-size:12px;">${escapeHtml(model.formula || '')}</div>
+                        </div>
+                    </div>
+                </div>
+
+                ${(model.appears_in || []).length > 0 ? `
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Appears In</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        ${appearsInHtml}
+                    </div>
+                </div>` : ''}
+
+                ${(model.aliases || []).length > 0 ? `
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Aliases</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        ${aliasesHtml}
+                    </div>
+                </div>` : ''}
+
+                ${(model.tags || []).length > 0 || (model.semantic_tags || []).length > 0 ? `
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Tags</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        ${tagsHtml ? '<div class="detail-field"><label>Tags</label>' + tagsHtml + '</div>' : ''}
+                        ${semanticTagsHtml ? '<div class="detail-field"><label>Semantic Tags</label>' + semanticTagsHtml + '</div>' : ''}
+                    </div>
+                </div>` : ''}
+
+                ${model.ownership ? `
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Ownership</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="detail-field">
+                            <div class="detail-value">${escapeHtml(typeof model.ownership === 'string' ? model.ownership : JSON.stringify(model.ownership))}</div>
+                        </div>
+                    </div>
+                </div>` : ''}
+
+                <div style="padding: var(--sp-3); text-align: center;">
+                    <a href="/models/ui" class="btn btn-secondary" target="_blank">Edit Fields in Field Manager</a>
+                </div>
+            `;
+        }
+
+        // =============================================================================
+        // Applications List Tab
+        // =============================================================================
+
+        async function loadAppsList() {
+            appsLoaded = true;
+            const container = document.getElementById('apps-list');
+            container.innerHTML = '<div class="loading">Loading applications...</div>';
+
+            try {
+                const data = await fetchJSON('/applications');
+                appsData = data.applications || [];
+                renderAppsList();
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state"><h3>Error</h3><p>Failed to load applications: ' + escapeHtml(e.message) + '</p></div>';
+            }
+        }
+
+        function renderAppsList() {
+            const container = document.getElementById('apps-list');
+
+            if (!appsData || appsData.length === 0) {
+                container.innerHTML = '<div class="empty-state"><h3>No Applications</h3><p>No applications have been registered yet.</p></div>';
+                return;
+            }
+
+            container.innerHTML = appsData.map(app => {
+                const color = app.color || '#005587';
+                const meta = [app.category, app.status].filter(Boolean).join(' \u00B7 ');
+                return `<div class="list-item" data-app="${escapeHtml(app.key)}" onclick="showAppDetail('${escapeHtml(app.key)}')">
+                    <span class="list-item-dot" style="background:${escapeHtml(color)}"></span>
+                    <span class="list-item-name">${escapeHtml(app.display_name || app.key)}</span>
+                    <span class="list-item-meta">${escapeHtml(meta)}</span>
+                </div>`;
+            }).join('');
+        }
+
+        function filterAppsList(query) {
+            const q = query.toLowerCase();
+            document.querySelectorAll('#apps-list .list-item').forEach(el => {
+                const name = el.querySelector('.list-item-name')?.textContent.toLowerCase() || '';
+                const meta = el.querySelector('.list-item-meta')?.textContent.toLowerCase() || '';
+                el.style.display = (name.includes(q) || meta.includes(q)) ? '' : 'none';
+            });
+        }
+
+        function showAppDetail(appKey) {
+            selectedAppKey = appKey;
+            selectedDomainName = null;
+            selectedFieldPath = null;
+
+            // Highlight selected item
+            document.querySelectorAll('#apps-list .list-item').forEach(el => {
+                el.classList.toggle('selected', el.dataset.app === appKey);
+            });
+
+            const app = appsData.find(a => a.key === appKey);
+            if (!app) return;
+
+            // Hide form actions
+            document.getElementById('form-actions').style.display = 'none';
+            document.getElementById('expand-all-sections-btn').style.display = 'none';
+            document.getElementById('collapse-all-sections-btn').style.display = 'none';
+            const phToggle = document.getElementById('placeholder-panel-toggle');
+            if (phToggle) phToggle.style.display = 'none';
+
+            document.getElementById('form-title').textContent = app.display_name || app.key;
+
+            const datasetsHtml = (app.datasets || []).length > 0
+                ? `<div class="detail-chips">${(app.datasets || []).map(d => `<span class="detail-chip">${escapeHtml(d)}</span>`).join('')}</div>`
+                : '';
+
+            const fieldsHtml = (app.fields || []).length > 0
+                ? `<div class="detail-chips">${(app.fields || []).map(f => `<span class="detail-chip" style="background:var(--c-teal)">${escapeHtml(f)}</span>`).join('')}</div>`
+                : '';
+
+            const linksHtml = [];
+            if (app.documentation_url) {
+                linksHtml.push(`<a href="${escapeHtml(app.documentation_url)}" class="detail-link" target="_blank">Documentation</a>`);
+            }
+            if (app.wiki_link) {
+                linksHtml.push(`<a href="${escapeHtml(app.wiki_link)}" class="detail-link" target="_blank">Wiki</a>`);
+            }
+
+            const container = document.getElementById('form-container');
+            container.innerHTML = `
+                <div class="path-display" style="display:flex;align-items:center;gap:12px;">
+                    <span class="list-item-dot" style="background:${escapeHtml(app.color || '#005587')};width:12px;height:12px;border-radius:50%;flex-shrink:0;"></span>
+                    <span>${escapeHtml(app.display_name || app.key)}</span>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Application Info</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-grid">
+                            <div class="detail-field">
+                                <label>Key</label>
+                                <div class="detail-value" style="font-family:'Consolas','Monaco',monospace;font-size:12px;">${escapeHtml(app.key)}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Display Name</label>
+                                <div class="detail-value">${escapeHtml(app.display_name || '')}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Category</label>
+                                <div class="detail-value">${escapeHtml(app.category || '')}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Status</label>
+                                <div class="detail-value">${escapeHtml(app.status || '')}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Owner</label>
+                                <div class="detail-value">${escapeHtml(app.owner || '')}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Tech Lead</label>
+                                <div class="detail-value">${escapeHtml(app.tech_lead || '')}</div>
+                            </div>
+                            <div class="detail-field">
+                                <label>Support Channel</label>
+                                <div class="detail-value">${escapeHtml(app.support_channel || '')}</div>
+                            </div>
+                        </div>
+                        <div class="detail-field">
+                            <label>Description</label>
+                            <div class="detail-value">${escapeHtml(app.description || '')}</div>
+                        </div>
+                    </div>
+                </div>
+
+                ${(app.datasets || []).length > 0 ? `
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Datasets</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        ${datasetsHtml}
+                    </div>
+                </div>` : ''}
+
+                ${(app.fields || []).length > 0 ? `
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Fields</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        ${fieldsHtml}
+                    </div>
+                </div>` : ''}
+
+                ${linksHtml.length > 0 ? `
+                <div class="form-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span>Links</span>
+                        <span class="section-toggle"></span>
+                    </div>
+                    <div class="section-content">
+                        <div style="display:flex;gap:var(--sp-4);">
+                            ${linksHtml.join('')}
+                        </div>
+                    </div>
+                </div>` : ''}
+            `;
+        }
+
+        // =============================================================================
+        // Initialization
+        // =============================================================================
+
+        async function init() {
+            await Promise.all([loadSourceTypes(), loadDomains()]);
+            await loadNodes();
+
+            // Handle URL hash to auto-select node (e.g., /config/ui#some/path)
+            if (window.location.hash) {
+                const path = decodeURIComponent(window.location.hash.slice(1));
+                if (path) {
+                    setTimeout(() => {
+                        expandToPath(path);
+                        selectNode(path);
+                    }, 100);
+                }
+            } else if (nodes.length > 0) {
+                // Auto-select first node so the form panel isn't empty on load
+                const firstNode = nodes.sort((a, b) => a.path.localeCompare(b.path))[0];
+                if (firstNode) selectNode(firstNode.path);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -26,6 +26,12 @@ public class CatalogNode {
     // Vendor (e.g., bloomberg, refinitiv, msci)
     private String vendor;
 
+    // Asset class (e.g., equity, fixed_income, commodity)
+    private String assetClass;
+
+    // Update frequency (e.g., daily, real-time, weekly)
+    private String updateFrequency;
+
     // Maturity level (e.g., governed, certified)
     private String maturity;
 

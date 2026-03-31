@@ -13,9 +13,8 @@ from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_SRC = _REPO_ROOT / "src"
 _EXTERNAL_DATA = _REPO_ROOT / "external" / "moniker-data" / "src"
-for p in (_SRC, _EXTERNAL_DATA):
+for p in (_REPO_ROOT, _EXTERNAL_DATA):
     if p.exists() and str(p) not in sys.path:
         sys.path.insert(0, str(p))
 

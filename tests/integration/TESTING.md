@@ -5,7 +5,7 @@ Integration tests for the Moniker resolution service.
 ## Purpose
 
 This repository contains **integration tests** that are intentionally separated from:
-- `open-moniker-svc` - The service code
+- `open-moniker` - The service code
 - `open-moniker-data` - The test fixtures/mocks
 
 This separation ensures:

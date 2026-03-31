@@ -337,7 +337,7 @@ The Go resolver is not only **functionally complete** but already **outperforms 
 
 ## 📚 Resources
 
-- **Source Code:** `/home/user/open-moniker-svc/resolver-go/`
+- **Source Code:** `/home/user/open-moniker/resolver-go/`
 - **Build:** `make build` or `go build -o bin/resolver ./cmd/resolver`
 - **Run:** `./bin/resolver --port 8053`
 - **Test:** `./test_all_routes.sh`

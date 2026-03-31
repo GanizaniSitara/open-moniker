@@ -21,10 +21,10 @@ Shared state is the YAML files on disk. Management writes → Resolver hot-reloa
 
 | File | Action |
 |------|--------|
-| `src/moniker_svc/_bootstrap.py` | **Create** — shared init helpers extracted from `main.py` lifespan |
-| `src/moniker_svc/resolver_app.py` | **Create** — resolver-only FastAPI entry point |
-| `src/moniker_svc/management_app.py` | **Create** — management-only FastAPI entry point |
-| `src/moniker_svc/main.py` | **Refactor** lifespan to call `_bootstrap` helpers; no route or behaviour changes |
+| `moniker_svc/_bootstrap.py` | **Create** — shared init helpers extracted from `main.py` lifespan |
+| `moniker_svc/resolver_app.py` | **Create** — resolver-only FastAPI entry point |
+| `moniker_svc/management_app.py` | **Create** — management-only FastAPI entry point |
+| `moniker_svc/main.py` | **Refactor** lifespan to call `_bootstrap` helpers; no route or behaviour changes |
 | `CLAUDE.md` | **Update** with new start commands |
 
 ---
@@ -165,13 +165,13 @@ No Redis or message bus needed for catalog propagation for now.
 
 ```bash
 # Resolver — run on all scaled instances
-PYTHONPATH=src uvicorn moniker_svc.resolver_app:app --host 0.0.0.0 --port 8051
+PYTHONPATH=. uvicorn moniker_svc.resolver_app:app --host 0.0.0.0 --port 8051
 
 # Management — run once per region
-PYTHONPATH=src uvicorn moniker_svc.management_app:app --host 0.0.0.0 --port 8052
+PYTHONPATH=. uvicorn moniker_svc.management_app:app --host 0.0.0.0 --port 8052
 
 # Legacy monolith (local dev / backwards compat — unchanged, keeps existing port)
-PYTHONPATH=src uvicorn moniker_svc.main:app --host 0.0.0.0 --port 8050
+PYTHONPATH=. uvicorn moniker_svc.main:app --host 0.0.0.0 --port 8050
 ```
 
 ---

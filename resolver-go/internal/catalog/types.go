@@ -21,6 +21,9 @@ const (
 	SourceTypeBloomberg  SourceType = "bloomberg"
 	SourceTypeRefinitiv  SourceType = "refinitiv"
 	SourceTypeOpenSearch SourceType = "opensearch" // OpenSearch/Elasticsearch
+	// External data providers
+	SourceTypeFRED     SourceType = "fred"     // Federal Reserve Economic Data
+	SourceTypeYFinance SourceType = "yfinance" // Yahoo Finance
 	// Synthetic/computed sources
 	SourceTypeComposite SourceType = "composite" // Combines multiple sources
 	SourceTypeDerived   SourceType = "derived"   // Computed from other monikers
@@ -346,6 +349,12 @@ type CatalogNode struct {
 	Path        string     `json:"path" yaml:"-"`
 	DisplayName string     `json:"display_name" yaml:"display_name"`
 	Description string     `json:"description" yaml:"description"`
+
+	// Asset class (rates, credit, mortgages, macro, risk, fx, equities, commodities, em, fixed.income)
+	AssetClass string `json:"asset_class,omitempty" yaml:"asset_class,omitempty"`
+
+	// Update frequency (daily, weekly, monthly, quarterly)
+	UpdateFrequency string `json:"update_frequency,omitempty" yaml:"update_frequency,omitempty"`
 
 	// Domain mapping (for top-level nodes)
 	Domain *string `json:"domain,omitempty" yaml:"domain,omitempty"`

@@ -18,9 +18,8 @@ from jose import jwt as jose_jwt
 from starlette.testclient import TestClient
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_SRC = _REPO_ROOT / "src"
-if str(_SRC) not in sys.path:
-    sys.path.insert(0, str(_SRC))
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 from moniker_svc.auth.config import AuthConfig, OktaJWTConfig, KerberosConfig
 from moniker_svc.auth.authenticator import (

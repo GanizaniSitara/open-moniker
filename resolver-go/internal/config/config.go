@@ -10,19 +10,27 @@ import (
 
 // Config represents the service configuration
 type Config struct {
-	ProjectName string          `yaml:"project_name"`
-	Server      ServerConfig    `yaml:"server"`
-	Telemetry   TelemetryConfig `yaml:"telemetry"`
-	Cache       CacheConfig     `yaml:"cache"`
-	Catalog     CatalogConfig   `yaml:"catalog"`
-	Auth        AuthConfig      `yaml:"auth"`
-	ConfigUI    ConfigUIConfig  `yaml:"config_ui"`
+	ProjectName  string            `yaml:"project_name"`
+	Server       ServerConfig      `yaml:"server"`
+	Telemetry    TelemetryConfig   `yaml:"telemetry"`
+	Cache        CacheConfig       `yaml:"cache"`
+	Redis        RedisConfig       `yaml:"redis"`
+	Catalog      CatalogConfig     `yaml:"catalog"`
+	Auth         AuthConfig        `yaml:"auth"`
+	ConfigUI     ConfigUIConfig    `yaml:"config_ui"`
+	Deprecation  DeprecationConfig `yaml:"deprecation"`
+	Models       ModelsConfig      `yaml:"models"`
+	Requests     RequestsConfig    `yaml:"requests"`
+	Governance   GovernanceConfig  `yaml:"governance"`
+	SqlCatalog   SqlCatalogConfig  `yaml:"sql_catalog"`
 }
 
 // ServerConfig represents server configuration
 type ServerConfig struct {
-	Host string `yaml:"host"`
-	Port int    `yaml:"port"`
+	Host    string `yaml:"host"`
+	Port    int    `yaml:"port"`
+	Workers int    `yaml:"workers"`
+	Reload  bool   `yaml:"reload"`
 }
 
 // TelemetryConfig represents telemetry configuration
@@ -60,6 +68,55 @@ type ConfigUIConfig struct {
 	Enabled        bool   `yaml:"enabled"`
 	YAMLOutputPath string `yaml:"yaml_output_path"`
 	ShowFilePaths  bool   `yaml:"show_file_paths"`
+}
+
+// RedisConfig represents Redis cache configuration
+type RedisConfig struct {
+	Enabled              bool    `yaml:"enabled"`
+	Host                 string  `yaml:"host"`
+	Port                 int     `yaml:"port"`
+	DB                   int     `yaml:"db"`
+	Password             string  `yaml:"password"`
+	Prefix               string  `yaml:"prefix"`
+	SocketTimeout        float64 `yaml:"socket_timeout"`
+	SocketConnectTimeout float64 `yaml:"socket_connect_timeout"`
+}
+
+// DeprecationConfig represents deprecation/decommissioning feature toggles
+type DeprecationConfig struct {
+	Enabled              bool `yaml:"enabled"`
+	RedirectOnResolve    bool `yaml:"redirect_on_resolve"`
+	ValidatedReload      bool `yaml:"validated_reload"`
+	BlockBreakingReload  bool `yaml:"block_breaking_reload"`
+	DeprecationTelemetry bool `yaml:"deprecation_telemetry"`
+}
+
+// ModelsConfig represents business models configuration
+type ModelsConfig struct {
+	Enabled        bool   `yaml:"enabled"`
+	DefinitionFile string `yaml:"definition_file"`
+}
+
+// RequestsConfig represents moniker request/approval workflow configuration
+type RequestsConfig struct {
+	Enabled        bool   `yaml:"enabled"`
+	DefinitionFile string `yaml:"definition_file"`
+}
+
+// GovernanceConfig represents enterprise governance configuration
+type GovernanceConfig struct {
+	RateLimiterEnabled      bool    `yaml:"rate_limiter_enabled"`
+	RequestsPerSecond       float64 `yaml:"requests_per_second"`
+	BurstCapacity           float64 `yaml:"burst_capacity"`
+	GlobalRequestsPerSecond float64 `yaml:"global_requests_per_second"`
+	GlobalBurstCapacity     float64 `yaml:"global_burst_capacity"`
+}
+
+// SqlCatalogConfig represents SQL catalog import/browse configuration
+type SqlCatalogConfig struct {
+	Enabled      bool   `yaml:"enabled"`
+	DBPath       string `yaml:"db_path"`
+	SourceDBPath string `yaml:"source_db_path"`
 }
 
 // Load loads configuration from a YAML file

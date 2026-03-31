@@ -162,7 +162,7 @@ def main():
     # Check service
     if not check_service(base):
         print(f"  ERROR: Cannot reach service at {base}")
-        print(f"  Start it with: PYTHONPATH=src python3 -m uvicorn moniker_svc.main:app --port 8050")
+        print(f"  Start it with: PYTHONPATH=. python3 -m uvicorn moniker_svc.main:app --port 8050")
         sys.exit(1)
 
     log("o", "Service is reachable")

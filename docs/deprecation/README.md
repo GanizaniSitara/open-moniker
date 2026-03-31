@@ -191,7 +191,7 @@ New optional fields in request body:
 
 ## Files Changed
 
-### Server (`open-moniker-svc`)
+### Server (`open-moniker`)
 | File | Changes |
 |---|---|
 | `config.py` | `DeprecationConfig` dataclass + wired into `Config` |
@@ -214,7 +214,7 @@ New optional fields in request body:
 
 ```bash
 cd ~/open-moniker-client-tests
-PYTHONPATH=~/open-moniker-svc/src:~/open-moniker-client python3 -m pytest test_governance.py -v
+PYTHONPATH=~/open-moniker:~/open-moniker-client python3 -m pytest test_governance.py -v
 ```
 
 22 new test cases cover all 6 phases. Tests for the feature toggle verify

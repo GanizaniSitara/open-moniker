@@ -12,11 +12,11 @@ from pathlib import Path
 _TESTS_DIR = Path(__file__).parent
 _EXTERNAL_DIR = _TESTS_DIR.parent.parent  # external/moniker-tests -> external
 _REPO_ROOT = _EXTERNAL_DIR.parent  # external -> open-moniker
-_RUNNING_IN_MONOREPO = (_REPO_ROOT / "src" / "moniker_svc").exists()
+_RUNNING_IN_MONOREPO = (_REPO_ROOT / "moniker_svc").exists()
 
 if _RUNNING_IN_MONOREPO:
     # Add paths for local development
-    sys.path.insert(0, str(_REPO_ROOT / "src"))
+    sys.path.insert(0, str(_REPO_ROOT))
     sys.path.insert(0, str(_EXTERNAL_DIR / "moniker-data" / "src"))
 
 # Import from moniker-svc package

@@ -118,7 +118,7 @@ Once `/resolve` is implemented, you can compare responses:
 
 ```bash
 # Start Python resolver
-PYTHONPATH=src uvicorn moniker_svc.resolver_app:app --port 8051 &
+PYTHONPATH=. uvicorn moniker_svc.resolver_app:app --port 8051 &
 
 # Start Go resolver
 ./bin/resolver --port 8053 &
@@ -176,7 +176,7 @@ make build
 ## Resources
 
 - **Plan**: See conversation for full implementation plan
-- **Python Reference**: `/home/user/open-moniker-svc/src/moniker_svc/`
-- **Go Code**: `/home/user/open-moniker-svc/resolver-go/`
+- **Python Reference**: `/home/user/open-moniker/moniker_svc/`
+- **Go Code**: `/home/user/open-moniker/resolver-go/`
 - **Status**: `IMPLEMENTATION_STATUS.md`
 - **Full Docs**: `README.md`
