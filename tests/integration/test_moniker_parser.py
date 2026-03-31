@@ -118,3 +118,92 @@ class TestParseMoniker:
     def test_invalid_scheme(self):
         with pytest.raises(MonikerParseError):
             parse_moniker("http://market-data/prices")
+
+
+class TestSegmentId:
+    """Tests for in-path @id identity parameters."""
+
+    def test_segment_id_basic(self):
+        m = parse_moniker("holdings/positions@ACC001/summary")
+        assert m.segment_id == (1, "ACC001")
+        assert str(m.path) == "holdings/positions/summary"
+        assert m.version is None
+
+    def test_segment_id_first_segment_with_namespace(self):
+        """Segment 0 @id requires namespace prefix to avoid ambiguity."""
+        m = parse_moniker("prod@portfolios@FUND_ALPHA/holdings")
+        assert m.namespace == "prod"
+        assert m.segment_id == (0, "FUND_ALPHA")
+        assert str(m.path) == "portfolios/holdings"
+
+    def test_segment_id_numeric(self):
+        m = parse_moniker("holdings/accounts@12345/transactions/recent")
+        assert m.segment_id == (1, "12345")
+        assert str(m.path) == "holdings/accounts/transactions/recent"
+
+    def test_segment_id_with_dots_and_hyphens(self):
+        m = parse_moniker("holdings/accounts@ACC-001.v2/transactions")
+        assert m.segment_id == (1, "ACC-001.v2")
+        assert str(m.path) == "holdings/accounts/transactions"
+
+    def test_segment_id_path_cleaned_for_catalog(self):
+        """The @id is stripped from the segment for catalog lookup."""
+        m = parse_moniker("holdings/positions@ACC001/summary")
+        # Catalog sees holdings/positions/summary (no @id)
+        assert m.path.segments == ("holdings", "positions", "summary")
+
+    def test_no_segment_id_for_version_at_end(self):
+        """@ at end of path is a version, not segment identity."""
+        m = parse_moniker("prices/AAPL@20260101")
+        assert m.segment_id is None
+        assert m.version == "20260101"
+
+    def test_mid_path_at_is_segment_id_not_version(self):
+        """@ in a non-final segment is always segment identity."""
+        m = parse_moniker("securities/012345678@20260101/details")
+        # Under new rules: @ in mid-path segment = segment identity
+        assert m.segment_id == (1, "20260101")
+        assert str(m.path) == "securities/012345678/details"
+        assert m.version is None
+
+    def test_segment_id_with_version(self):
+        """Segment identity and version can coexist."""
+        m = parse_moniker("holdings/positions@ACC001/summary@latest")
+        assert m.segment_id == (1, "ACC001")
+        assert m.version == "latest"
+        assert str(m.path) == "holdings/positions/summary"
+
+    def test_segment_id_with_namespace(self):
+        m = parse_moniker("prod@holdings/positions@ACC001/summary")
+        assert m.namespace == "prod"
+        assert m.segment_id == (1, "ACC001")
+        assert str(m.path) == "holdings/positions/summary"
+
+    def test_segment_id_with_namespace_and_version(self):
+        m = parse_moniker("prod@holdings/positions@ACC001/summary@latest")
+        assert m.namespace == "prod"
+        assert m.segment_id == (1, "ACC001")
+        assert m.version == "latest"
+        assert str(m.path) == "holdings/positions/summary"
+
+    def test_multiple_at_ids_raises(self):
+        with pytest.raises(MonikerParseError, match="At most one"):
+            parse_moniker("domain/holdings@X/positions@Y/summary")
+
+    def test_empty_segment_id_raises(self):
+        with pytest.raises(MonikerParseError, match="Empty @id"):
+            parse_moniker("domain/holdings@/summary")
+
+    def test_invalid_segment_id_chars(self):
+        with pytest.raises(MonikerParseError, match="Invalid segment identity"):
+            parse_moniker("domain/holdings@ACC 001/summary")
+
+    def test_segment_id_preserved_by_with_version(self):
+        m = parse_moniker("holdings/positions@ACC001/summary")
+        m2 = m.with_version("latest")
+        assert m2.segment_id == (1, "ACC001")
+
+    def test_segment_id_preserved_by_with_namespace(self):
+        m = parse_moniker("holdings/positions@ACC001/summary")
+        m2 = m.with_namespace("prod")
+        assert m2.segment_id == (1, "ACC001")

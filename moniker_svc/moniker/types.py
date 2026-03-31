@@ -161,6 +161,7 @@ class Moniker:
     version_type: VersionType | None = None  # Semantic type of version
     sub_resource: str | None = None  # Path after @version (e.g., "details.corporate.actions")
     revision: int | None = None  # /v2 -> 2
+    segment_id: tuple[int, str] | None = None  # In-path identity: (segment_index, id_value)
     params: QueryParams = field(default_factory=lambda: QueryParams({}))
 
     def __str__(self) -> str:
@@ -279,6 +280,7 @@ class Moniker:
             version_type=version_type,
             sub_resource=self.sub_resource,
             revision=self.revision,
+            segment_id=self.segment_id,
             params=self.params,
         )
 
@@ -291,6 +293,7 @@ class Moniker:
             version_type=self.version_type,
             sub_resource=self.sub_resource,
             revision=self.revision,
+            segment_id=self.segment_id,
             params=self.params,
         )
 
@@ -303,5 +306,6 @@ class Moniker:
             version_type=self.version_type,
             sub_resource=sub_resource,
             revision=self.revision,
+            segment_id=self.segment_id,
             params=self.params,
         )

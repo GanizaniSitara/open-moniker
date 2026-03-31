@@ -23,6 +23,9 @@ NAMESPACE_PATTERN = re.compile(r"^[a-zA-Z][a-zA-Z0-9_\-]*$")
 # Version pattern: digits (date) or alphanumeric (like "latest")
 VERSION_PATTERN = re.compile(r"^[a-zA-Z0-9]+$")
 
+# Segment identity pattern: valid chars for the @id value within a path segment
+SEGMENT_ID_VALUE_PATTERN = re.compile(r"^[a-zA-Z0-9_.\-]+$")
+
 # Revision pattern: /vN or /VN where N is a positive integer (case-insensitive)
 REVISION_PATTERN = re.compile(r"^[vV](\d+)$")
 
@@ -200,6 +203,44 @@ def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
                 revision = int(rev_match.group(1))
                 remaining = before
 
+    # Extract in-path segment identity (@id embedded in a mid-path segment).
+    # Disambiguation: if @ appears in a non-final segment (path continues after it),
+    # it's a segment identity.  If @ is at the end of the path, it's a version.
+    # At most one @id per path.
+    # Examples:
+    #   holdings/positions@ACC001/summary -> segment_id=(1, "ACC001"), path segments intact
+    #   prices/AAPL@20260101             -> version (no change, existing behavior)
+    segment_id = None
+    if "@" in remaining:
+        parts = remaining.split("/")
+        at_segments = [(i, p) for i, p in enumerate(parts) if "@" in p]
+
+        # Segment identity: @ appears in a segment that is NOT the last one
+        mid_at = [(i, p) for i, p in at_segments if i < len(parts) - 1]
+
+        if mid_at:
+            if len(mid_at) > 1:
+                raise MonikerParseError(
+                    "At most one @id identity parameter is allowed per path."
+                )
+            seg_idx, seg_text = mid_at[0]
+            seg_name, seg_id_value = seg_text.split("@", 1)
+
+            if not seg_id_value:
+                raise MonikerParseError(
+                    f"Empty @id value in segment '{seg_text}'."
+                )
+            if validate and not SEGMENT_ID_VALUE_PATTERN.match(seg_id_value):
+                raise MonikerParseError(
+                    f"Invalid segment identity value: '{seg_id_value}'. "
+                    "Must contain only alphanumerics, hyphens, underscores, or dots."
+                )
+
+            segment_id = (seg_idx, seg_id_value)
+            # Replace the segment with the clean name (without @id) for catalog lookup
+            parts[seg_idx] = seg_name
+            remaining = "/".join(parts)
+
     # Parse version suffix with optional sub-resource: @version[/sub.resource]
     # Examples:
     #   securities/012345678@20260101 -> version=20260101, sub_resource=None
@@ -278,6 +319,7 @@ def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
         version_type=classify_version(version),
         sub_resource=sub_resource,
         revision=revision,
+        segment_id=segment_id,
         params=QueryParams(params),
     )
 

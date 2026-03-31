@@ -193,6 +193,36 @@ PLACEHOLDERS: dict[str, PlaceholderInfo] = {
         example_output="TO_DATE('20260101', 'YYYYMMDD')",
         category="dialect",
     ),
+
+    # Segment identity placeholders (in-path @id)
+    "segment_id[N]": PlaceholderInfo(
+        name="segment_id[N]",
+        description="Identity value from segment N (only if that segment carries @id)",
+        example_input="holdings/positions@ACC001/summary with {segment_id[1]}",
+        example_output="ACC001",
+        category="segment",
+    ),
+    "segment_id_value": PlaceholderInfo(
+        name="segment_id_value",
+        description="Raw identity value regardless of which segment carries it",
+        example_input="holdings/positions@ACC001/summary",
+        example_output="ACC001",
+        category="segment",
+    ),
+    "segment_id_index": PlaceholderInfo(
+        name="segment_id_index",
+        description="Index of the segment carrying the @id identity",
+        example_input="holdings/positions@ACC001/summary",
+        example_output="1",
+        category="segment",
+    ),
+    "has_segment_id": PlaceholderInfo(
+        name="has_segment_id",
+        description="'true' if any segment has an @id identity, else 'false'",
+        example_input="holdings/positions@ACC001/summary",
+        example_output="true",
+        category="segment",
+    ),
 }
 
 # Backward compatibility aliases

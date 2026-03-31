@@ -422,6 +422,10 @@ class MonikerService:
             "is_tenor": "true" if is_lookback else "false",
             "tenor_value": lookback_value,
             "tenor_unit": lookback_unit,
+            # Segment identity placeholders
+            "segment_id_value": moniker.segment_id[1] if moniker.segment_id else "",
+            "segment_id_index": str(moniker.segment_id[0]) if moniker.segment_id else "",
+            "has_segment_id": "true" if moniker.segment_id else "false",
         }
 
         result = template
@@ -434,6 +438,15 @@ class MonikerService:
             return ""
 
         result = re.sub(r"\{segments\[(\d+)\]\}", replace_segment, result)
+
+        # Handle {segment_id[N]} patterns - identity value from segment N
+        def replace_segment_id(match: re.Match) -> str:
+            idx = int(match.group(1))
+            if moniker.segment_id and moniker.segment_id[0] == idx:
+                return moniker.segment_id[1]
+            return ""
+
+        result = re.sub(r"\{segment_id\[(\d+)\]\}", replace_segment_id, result)
 
         # Handle {segments[N]:date} patterns - formats YYYYMMDD as YYYY-MM-DD
         def replace_segment_date(match: re.Match) -> str:
