@@ -767,6 +767,7 @@ def get_streamable_http_app():
     manager's task group is initialised (mounted sub-apps don't get
     their lifespans triggered by FastAPI).
     """
+    mcp._session_manager = None  # force fresh session manager each call
     return mcp.streamable_http_app()
 
 
