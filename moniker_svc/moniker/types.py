@@ -164,6 +164,17 @@ class Moniker:
     segment_id: tuple[int, str] | None = None  # In-path identity: (segment_index, id_value)
     params: QueryParams = field(default_factory=lambda: QueryParams({}))
 
+    def _path_with_segment_id(self) -> str:
+        """Return path string with @id re-injected into the correct segment."""
+        path_str = str(self.path)
+        if not self.segment_id:
+            return path_str
+        seg_idx, seg_id_value = self.segment_id
+        segments = path_str.split("/")
+        if seg_idx < len(segments):
+            segments[seg_idx] = f"{segments[seg_idx]}@{seg_id_value}"
+        return "/".join(segments)
+
     def __str__(self) -> str:
         parts = []
 
@@ -171,8 +182,8 @@ class Moniker:
         if self.namespace:
             parts.append(f"{self.namespace}@")
 
-        # Path
-        parts.append(str(self.path))
+        # Path (with @id re-injected)
+        parts.append(self._path_with_segment_id())
 
         # Version suffix
         if self.version:
@@ -202,13 +213,13 @@ class Moniker:
 
     @property
     def canonical_path(self) -> str:
-        """The path as a string (without namespace, version, or params)."""
-        return str(self.path)
+        """The path with @id identity but without namespace, version, or params."""
+        return self._path_with_segment_id()
 
     @property
     def full_path(self) -> str:
-        """Path including version, sub-resource, and revision but not namespace."""
-        parts = [str(self.path)]
+        """Path including @id, version, sub-resource, and revision but not namespace."""
+        parts = [self._path_with_segment_id()]
         if self.version:
             parts.append(f"@{self.version}")
         if self.sub_resource:

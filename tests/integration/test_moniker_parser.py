@@ -207,3 +207,35 @@ class TestSegmentId:
         m = parse_moniker("holdings/positions@ACC001/summary")
         m2 = m.with_namespace("prod")
         assert m2.segment_id == (1, "ACC001")
+
+    def test_segment_id_str_roundtrip(self):
+        """__str__ must preserve @id so parse(str(m)) == m."""
+        m = parse_moniker("holdings/positions@ACC001/summary")
+        s = str(m)
+        assert "positions@ACC001" in s
+        m2 = parse_moniker(s)
+        assert m2.segment_id == m.segment_id
+        assert m2.path == m.path
+
+    def test_segment_id_str_roundtrip_with_namespace_and_version(self):
+        m = parse_moniker("prod@holdings/positions@ACC001/summary@latest")
+        s = str(m)
+        m2 = parse_moniker(s)
+        assert m2.namespace == "prod"
+        assert m2.segment_id == (1, "ACC001")
+        assert m2.version == "latest"
+        assert m2.path == m.path
+
+    def test_segment_id_full_path(self):
+        m = parse_moniker("holdings/positions@ACC001/summary@latest/v2")
+        assert "positions@ACC001" in m.full_path
+        assert m.full_path == "holdings/positions@ACC001/summary@latest/v2"
+
+    def test_segment_id_canonical_path(self):
+        m = parse_moniker("holdings/positions@ACC001/summary")
+        assert m.canonical_path == "holdings/positions@ACC001/summary"
+
+    def test_segment_id_catalog_path_clean(self):
+        """str(moniker.path) must remain clean (no @id) for catalog lookup."""
+        m = parse_moniker("holdings/positions@ACC001/summary")
+        assert str(m.path) == "holdings/positions/summary"
