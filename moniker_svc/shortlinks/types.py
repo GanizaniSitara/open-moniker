@@ -43,7 +43,6 @@ class Shortlink:
     id: str
     base_path: str  # e.g. "fixed.income/govies/sovereign"
     filter_segments: tuple[str, ...]  # e.g. ("US", "10Y", "SHORT_DATED")
-    version: str | None = None  # e.g. "3M", "20260115", "latest"
     params: dict[str, str] = field(default_factory=dict)  # query params
     label: str = ""
     created_by: str = ""
@@ -55,23 +54,19 @@ class Shortlink:
     def canonical_filter(self) -> str:
         """Canonical string for the filter state (used for dedup hashing)."""
         parts = "/".join(self.filter_segments)
-        if self.version:
-            parts += f"@{self.version}"
         if self.params:
             qs = "&".join(f"{k}={v}" for k, v in sorted(self.params.items()))
             parts += f"?{qs}"
         return parts
 
     def expand(self) -> str:
-        """Expand to the full moniker path (base + filters + version + params).
+        """Expand to the full moniker path (base + filters + params).
 
         Returns the path string ready for ``moniker://`` prefix.
         """
         path = self.base_path
         if self.filter_segments:
             path += "/" + "/".join(self.filter_segments)
-        if self.version:
-            path += f"@{self.version}"
         if self.params:
             qs = "&".join(f"{k}={v}" for k, v in sorted(self.params.items()))
             path += f"?{qs}"
@@ -82,7 +77,6 @@ class Shortlink:
             "id": self.id,
             "base_path": self.base_path,
             "filter_segments": list(self.filter_segments),
-            "version": self.version,
             "params": dict(self.params),
             "label": self.label,
             "created_by": self.created_by,
@@ -95,7 +89,6 @@ class Shortlink:
             id=data["id"],
             base_path=data["base_path"],
             filter_segments=tuple(data.get("filter_segments", ())),
-            version=data.get("version"),
             params=data.get("params", {}),
             label=data.get("label", ""),
             created_by=data.get("created_by", ""),

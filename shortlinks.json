@@ -6,7 +6,6 @@
       "equity",
       "sp500"
     ],
-    "version": "latest",
     "params": {},
     "label": "S&P 500 returns",
     "created_by": "",
@@ -19,7 +18,6 @@
       "A",
       "B"
     ],
-    "version": null,
     "params": {},
     "label": "",
     "created_by": "",
@@ -31,7 +29,6 @@
     "filter_segments": [
       "X"
     ],
-    "version": null,
     "params": {},
     "label": "",
     "created_by": "",
@@ -41,7 +38,6 @@
     "id": "zuwljDa",
     "base_path": "benchmarks.returns",
     "filter_segments": [],
-    "version": "latest",
     "params": {},
     "label": "",
     "created_by": "",

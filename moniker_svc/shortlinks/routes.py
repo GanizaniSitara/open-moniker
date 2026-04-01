@@ -40,7 +40,6 @@ def _to_model(link: Shortlink) -> ShortlinkModel:
         id=link.id,
         base_path=link.base_path,
         filter_segments=list(link.filter_segments),
-        version=link.version,
         params=link.params,
         label=link.label,
         created_by=link.created_by,
@@ -62,7 +61,6 @@ async def create_shortlink(req: CreateShortlinkRequest):
     link = store.create(
         base_path=req.base_path,
         filter_segments=req.filter_segments,
-        version=req.version,
         params=req.params,
         label=req.label,
     )

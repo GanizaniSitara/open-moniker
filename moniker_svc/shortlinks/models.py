@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 class CreateShortlinkRequest(BaseModel):
     base_path: str = Field(..., description="Base moniker path (e.g. 'fixed.income/govies/sovereign')")
     filter_segments: list[str] = Field(default_factory=list, description="Filter segments after base path")
-    version: str | None = Field(None, description="Version string (e.g. '3M', '20260115', 'latest')")
     params: dict[str, str] = Field(default_factory=dict, description="Query parameters")
     label: str = Field("", description="Human-readable label")
 
@@ -17,13 +16,12 @@ class ShortlinkModel(BaseModel):
     id: str
     base_path: str
     filter_segments: list[str]
-    version: str | None = None
     params: dict[str, str] = {}
     label: str = ""
     created_by: str = ""
     created_at: str = ""
     resolve_path: str = ""  # e.g. "fixed.income/govies/sovereign/~xK9f2p"
-    expanded_path: str = ""  # e.g. "fixed.income/govies/sovereign/US/10Y/SHORT_DATED@3M?format=json"
+    expanded_path: str = ""  # e.g. "fixed.income/govies/sovereign/US/10Y/SHORT_DATED?format=json"
 
 
 class ShortlinkListResponse(BaseModel):

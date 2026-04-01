@@ -22,11 +22,9 @@ from moniker_svc.dialect.mssql import MSSQLDialect
 from moniker_svc.dialect.rest import RestDialect
 from moniker_svc.dialect.placeholders import (
     PLACEHOLDERS,
-    PLACEHOLDER_ALIASES,
     get_placeholder_help,
     list_placeholders,
     format_placeholder_reference,
-    get_pattern,
 )
 
 
@@ -291,7 +289,7 @@ class TestPlaceholders:
         for name, info in PLACEHOLDERS.items():
             assert info.name, f"{name} missing name"
             assert info.description, f"{name} missing description"
-            assert info.category in ("raw", "version", "dialect", "segment")
+            assert info.category in ("raw", "dialect", "segment")
 
     def test_get_placeholder_help_found(self):
         info = get_placeholder_help("path")
@@ -302,10 +300,9 @@ class TestPlaceholders:
     def test_get_placeholder_help_not_found(self):
         assert get_placeholder_help("nonexistent") is None
 
-    def test_alias_resolves(self):
+    def test_removed_alias_returns_none(self):
         info = get_placeholder_help("is_tenor")
-        assert info is not None
-        assert info.name == "is_lookback"  # alias target
+        assert info is None
 
     def test_list_all(self):
         all_ph = list_placeholders()
@@ -322,19 +319,5 @@ class TestPlaceholders:
     def test_format_reference_contains_all_categories(self):
         ref = format_placeholder_reference()
         assert "Raw Value Placeholders" in ref
-        assert "Version Type Placeholders" in ref
         assert "Dialect-Aware SQL Placeholders" in ref
         assert "Path Segment Placeholders" in ref
-        assert "Backward Compatibility Aliases" in ref
-
-    def test_get_pattern(self):
-        p = get_pattern("lookback_query")
-        assert p is not None
-        assert "{date_filter:trade_date}" in p
-
-    def test_get_pattern_not_found(self):
-        assert get_pattern("nonexistent") is None
-
-    def test_aliases_point_to_valid_placeholders(self):
-        for alias, target in PLACEHOLDER_ALIASES.items():
-            assert target in PLACEHOLDERS, f"Alias '{alias}' points to unknown '{target}'"

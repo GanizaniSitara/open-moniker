@@ -2,32 +2,7 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any
-
-
-class VersionType(Enum):
-    """Semantic type of a version specifier.
-
-    Examples:
-        @20260101 -> DATE
-        @latest -> LATEST
-        @3M, @12Y, @1W -> LOOKBACK (historical lookback period)
-        @daily, @weekly, @monthly -> FREQUENCY (time series granularity)
-        @all -> ALL
-        @anything_else -> CUSTOM
-    """
-    DATE = "date"           # @20260101 (YYYYMMDD format)
-    LATEST = "latest"       # @latest
-    LOOKBACK = "lookback"   # @3M, @12Y, @1W, @5D (lookback period)
-    FREQUENCY = "frequency" # @daily, @weekly, @monthly
-    ALL = "all"             # @all (full time series)
-    CUSTOM = "custom"       # Source-specific version identifier
-
-    # Backward compatibility alias
-    TENOR = LOOKBACK
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,37 +106,31 @@ class QueryParams:
 @dataclass(frozen=True, slots=True)
 class Moniker:
     """
-    A complete moniker reference with optional namespace, version, and revision.
+    A complete moniker reference with optional namespace and revision.
 
-    Format: [namespace@]path/segments[@version][/sub.resource][/vN][?query=params]
+    Format: [namespace@]path/segments[/vN][?query=params]
+
+    The @ character within a path segment denotes an identity parameter:
+        holdings/positions@ACC001/summary
 
     Components:
         namespace: Access scope (e.g., "official", "user", "trading-desk")
         path: Hierarchical path with dot-notation support
-        version: Point-in-time reference (date, "latest", tenor like "3M", or "all")
-        version_type: Semantic type of version (DATE, LATEST, TENOR, ALL, CUSTOM)
-        sub_resource: Path after @version (e.g., "details" or "details.corporate.actions")
+        segment_id: In-path identity parameter (segment_index, id_value)
         revision: Schema/format revision (integer, e.g., 2 for /v2)
         params: Additional query parameters
 
     Examples:
         indices.sovereign/developed/EUR/ALL
-        commodities.derivatives/crypto/ETH@20260115/v2
-        verified@reference.security/ISIN/US0378331005@latest
-        user@analytics.risk/views/my-watchlist@20260115/v3
-        securities/012345678@20260101/details
-        securities/012345678@20260101/details.corporate.actions
-        prices.equity/AAPL@3M (3-month lookback)
-        risk.cvar/portfolio-123@all (full time series)
+        verified@reference.security/ISIN/US0378331005
+        holdings/positions@ACC001/summary
+        prod@holdings/positions@ACC001/summary/v2
         holdings/20260115/fund_alpha?format=json
     """
     path: MonikerPath
     namespace: str | None = None
-    version: str | None = None  # @latest, @20260115, @3M, @all, etc.
-    version_type: VersionType | None = None  # Semantic type of version
-    sub_resource: str | None = None  # Path after @version (e.g., "details.corporate.actions")
-    revision: int | None = None  # /v2 -> 2
     segment_id: tuple[int, str] | None = None  # In-path identity: (segment_index, id_value)
+    revision: int | None = None  # /v2 -> 2
     params: QueryParams = field(default_factory=lambda: QueryParams({}))
 
     def _path_with_segment_id(self) -> str:
@@ -185,14 +154,6 @@ class Moniker:
         # Path (with @id re-injected)
         parts.append(self._path_with_segment_id())
 
-        # Version suffix
-        if self.version:
-            parts.append(f"@{self.version}")
-
-        # Sub-resource (after version, before revision)
-        if self.sub_resource:
-            parts.append(f"/{self.sub_resource}")
-
         # Revision suffix
         if self.revision is not None:
             parts.append(f"/v{self.revision}")
@@ -213,110 +174,23 @@ class Moniker:
 
     @property
     def canonical_path(self) -> str:
-        """The clean path for catalog lookup (without @id, namespace, version, or params)."""
+        """The clean path for catalog lookup (without @id, namespace, or params)."""
         return str(self.path)
 
     @property
     def full_path(self) -> str:
-        """Path including @id, version, sub-resource, and revision but not namespace."""
+        """Path including @id and revision but not namespace."""
         parts = [self._path_with_segment_id()]
-        if self.version:
-            parts.append(f"@{self.version}")
-        if self.sub_resource:
-            parts.append(f"/{self.sub_resource}")
         if self.revision is not None:
             parts.append(f"/v{self.revision}")
         return "".join(parts)
-
-    @property
-    def is_versioned(self) -> bool:
-        """Whether this moniker has a version specifier."""
-        return self.version is not None
-
-    @property
-    def is_latest(self) -> bool:
-        """Whether this moniker explicitly requests latest version."""
-        return self.version == "latest"
-
-    @property
-    def version_date(self) -> str | None:
-        """Extract date from version if it's a date format (YYYYMMDD)."""
-        if self.version_type == VersionType.DATE:
-            return self.version
-        # Fallback for backwards compatibility
-        if self.version and self.version.isdigit() and len(self.version) == 8:
-            return self.version
-        return None
-
-    @property
-    def version_lookback(self) -> tuple[int, str] | None:
-        """Extract lookback components if version is a lookback period (e.g., 3M -> (3, 'M')).
-
-        Returns:
-            Tuple of (value, unit) where unit is Y/M/W/D, or None if not a lookback.
-        """
-        if self.version_type == VersionType.LOOKBACK and self.version:
-            match = re.match(r"^(\d+)([YMWD])$", self.version, re.IGNORECASE)
-            if match:
-                return (int(match.group(1)), match.group(2).upper())
-        return None
-
-    @property
-    def version_tenor(self) -> tuple[int, str] | None:
-        """Backward compatibility alias for version_lookback."""
-        return self.version_lookback
-
-    @property
-    def version_frequency(self) -> str | None:
-        """Extract frequency if version is a frequency specifier.
-
-        Returns:
-            Frequency string (daily, weekly, monthly) or None if not a frequency.
-        """
-        if self.version_type == VersionType.FREQUENCY and self.version:
-            return self.version.lower()
-        return None
-
-    @property
-    def is_all(self) -> bool:
-        """Whether this moniker requests the full time series."""
-        return self.version_type == VersionType.ALL
-
-    def with_version(self, version: str, version_type: VersionType | None = None) -> Moniker:
-        """Create a copy with a different version."""
-        return Moniker(
-            path=self.path,
-            namespace=self.namespace,
-            version=version,
-            version_type=version_type,
-            sub_resource=self.sub_resource,
-            revision=self.revision,
-            segment_id=self.segment_id,
-            params=self.params,
-        )
 
     def with_namespace(self, namespace: str | None) -> Moniker:
         """Create a copy with a different namespace."""
         return Moniker(
             path=self.path,
             namespace=namespace,
-            version=self.version,
-            version_type=self.version_type,
-            sub_resource=self.sub_resource,
-            revision=self.revision,
             segment_id=self.segment_id,
-            params=self.params,
-        )
-
-    def with_sub_resource(self, sub_resource: str | None) -> Moniker:
-        """Create a copy with a different sub-resource."""
-        return Moniker(
-            path=self.path,
-            namespace=self.namespace,
-            version=self.version,
-            version_type=self.version_type,
-            sub_resource=sub_resource,
             revision=self.revision,
-            segment_id=self.segment_id,
             params=self.params,
         )

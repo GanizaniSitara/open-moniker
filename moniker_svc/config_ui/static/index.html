@@ -1320,29 +1320,19 @@
             raw: [
                 { name: 'path', desc: 'Full sub-path after the catalog binding', example: 'equity/AAPL' },
                 { name: 'segments[N]', desc: 'Specific path segment by index (0-based)', example: '{segments[0]} = first segment' },
-                { name: 'version', desc: 'Raw version string from @suffix', example: '3M, 20260115, latest' },
                 { name: 'revision', desc: 'Revision number from /vN suffix', example: '2' },
                 { name: 'namespace', desc: 'Namespace prefix if provided', example: 'prod' },
-                { name: 'sub_resource', desc: 'Sub-resource path after @version', example: 'details.corporate' },
-            ],
-            version: [
-                { name: 'version_type', desc: 'Semantic type: date, latest, lookback, all', example: 'lookback' },
-                { name: 'is_date', desc: "'true' if version is YYYYMMDD format", example: 'true/false' },
-                { name: 'is_latest', desc: "'true' if version is 'latest'", example: 'true/false' },
-                { name: 'is_lookback', desc: "'true' if lookback period (3M, 1Y, etc.)", example: 'true/false' },
-                { name: 'is_all', desc: "'true' if version is 'all'", example: 'true/false' },
-                { name: 'lookback_value', desc: 'Numeric part of lookback period', example: '3 from 3M' },
-                { name: 'lookback_unit', desc: 'Unit: Y, M, W, D', example: 'M from 3M' },
             ],
             dialect: [
                 { name: 'current_date', desc: 'Dialect-specific current date SQL', example: 'CURRENT_DATE() / SYSDATE' },
-                { name: 'version_date', desc: 'Dialect-specific version date SQL', example: "TO_DATE('20260115', 'YYYYMMDD')" },
-                { name: 'lookback_start_sql', desc: 'Lookback start date SQL', example: "DATEADD('MONTH', -3, CURRENT_DATE())" },
-                { name: 'date_filter:COL', desc: 'Complete WHERE clause for date column', example: 'trade_date >= ...' },
+                { name: 'segment_date_sql[N]', desc: 'Segment N as dialect-aware SQL date', example: "TO_DATE('20260101', 'YYYYMMDD')" },
             ],
             segment: [
                 { name: 'filter[N]:COL', desc: "SQL filter for segment N on column COL. 'ALL' becomes 1=1", example: "sector = 'tech'" },
                 { name: 'is_all[N]', desc: "'true' if segment N is 'ALL'", example: 'true/false' },
+                { name: 'segment_id[N]', desc: 'Identity value from segment N (@id)', example: 'ACC001' },
+                { name: 'segment_id_value', desc: 'Raw identity value', example: 'ACC001' },
+                { name: 'has_segment_id', desc: "'true' if any segment has @id", example: 'true/false' },
             ],
         };
 

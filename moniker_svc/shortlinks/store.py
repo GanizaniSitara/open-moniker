@@ -60,7 +60,6 @@ class ShortlinkStore:
         self,
         base_path: str,
         filter_segments: list[str] | tuple[str, ...],
-        version: str | None = None,
         params: dict[str, str] | None = None,
         label: str = "",
         created_by: str = "",
@@ -71,7 +70,7 @@ class ShortlinkStore:
 
         # Build canonical filter for hashing
         tmp = Shortlink(id="", base_path=base_path, filter_segments=segments,
-                        version=version, params=params)
+                        params=params)
         canonical = tmp.canonical_filter
 
         with self._lock:
@@ -91,7 +90,6 @@ class ShortlinkStore:
                 id=short_id,
                 base_path=base_path,
                 filter_segments=segments,
-                version=version,
                 params=params,
                 label=label,
                 created_by=created_by,

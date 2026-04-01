@@ -120,6 +120,34 @@ class TestParseMoniker:
             parse_moniker("http://market-data/prices")
 
 
+class TestAtVersionRemoved:
+    """Verify that @version syntax is rejected (OM-19)."""
+
+    def test_at_version_date_raises(self):
+        with pytest.raises(MonikerParseError, match="Invalid use of '@'"):
+            parse_moniker("prices/AAPL@20260101")
+
+    def test_at_latest_raises(self):
+        with pytest.raises(MonikerParseError, match="Invalid use of '@'"):
+            parse_moniker("prices/AAPL@latest")
+
+    def test_at_all_raises(self):
+        with pytest.raises(MonikerParseError, match="Invalid use of '@'"):
+            parse_moniker("prices/AAPL@all")
+
+    def test_at_lookback_raises(self):
+        with pytest.raises(MonikerParseError, match="Invalid use of '@'"):
+            parse_moniker("prices/AAPL@3M")
+
+    def test_at_frequency_raises(self):
+        with pytest.raises(MonikerParseError, match="Invalid use of '@'"):
+            parse_moniker("prices/AAPL@daily")
+
+    def test_at_custom_raises(self):
+        with pytest.raises(MonikerParseError, match="Invalid use of '@'"):
+            parse_moniker("prices/AAPL@custom123")
+
+
 class TestSegmentId:
     """Tests for in-path @id identity parameters."""
 
@@ -127,7 +155,6 @@ class TestSegmentId:
         m = parse_moniker("holdings/positions@ACC001/summary")
         assert m.segment_id == (1, "ACC001")
         assert str(m.path) == "holdings/positions/summary"
-        assert m.version is None
 
     def test_segment_id_first_segment_with_namespace(self):
         """Segment 0 @id requires namespace prefix to avoid ambiguity."""
@@ -149,41 +176,18 @@ class TestSegmentId:
     def test_segment_id_path_cleaned_for_catalog(self):
         """The @id is stripped from the segment for catalog lookup."""
         m = parse_moniker("holdings/positions@ACC001/summary")
-        # Catalog sees holdings/positions/summary (no @id)
         assert m.path.segments == ("holdings", "positions", "summary")
 
-    def test_no_segment_id_for_version_at_end(self):
-        """@ at end of path is a version, not segment identity."""
-        m = parse_moniker("prices/AAPL@20260101")
-        assert m.segment_id is None
-        assert m.version == "20260101"
-
-    def test_mid_path_at_is_segment_id_not_version(self):
+    def test_mid_path_at_is_segment_id(self):
         """@ in a non-final segment is always segment identity."""
         m = parse_moniker("securities/012345678@20260101/details")
-        # Under new rules: @ in mid-path segment = segment identity
         assert m.segment_id == (1, "20260101")
         assert str(m.path) == "securities/012345678/details"
-        assert m.version is None
-
-    def test_segment_id_with_version(self):
-        """Segment identity and version can coexist."""
-        m = parse_moniker("holdings/positions@ACC001/summary@latest")
-        assert m.segment_id == (1, "ACC001")
-        assert m.version == "latest"
-        assert str(m.path) == "holdings/positions/summary"
 
     def test_segment_id_with_namespace(self):
         m = parse_moniker("prod@holdings/positions@ACC001/summary")
         assert m.namespace == "prod"
         assert m.segment_id == (1, "ACC001")
-        assert str(m.path) == "holdings/positions/summary"
-
-    def test_segment_id_with_namespace_and_version(self):
-        m = parse_moniker("prod@holdings/positions@ACC001/summary@latest")
-        assert m.namespace == "prod"
-        assert m.segment_id == (1, "ACC001")
-        assert m.version == "latest"
         assert str(m.path) == "holdings/positions/summary"
 
     def test_multiple_at_ids_raises(self):
@@ -197,11 +201,6 @@ class TestSegmentId:
     def test_invalid_segment_id_chars(self):
         with pytest.raises(MonikerParseError, match="Invalid segment identity"):
             parse_moniker("domain/holdings@ACC 001/summary")
-
-    def test_segment_id_preserved_by_with_version(self):
-        m = parse_moniker("holdings/positions@ACC001/summary")
-        m2 = m.with_version("latest")
-        assert m2.segment_id == (1, "ACC001")
 
     def test_segment_id_preserved_by_with_namespace(self):
         m = parse_moniker("holdings/positions@ACC001/summary")
@@ -217,19 +216,10 @@ class TestSegmentId:
         assert m2.segment_id == m.segment_id
         assert m2.path == m.path
 
-    def test_segment_id_str_roundtrip_with_namespace_and_version(self):
-        m = parse_moniker("prod@holdings/positions@ACC001/summary@latest")
-        s = str(m)
-        m2 = parse_moniker(s)
-        assert m2.namespace == "prod"
-        assert m2.segment_id == (1, "ACC001")
-        assert m2.version == "latest"
-        assert m2.path == m.path
-
     def test_segment_id_full_path(self):
-        m = parse_moniker("holdings/positions@ACC001/summary@latest/v2")
+        m = parse_moniker("holdings/positions@ACC001/summary/v2")
         assert "positions@ACC001" in m.full_path
-        assert m.full_path == "holdings/positions@ACC001/summary@latest/v2"
+        assert m.full_path == "holdings/positions@ACC001/summary/v2"
 
     def test_segment_id_canonical_path_is_clean(self):
         """canonical_path is for catalog lookup — no @id."""

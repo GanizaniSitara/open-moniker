@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from urllib.parse import parse_qs, urlparse
 
-from .types import Moniker, MonikerPath, QueryParams, VersionType
+from .types import Moniker, MonikerPath, QueryParams
 
 
 class MonikerParseError(ValueError):
@@ -20,45 +20,11 @@ SEGMENT_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.\-]*$")
 # Namespace pattern: alphanumeric, hyphens, underscores (no dots - those are for paths)
 NAMESPACE_PATTERN = re.compile(r"^[a-zA-Z][a-zA-Z0-9_\-]*$")
 
-# Version pattern: digits (date) or alphanumeric (like "latest")
-VERSION_PATTERN = re.compile(r"^[a-zA-Z0-9]+$")
-
 # Segment identity pattern: valid chars for the @id value within a path segment
 SEGMENT_ID_VALUE_PATTERN = re.compile(r"^[a-zA-Z0-9_.\-]+$")
 
 # Revision pattern: /vN or /VN where N is a positive integer (case-insensitive)
 REVISION_PATTERN = re.compile(r"^[vV](\d+)$")
-
-# Version classification patterns
-DATE_VERSION_PATTERN = re.compile(r"^\d{8}$")                  # 20260101 (YYYYMMDD)
-LOOKBACK_VERSION_PATTERN = re.compile(r"^\d+[YMWD]$", re.I)    # 3M, 12Y, 1W, 5D
-FREQUENCY_VERSION_PATTERN = re.compile(r"^(daily|weekly|monthly)$", re.I)
-KEYWORD_VERSION_PATTERN = re.compile(r"^(latest|all)$", re.I)
-
-# Backward compatibility alias
-TENOR_VERSION_PATTERN = LOOKBACK_VERSION_PATTERN
-
-
-def classify_version(version: str | None) -> VersionType | None:
-    """Determine the semantic type of a version string.
-
-    Args:
-        version: The version string to classify (e.g., "20260101", "latest", "3M", "daily")
-
-    Returns:
-        VersionType enum value, or None if version is None/empty
-    """
-    if not version:
-        return None
-    if DATE_VERSION_PATTERN.match(version):
-        return VersionType.DATE
-    if LOOKBACK_VERSION_PATTERN.match(version):
-        return VersionType.LOOKBACK
-    if FREQUENCY_VERSION_PATTERN.match(version):
-        return VersionType.FREQUENCY
-    if KEYWORD_VERSION_PATTERN.match(version):
-        return VersionType.LATEST if version.lower() == "latest" else VersionType.ALL
-    return VersionType.CUSTOM
 
 
 def validate_segment(segment: str) -> bool:
@@ -119,18 +85,10 @@ def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
     """
     Parse a full moniker string.
 
-    Format: [namespace@]path/segments[@version][/sub.resource][/vN][?query=params]
+    Format: [namespace@]path/segments[/vN][?query=params]
 
-    Examples:
-        indices.sovereign/developed/EUR/ALL
-        commodities.derivatives/crypto/ETH@20260115/v2
-        verified@reference.security/ISIN/US0378331005@latest
-        user@analytics.risk/views/my-watchlist@20260115/v3
-        securities/012345678@20260101/details
-        securities/012345678@20260101/details.corporate.actions
-        prices.equity/AAPL@3M (3-month lookback)
-        risk.cvar/portfolio-123@all (full time series)
-        moniker://holdings/20260115/fund_alpha?format=json
+    The @ character within a path segment denotes an identity parameter:
+        holdings/positions@ACC001/summary
 
     Args:
         moniker_str: The moniker string to parse
@@ -170,7 +128,7 @@ def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
     remaining = body
 
     # Check for namespace@ prefix
-    # The @ must appear before any / to be a namespace (otherwise it's a version)
+    # The @ must appear before any / to be a namespace (otherwise it's an identity param)
     first_at = body.find("@")
     first_slash = body.find("/")
 
@@ -188,117 +146,62 @@ def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
 
     # Parse revision suffix (/vN or /VN at the end - case-insensitive)
     revision = None
-    # Check for both /v and /V patterns
     remaining_lower = remaining.lower()
     if "/v" in remaining_lower:
-        # Find the last /v or /V pattern
-        # Use case-insensitive search by finding the rightmost occurrence
         lower_idx = remaining_lower.rfind("/v")
         if lower_idx != -1:
             before = remaining[:lower_idx]
             after = remaining[lower_idx + 2:]  # Skip the "/v" or "/V"
-            # Check if it's a valid revision (just digits at the end or before ?)
             rev_match = re.match(r"^(\d+)(?:$|(?=\?))", after)
             if rev_match:
                 revision = int(rev_match.group(1))
                 remaining = before
 
-    # Extract in-path segment identity (@id embedded in a mid-path segment).
-    # Disambiguation: if @ appears in a non-final segment (path continues after it),
-    # it's a segment identity.  If @ is at the end of the path, it's a version.
-    # At most one @id per path.
-    # Examples:
-    #   holdings/positions@ACC001/summary -> segment_id=(1, "ACC001"), path segments intact
-    #   prices/AAPL@20260101             -> version (no change, existing behavior)
+    # Extract in-path segment identity (@id embedded in a path segment).
+    # @ is ONLY valid as an identity parameter within a segment followed by more path.
+    # @ at end of path or standalone is a parse error.
     segment_id = None
     if "@" in remaining:
         parts = remaining.split("/")
         at_segments = [(i, p) for i, p in enumerate(parts) if "@" in p]
 
-        # Segment identity: @ appears in a segment that is NOT the last one
-        mid_at = [(i, p) for i, p in at_segments if i < len(parts) - 1]
-
-        if mid_at:
-            if len(mid_at) > 1:
-                raise MonikerParseError(
-                    "At most one @id identity parameter is allowed per path."
-                )
-            seg_idx, seg_text = mid_at[0]
-            seg_name, seg_id_value = seg_text.split("@", 1)
-
-            if not seg_id_value:
-                raise MonikerParseError(
-                    f"Empty @id value in segment '{seg_text}'."
-                )
-            if validate and not SEGMENT_ID_VALUE_PATTERN.match(seg_id_value):
-                raise MonikerParseError(
-                    f"Invalid segment identity value: '{seg_id_value}'. "
-                    "Must contain only alphanumerics, hyphens, underscores, or dots."
-                )
-
-            segment_id = (seg_idx, seg_id_value)
-            # Replace the segment with the clean name (without @id) for catalog lookup
-            parts[seg_idx] = seg_name
-            remaining = "/".join(parts)
-
-    # Parse version suffix with optional sub-resource: @version[/sub.resource]
-    # Examples:
-    #   securities/012345678@20260101 -> version=20260101, sub_resource=None
-    #   securities/012345678@20260101/details -> version=20260101, sub_resource=details
-    #   securities/012345678@20260101/details.corporate.actions -> sub_resource=details.corporate.actions
-    version = None
-    sub_resource = None
-    if "@" in remaining:
-        # Find the @ that's a version (not a namespace prefix)
-        # Namespace @ appears before any /
-        first_slash_in_remaining = remaining.find("/")
-        at_idx = remaining.rfind("@")
-
-        # Check if this @ is after the first slash (making it a version, not namespace)
-        # If no slash in remaining, check if we already parsed namespace
-        is_version_at = (first_slash_in_remaining != -1 and at_idx > first_slash_in_remaining) or \
-                        (first_slash_in_remaining == -1 and namespace is not None) or \
-                        (first_slash_in_remaining == -1 and at_idx == remaining.find("@"))
-
-        # Actually, simpler: if namespace was already parsed, any @ is a version
-        # If namespace wasn't parsed, @ is version only if it's after a /
-        if namespace is not None:
-            # Namespace already extracted, any @ is a version
-            is_version_at = at_idx != -1
+        if not at_segments:
+            pass  # No @ after splitting — shouldn't happen but safe
         else:
-            # No namespace yet - @ is version only if after first /
-            is_version_at = at_idx != -1 and (first_slash_in_remaining == -1 or at_idx > first_slash_in_remaining)
+            # Segment identity: @ appears in a segment that is NOT the last one
+            mid_at = [(i, p) for i, p in at_segments if i < len(parts) - 1]
 
-        if is_version_at and at_idx != -1:
-            # Everything before @ is the path
-            path_part = remaining[:at_idx]
-            after_at = remaining[at_idx + 1:]
-
-            # Check if there's a sub-resource (path after version)
-            # Pattern: @version/sub.resource or just @version
-            if "/" in after_at:
-                version, sub_resource = after_at.split("/", 1)
-            else:
-                version = after_at
-
-            remaining = path_part
-
-            if validate and version and not VERSION_PATTERN.match(version):
+            # @ in the final segment is now a parse error (no more @version syntax)
+            final_at = [(i, p) for i, p in at_segments if i == len(parts) - 1]
+            if final_at:
                 raise MonikerParseError(
-                    f"Invalid version: '{version}'. "
-                    "Version must be alphanumeric (e.g., 'latest', '20260115', '3M')."
+                    f"Invalid use of '@' at end of path in '{final_at[0][1]}'. "
+                    "The @ character is only valid as an identity parameter "
+                    "within a mid-path segment (e.g., segment@id/rest)."
                 )
 
-            # Validate sub_resource segments if present
-            if validate and sub_resource:
-                # Sub-resource uses dots for multi-level: details.corporate.actions
-                # Each dot-separated part should be a valid segment
-                for part in sub_resource.split("."):
-                    if not validate_segment(part):
-                        raise MonikerParseError(
-                            f"Invalid sub-resource segment: '{part}'. "
-                            "Sub-resource parts must start with alphanumeric."
-                        )
+            if mid_at:
+                if len(mid_at) > 1:
+                    raise MonikerParseError(
+                        "At most one @id identity parameter is allowed per path."
+                    )
+                seg_idx, seg_text = mid_at[0]
+                seg_name, seg_id_value = seg_text.split("@", 1)
+
+                if not seg_id_value:
+                    raise MonikerParseError(
+                        f"Empty @id value in segment '{seg_text}'."
+                    )
+                if validate and not SEGMENT_ID_VALUE_PATTERN.match(seg_id_value):
+                    raise MonikerParseError(
+                        f"Invalid segment identity value: '{seg_id_value}'. "
+                        "Must contain only alphanumerics, hyphens, underscores, or dots."
+                    )
+
+                segment_id = (seg_idx, seg_id_value)
+                # Replace the segment with the clean name (without @id) for catalog lookup
+                parts[seg_idx] = seg_name
+                remaining = "/".join(parts)
 
     # Parse path
     path = parse_path(remaining, validate=validate)
@@ -307,7 +210,6 @@ def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
     params: dict[str, str] = {}
     if query_str:
         parsed_qs = parse_qs(query_str, keep_blank_values=True)
-        # Take first value for each param (no multi-value support)
         for key, values in parsed_qs.items():
             if values:
                 params[key] = values[0]
@@ -315,11 +217,8 @@ def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
     return Moniker(
         path=path,
         namespace=namespace,
-        version=version,
-        version_type=classify_version(version),
-        sub_resource=sub_resource,
-        revision=revision,
         segment_id=segment_id,
+        revision=revision,
         params=QueryParams(params),
     )
 
@@ -328,7 +227,7 @@ def normalize_moniker(moniker_str: str) -> str:
     """
     Normalize a moniker string to canonical form.
 
-    Always returns: moniker://[namespace@]path[@version][/vN][?sorted_params]
+    Always returns: moniker://[namespace@]path[/vN][?sorted_params]
     """
     m = parse_moniker(moniker_str)
     return str(m)
@@ -338,9 +237,6 @@ def build_moniker(
     path: str,
     *,
     namespace: str | None = None,
-    version: str | None = None,
-    version_type: VersionType | None = None,
-    sub_resource: str | None = None,
     revision: int | None = None,
     **params: str,
 ) -> Moniker:
@@ -350,24 +246,15 @@ def build_moniker(
     Args:
         path: The path string
         namespace: Optional namespace prefix
-        version: Optional version (date, 'latest', tenor like '3M', or 'all')
-        version_type: Optional explicit version type (auto-classified if not provided)
-        sub_resource: Optional sub-resource path (e.g., 'details.corporate.actions')
         revision: Optional revision number
         **params: Query parameters
 
     Returns:
         Moniker instance
     """
-    # Auto-classify version if not explicitly provided
-    effective_version_type = version_type if version_type is not None else classify_version(version)
-
     return Moniker(
         path=parse_path(path),
         namespace=namespace,
-        version=version,
-        version_type=effective_version_type,
-        sub_resource=sub_resource,
         revision=revision,
         params=QueryParams(params) if params else QueryParams({}),
     )

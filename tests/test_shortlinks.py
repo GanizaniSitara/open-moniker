@@ -71,7 +71,6 @@ class TestShortlinkType:
             id="abc1234",
             base_path="fixed.income/govies/sovereign",
             filter_segments=("US", "10Y", "SHORT_DATED"),
-            version="3M",
             params={"format": "json", "limit": "1000"},
             label="Test link",
             created_by="test@firm.com",
@@ -80,7 +79,6 @@ class TestShortlinkType:
         assert restored.id == link.id
         assert restored.base_path == link.base_path
         assert restored.filter_segments == link.filter_segments
-        assert restored.version == link.version
         assert restored.params == link.params
         assert restored.label == link.label
 
@@ -90,32 +88,30 @@ class TestShortlinkType:
             id="abc1234",
             base_path="fixed.income/govies/sovereign",
             filter_segments=("US", "10Y"),
-            version="3M",
             params={"format": "json"},
         )
-        assert link.expand() == "fixed.income/govies/sovereign/US/10Y@3M?format=json"
+        assert link.expand() == "fixed.income/govies/sovereign/US/10Y?format=json"
 
-    def test_expand_no_version(self):
+    def test_expand_no_filters(self):
+        link = Shortlink(
+            id="x", base_path="indices.equity", filter_segments=(),
+        )
+        assert link.expand() == "indices.equity"
+
+    def test_expand_no_params(self):
         link = Shortlink(
             id="x", base_path="prices.equity", filter_segments=("AAPL",),
         )
         assert link.expand() == "prices.equity/AAPL"
 
-    def test_expand_no_filters(self):
-        link = Shortlink(
-            id="x", base_path="indices.equity", filter_segments=(),
-            version="latest",
-        )
-        assert link.expand() == "indices.equity@latest"
-
     def test_canonical_filter(self):
         link = Shortlink(
             id="x", base_path="test",
-            filter_segments=("A", "B"), version="3M",
+            filter_segments=("A", "B"),
             params={"z": "1", "a": "2"},
         )
         # Params should be sorted
-        assert link.canonical_filter == "A/B@3M?a=2&z=1"
+        assert link.canonical_filter == "A/B?a=2&z=1"
 
 
 # =====================================================================
@@ -128,7 +124,6 @@ class TestStore:
         link = store.create(
             base_path="fixed.income/govies/sovereign",
             filter_segments=["US", "10Y"],
-            version="3M",
         )
         assert link.id
         assert store.get(link.id) is link
@@ -164,7 +159,6 @@ class TestStore:
             link = store1.create(
                 base_path="prices.equity",
                 filter_segments=["AAPL"],
-                version="latest",
                 params={"format": "csv"},
                 label="Apple prices",
             )
@@ -178,7 +172,6 @@ class TestStore:
             assert restored is not None
             assert restored.base_path == "prices.equity"
             assert restored.filter_segments == ("AAPL",)
-            assert restored.version == "latest"
             assert restored.params == {"format": "csv"}
             assert restored.label == "Apple prices"
         finally:
@@ -189,7 +182,6 @@ class TestStore:
         link = store.create(
             base_path="fixed.income/govies/sovereign",
             filter_segments=["US", "10Y"],
-            version="3M",
             params={"format": "json"},
         )
 
@@ -197,7 +189,7 @@ class TestStore:
             f"fixed.income/govies/sovereign/~{link.id}"
         )
         assert alias == f"~{link.id}"
-        assert expanded == "fixed.income/govies/sovereign/US/10Y@3M?format=json"
+        assert expanded == "fixed.income/govies/sovereign/US/10Y?format=json"
 
     def test_try_expand_path_no_tilde(self):
         store = ShortlinkStore()
@@ -239,7 +231,6 @@ class TestShortlinkAPI:
         r = await client.post("/s", json={
             "base_path": "benchmarks.returns",
             "filter_segments": ["equity", "sp500"],
-            "version": "latest",
             "label": "S&P 500 returns",
         })
         assert r.status_code == 201
@@ -247,7 +238,7 @@ class TestShortlinkAPI:
         assert "id" in body
         assert body["base_path"] == "benchmarks.returns"
         assert body["resolve_path"].startswith("benchmarks.returns/~")
-        assert "equity/sp500@latest" in body["expanded_path"]
+        assert "equity/sp500" in body["expanded_path"]
 
     @pytest.mark.asyncio
     async def test_create_idempotent(self, client):
@@ -308,11 +299,9 @@ class TestShortlinkAPI:
     @pytest.mark.asyncio
     async def test_resolve_via_shortlink(self, client):
         """Create a shortlink for a known moniker, resolve via ~id."""
-        # Create shortlink for benchmarks.returns (known in sample catalog)
         r = await client.post("/s", json={
             "base_path": "benchmarks.returns",
             "filter_segments": [],
-            "version": "latest",
         })
         assert r.status_code == 201
         short_id = r.json()["id"]
