@@ -333,3 +333,124 @@ class TestDateParam:
         assert m.namespace == "prod"
         assert m.date_param == "20260101"
         assert str(m.path) == "prices/equity/AAPL"
+
+
+class TestFilterShortlink:
+    """Tests for filter@CODE reserved segment expansion."""
+
+    @pytest.fixture()
+    def store(self):
+        from moniker_svc.shortlinks.store import ShortlinkStore
+        s = ShortlinkStore()
+        s.create(
+            base_path="prices/equity",
+            filter_segments=["US", "10Y"],
+            params={"format": "json"},
+            label="test",
+        )
+        return s
+
+    def _link_id(self, store):
+        return store.all()[0].id
+
+    def test_filter_basic_expansion(self, store):
+        """filter@CODE expands to stored filter_segments."""
+        lid = self._link_id(store)
+        m = parse_moniker(f"prices/equity/filter@{lid}", shortlink_store=store)
+        assert str(m.path) == "prices/equity/US/10Y"
+        assert m.params.format == "json"
+        assert m.filter_shortlink == f"filter@{lid}"
+
+    def test_filter_mid_path(self, store):
+        """filter@CODE splices in-place, preserving segments after it."""
+        lid = self._link_id(store)
+        m = parse_moniker(f"prices/equity/filter@{lid}/summary", shortlink_store=store)
+        assert str(m.path) == "prices/equity/US/10Y/summary"
+
+    def test_filter_at_start(self, store):
+        """filter@CODE can appear at the beginning of the path."""
+        lid = self._link_id(store)
+        m = parse_moniker(f"filter@{lid}/summary", shortlink_store=store)
+        assert str(m.path) == "US/10Y/summary"
+
+    def test_filter_with_segment_id(self, store):
+        """filter@CODE and @id can coexist."""
+        lid = self._link_id(store)
+        m = parse_moniker(
+            f"holdings/positions@ACC001/filter@{lid}/summary",
+            shortlink_store=store,
+        )
+        assert m.segment_id == (1, "ACC001")
+        assert m.filter_shortlink == f"filter@{lid}"
+        # path has ACC001 stripped + filter expanded
+        assert str(m.path) == "holdings/positions/US/10Y/summary"
+
+    def test_filter_with_date(self, store):
+        """filter@CODE and date@ can coexist."""
+        lid = self._link_id(store)
+        m = parse_moniker(
+            f"prices/equity/filter@{lid}/date@20260101",
+            shortlink_store=store,
+        )
+        assert m.date_param == "20260101"
+        assert str(m.path) == "prices/equity/US/10Y"
+
+    def test_filter_with_namespace(self, store):
+        """filter@CODE works with namespace prefix."""
+        lid = self._link_id(store)
+        m = parse_moniker(f"prod@prices/equity/filter@{lid}", shortlink_store=store)
+        assert m.namespace == "prod"
+        assert str(m.path) == "prices/equity/US/10Y"
+
+    def test_filter_with_revision(self, store):
+        """filter@CODE works with /vN revision."""
+        lid = self._link_id(store)
+        m = parse_moniker(f"prices/equity/filter@{lid}/v2", shortlink_store=store)
+        assert m.revision == 2
+        assert str(m.path) == "prices/equity/US/10Y"
+
+    def test_filter_params_merge_with_query(self, store):
+        """Shortlink params merge with client query params; client wins on conflict."""
+        lid = self._link_id(store)
+        m = parse_moniker(
+            f"prices/equity/filter@{lid}?format=csv&limit=100",
+            shortlink_store=store,
+        )
+        # Client format=csv overrides shortlink format=json
+        assert m.params.format == "csv"
+        assert m.params.limit == "100"
+
+    def test_filter_does_not_count_as_at_id(self, store):
+        """filter@ is reserved — it does NOT trigger the @id limit."""
+        lid = self._link_id(store)
+        # filter@ + one @id should work fine
+        m = parse_moniker(
+            f"holdings/positions@ACC001/filter@{lid}",
+            shortlink_store=store,
+        )
+        assert m.segment_id == (1, "ACC001")
+        assert m.filter_shortlink is not None
+
+    def test_filter_canonical_path_is_clean(self, store):
+        """canonical_path contains expanded segments, no filter@CODE."""
+        lid = self._link_id(store)
+        m = parse_moniker(f"prices/equity/filter@{lid}", shortlink_store=store)
+        assert "filter@" not in m.canonical_path
+        assert m.canonical_path == "prices/equity/US/10Y"
+
+    def test_filter_empty_code_raises(self):
+        """filter@ with no code is a parse error."""
+        with pytest.raises(MonikerParseError, match="Empty code"):
+            parse_moniker("prices/equity/filter@")
+
+    def test_filter_no_store_raises(self):
+        """filter@CODE without a shortlink store raises."""
+        with pytest.raises(MonikerParseError, match="no shortlink store"):
+            parse_moniker("prices/equity/filter@abc1234")
+
+    def test_filter_unknown_code_raises(self):
+        """filter@CODE with unknown ID raises."""
+        from moniker_svc.shortlinks.store import ShortlinkStore
+        store = ShortlinkStore()
+        with pytest.raises(MonikerParseError, match="Shortlink not found"):
+            parse_moniker("prices/equity/filter@UNKNOWN", shortlink_store=store)

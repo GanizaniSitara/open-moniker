@@ -9,6 +9,56 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.3.0] — 2026-04-02
+
+### Breaking — `~SHORTCODE` removed
+
+The `~SHORTCODE` shortlink syntax is replaced by `filter@SHORTCODE`. This is a clean break
+to establish a consistent `name@value` pattern throughout the moniker path syntax. All URLs,
+API responses, and code referencing `~` shortlinks must update to `filter@`.
+
+### Added
+- **`filter@CODE` reserved segment** — shortlink expansion via the OM-10 shortlink registry.
+  `filter` is a globally hard-reserved segment name; the parser recognises it before falling
+  through to entity `@id` logic. Does NOT count against the one-`@id`-per-path limit.
+  Can appear anywhere in the path.
+  - Syntax: `prices/equity/filter@xK9f2p`, `holdings/positions@ACC001/filter@abc123`
+  - Expansion splices stored `filter_segments` in-place and merges stored `params` into
+    query parameters (client params override on conflict)
+  - **File changed**: `moniker/parser.py` — `_FILTER_PREFIX`, detection before `date@` and
+    `@id` scans, `shortlink_store` optional parameter on `parse_moniker()`; reserved-word
+    check in namespace parser to prevent `filter` being consumed as a namespace
+  - **File changed**: `moniker/types.py` — `filter_shortlink: str | None` field on `Moniker`
+    dataclass (tracks which `filter@CODE` was expanded); updated `with_namespace()` to
+    preserve the field
+  - **File changed**: `shortlinks/store.py` — `try_expand_path()` detects `filter@` instead
+    of `~`; expansion now splices filter segments in-place (preserving surrounding segments)
+    rather than returning `link.expand()` wholesale
+  - **File changed**: `shortlinks/routes.py` — `resolve_path` in `_to_model()` uses
+    `filter@{id}` instead of `~{id}`
+  - **File changed**: `shortlinks/models.py` — updated `resolve_path` comment
+  - **File changed**: `service.py` — `resolve()` accepts optional `shortlink_store` kwarg,
+    passes to `parse_moniker()`; sets `redirected_from` from `filter_shortlink` on the
+    parsed moniker
+  - **File changed**: `main.py` — removed `~` expansion block from resolve handler; passes
+    `_shortlink_store` to `_service.resolve()`; catches `MonikerParseError` for unknown
+    shortlink codes (returns 404)
+
+### Removed
+- **`~SHORTCODE` shortlink syntax** — the tilde-prefix expansion mechanism is fully removed.
+  `try_expand_path()` no longer recognises `~`-prefixed segments.
+  - **File changed**: `shortlinks/store.py` — `_TILDE` constant removed, replaced by
+    `_FILTER_PREFIX`
+
+### Migration
+- Any URL or client code using `~CODE` (e.g. `/resolve/prices/equity/~xK9f2p`) must change
+  to `filter@CODE` (e.g. `/resolve/prices/equity/filter@xK9f2p`)
+- API response field `resolve_path` now returns `base_path/filter@{id}` instead of
+  `base_path/~{id}`
+- The `redirected_from` response field now contains `filter@{id}` instead of `~{id}`
+
+---
+
 ## [0.2.0] — 2026-04-02
 
 ### Added

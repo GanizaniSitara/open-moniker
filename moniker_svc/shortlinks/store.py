@@ -13,7 +13,7 @@ from .types import Shortlink, generate_random_id, generate_short_id
 logger = logging.getLogger(__name__)
 
 _MAX_COLLISION_RETRIES = 5
-_TILDE = "~"
+_FILTER_PREFIX = "filter@"
 
 
 class ShortlinkStore:
@@ -118,34 +118,42 @@ class ShortlinkStore:
         with self._lock:
             return len(self._links)
 
-    # ── Path expansion (used by resolve handler) ─────────────────────
+    # ── Path expansion ─────────────────────────────────────────────────
 
     def try_expand_path(self, path: str) -> tuple[str, str | None]:
-        """Scan a moniker path for a ``~``-prefixed segment and expand it.
+        """Scan a moniker path for a ``filter@CODE`` segment and expand it.
 
-        Returns ``(expanded_path, alias)`` if a tilde segment was found and
-        expanded, or ``(original_path, None)`` if no tilde segment exists.
+        The ``filter@CODE`` segment is replaced in-place with the stored
+        filter segments; shortlink query params are appended.
 
-        Raises ``KeyError`` if a tilde segment is found but the ID is unknown.
+        Returns ``(expanded_path, alias)`` if a filter segment was found and
+        expanded, or ``(original_path, None)`` if none exists.
+
+        Raises ``KeyError`` if a filter segment is found but the ID is unknown.
         """
-        # Split on / but preserve dot-separated domain segments
-        # The tilde segment can appear anywhere after the base path
         segments = path.split("/")
-        tilde_idx = None
+        filter_idx = None
         for i, seg in enumerate(segments):
-            if seg.startswith(_TILDE):
-                tilde_idx = i
+            if seg.startswith(_FILTER_PREFIX):
+                filter_idx = i
                 break
 
-        if tilde_idx is None:
+        if filter_idx is None:
             return (path, None)
 
-        short_id = segments[tilde_idx][1:]  # strip ~
+        short_id = segments[filter_idx][len(_FILTER_PREFIX):]  # strip "filter@"
         with self._lock:
             link = self._links.get(short_id)
 
         if link is None:
             raise KeyError(f"Shortlink not found: {short_id}")
 
-        # Expand: base path (everything before ~) + stored filter state
-        return (link.expand(), f"~{short_id}")
+        # Splice: replace filter@CODE with expanded filter segments
+        before = segments[:filter_idx]
+        after = segments[filter_idx + 1:]
+        expanded = list(before) + list(link.filter_segments) + list(after)
+        result = "/".join(expanded)
+        if link.params:
+            qs = "&".join(f"{k}={v}" for k, v in sorted(link.params.items()))
+            result += f"?{qs}"
+        return (result, f"filter@{short_id}")

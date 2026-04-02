@@ -134,6 +134,7 @@ class Moniker:
     date_param: str | None = None  # date@VALUE: "20260101", "latest", "3M"
     revision: int | None = None  # /v2 -> 2
     params: QueryParams = field(default_factory=lambda: QueryParams({}))
+    filter_shortlink: str | None = None  # filter@CODE that was expanded (e.g. "filter@xK9f2p")
 
     def _path_with_segment_id(self) -> str:
         """Return path string with @id re-injected into the correct segment."""
@@ -200,4 +201,5 @@ class Moniker:
             date_param=self.date_param,
             revision=self.revision,
             params=self.params,
+            filter_shortlink=self.filter_shortlink,
         )

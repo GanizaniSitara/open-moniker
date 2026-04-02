@@ -44,7 +44,7 @@ def _to_model(link: Shortlink) -> ShortlinkModel:
         label=link.label,
         created_by=link.created_by,
         created_at=link.created_at,
-        resolve_path=f"{link.base_path}/~{link.id}",
+        resolve_path=f"{link.base_path}/filter@{link.id}",
         expanded_path=link.expand(),
     )
 

@@ -20,7 +20,7 @@ class ShortlinkModel(BaseModel):
     label: str = ""
     created_by: str = ""
     created_at: str = ""
-    resolve_path: str = ""  # e.g. "fixed.income/govies/sovereign/~xK9f2p"
+    resolve_path: str = ""  # e.g. "fixed.income/govies/sovereign/filter@xK9f2p"
     expanded_path: str = ""  # e.g. "fixed.income/govies/sovereign/US/10Y/SHORT_DATED?format=json"
 
 

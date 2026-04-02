@@ -153,12 +153,18 @@ class MonikerService:
         self,
         moniker_str: str,
         caller: CallerIdentity,
+        *,
+        shortlink_store: object | None = None,
     ) -> ResolveResult:
         """
         Resolve a moniker to source connection info.
 
         This is the main entry point. Returns everything the client
         needs to connect directly to the data source.
+
+        Args:
+            shortlink_store: Optional shortlink store for ``filter@CODE``
+                expansion during parsing.
         """
         start = time.perf_counter()
         outcome = EventOutcome.SUCCESS
@@ -166,8 +172,9 @@ class MonikerService:
         result: ResolveResult | None = None
 
         try:
-            # Parse moniker
-            moniker = parse_moniker(moniker_str)
+            # Parse moniker (expands filter@CODE if store provided)
+            moniker = parse_moniker(moniker_str, shortlink_store=shortlink_store)
+            filter_shortlink = moniker.filter_shortlink
             path_str = str(moniker.path)
 
             # Check cache for resolution
@@ -252,7 +259,7 @@ class MonikerService:
                     node=node,
                     binding_path=binding_path,
                     sub_path=sub_path,
-                    redirected_from=redirected_from,
+                    redirected_from=filter_shortlink or redirected_from,
                 )
 
                 # Cache the resolution

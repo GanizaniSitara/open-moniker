@@ -7,10 +7,10 @@ A unified data access layer for enterprise data governance. Canonical identifica
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  Your Code                                                      │
-│    m = Moniker("prices.equity/AAPL@20260115")                   │
+│    m = Moniker("prices.equity/AAPL/date@20260115")               │
 │    info = m.resolve()                                            │
 └───────────────────────────┬─────────────────────────────────────┘
-                            │ GET /resolve/prices.equity/AAPL@20260115
+                            │ GET /resolve/prices.equity/AAPL/date@20260115
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  Moniker Service                                                │
@@ -108,8 +108,8 @@ print(info["ownership"]["support_channel"])     # #market-data
 lin = m.lineage()
 print(lin["path_hierarchy"])                    # ['prices', 'prices.equity', ...]
 
-# Historical data with date version
-m_hist = Moniker("prices.equity/AAPL@20260115")
+# Historical data with explicit date segment
+m_hist = Moniker("prices.equity/AAPL/date@20260115")
 historical = m_hist.resolve()
 
 # Navigate to children

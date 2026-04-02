@@ -177,7 +177,7 @@ class TestStore:
         finally:
             Path(path).unlink(missing_ok=True)
 
-    def test_try_expand_path_with_tilde(self):
+    def test_try_expand_path_with_filter(self):
         store = ShortlinkStore()
         link = store.create(
             base_path="fixed.income/govies/sovereign",
@@ -186,12 +186,26 @@ class TestStore:
         )
 
         expanded, alias = store.try_expand_path(
-            f"fixed.income/govies/sovereign/~{link.id}"
+            f"fixed.income/govies/sovereign/filter@{link.id}"
         )
-        assert alias == f"~{link.id}"
+        assert alias == f"filter@{link.id}"
         assert expanded == "fixed.income/govies/sovereign/US/10Y?format=json"
 
-    def test_try_expand_path_no_tilde(self):
+    def test_try_expand_path_splices_in_place(self):
+        """filter@CODE replaces only that segment; surrounding segments preserved."""
+        store = ShortlinkStore()
+        link = store.create(
+            base_path="prices/equity",
+            filter_segments=["US", "LARGE_CAP"],
+        )
+
+        expanded, alias = store.try_expand_path(
+            f"prices/equity/filter@{link.id}/summary"
+        )
+        assert alias == f"filter@{link.id}"
+        assert expanded == "prices/equity/US/LARGE_CAP/summary"
+
+    def test_try_expand_path_no_filter(self):
         store = ShortlinkStore()
         expanded, alias = store.try_expand_path("fixed.income/govies/sovereign/US/10Y")
         assert alias is None
@@ -200,7 +214,7 @@ class TestStore:
     def test_try_expand_path_unknown_id(self):
         store = ShortlinkStore()
         with pytest.raises(KeyError, match="Shortlink not found"):
-            store.try_expand_path("fixed.income/~UNKNOWN")
+            store.try_expand_path("fixed.income/filter@UNKNOWN")
 
 
 # =====================================================================
@@ -237,7 +251,7 @@ class TestShortlinkAPI:
         body = r.json()
         assert "id" in body
         assert body["base_path"] == "benchmarks.returns"
-        assert body["resolve_path"].startswith("benchmarks.returns/~")
+        assert body["resolve_path"].startswith("benchmarks.returns/filter@")
         assert "equity/sp500" in body["expanded_path"]
 
     @pytest.mark.asyncio
@@ -298,7 +312,7 @@ class TestShortlinkAPI:
 
     @pytest.mark.asyncio
     async def test_resolve_via_shortlink(self, client):
-        """Create a shortlink for a known moniker, resolve via ~id."""
+        """Create a shortlink for a known moniker, resolve via filter@id."""
         r = await client.post("/s", json={
             "base_path": "benchmarks.returns",
             "filter_segments": [],
@@ -306,23 +320,23 @@ class TestShortlinkAPI:
         assert r.status_code == 201
         short_id = r.json()["id"]
 
-        # Resolve via tilde path
-        r = await client.get(f"/resolve/benchmarks.returns/~{short_id}")
+        # Resolve via filter@ path
+        r = await client.get(f"/resolve/benchmarks.returns/filter@{short_id}")
         # May be 200 (resolved) or 404 (no source binding for this path in test catalog)
         # The important thing is it didn't 404 with "Shortlink not found"
         if r.status_code == 200:
             body = r.json()
-            assert body["redirected_from"] == f"~{short_id}"
+            assert body["redirected_from"] == f"filter@{short_id}"
 
     @pytest.mark.asyncio
     async def test_resolve_unknown_shortlink(self, client):
-        r = await client.get("/resolve/some/path/~UNKNOWN")
+        r = await client.get("/resolve/some/path/filter@UNKNOWN")
         assert r.status_code == 404
         assert "Shortlink not found" in r.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_resolve_normal_unaffected(self, client):
-        """Normal resolve (no tilde) still works."""
+        """Normal resolve (no filter@) still works."""
         r = await client.get("/resolve/benchmarks.returns")
         # Should work normally — no shortlink interference
         assert r.status_code in (200, 404)  # depends on demo catalog

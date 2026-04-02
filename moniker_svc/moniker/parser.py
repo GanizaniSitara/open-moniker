@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlparse
 
 from .types import Moniker, MonikerPath, QueryParams
+
+if TYPE_CHECKING:
+    from ..shortlinks.store import ShortlinkStore
 
 
 class MonikerParseError(ValueError):
@@ -31,6 +35,9 @@ DATE_PARAM_PATTERN = re.compile(
     r"^(?:\d{8}|[1-9]\d*[YMWD]|latest|previous)$",
     re.IGNORECASE,
 )
+
+# filter@CODE: reserved segment prefix for shortlink expansion
+_FILTER_PREFIX = "filter@"
 
 
 def validate_segment(segment: str) -> bool:
@@ -87,7 +94,12 @@ def parse_path(path_str: str, *, validate: bool = True) -> MonikerPath:
     return MonikerPath(tuple(segments))
 
 
-def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
+def parse_moniker(
+    moniker_str: str,
+    *,
+    validate: bool = True,
+    shortlink_store: ShortlinkStore | None = None,
+) -> Moniker:
     """
     Parse a full moniker string.
 
@@ -96,9 +108,13 @@ def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
     The @ character within a path segment denotes an identity parameter:
         holdings/positions@ACC001/summary
 
+    ``filter@CODE`` is a reserved segment that expands via the shortlink
+    store.  It does NOT count against the one-@id-per-path limit.
+
     Args:
         moniker_str: The moniker string to parse
         validate: Whether to validate segment names
+        shortlink_store: Optional shortlink store for ``filter@CODE`` expansion
 
     Returns:
         Moniker instance
@@ -139,16 +155,21 @@ def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
     first_slash = body.find("/")
 
     if first_at != -1 and (first_slash == -1 or first_at < first_slash):
-        # This @ is a namespace prefix
-        namespace = body[:first_at]
-        remaining = body[first_at + 1:]
+        candidate = body[:first_at]
+        # "filter" is a reserved segment name, not a namespace
+        if candidate == "filter":
+            pass  # fall through — handled by filter@CODE expansion below
+        else:
+            # This @ is a namespace prefix
+            namespace = candidate
+            remaining = body[first_at + 1:]
 
-        if validate and not validate_namespace(namespace):
-            raise MonikerParseError(
-                f"Invalid namespace: '{namespace}'. "
-                "Namespace must start with a letter and contain only "
-                "alphanumerics, hyphens, or underscores."
-            )
+            if validate and not validate_namespace(namespace):
+                raise MonikerParseError(
+                    f"Invalid namespace: '{namespace}'. "
+                    "Namespace must start with a letter and contain only "
+                    "alphanumerics, hyphens, or underscores."
+                )
 
     # Parse revision suffix (/vN or /VN at the end - case-insensitive)
     revision = None
@@ -162,6 +183,36 @@ def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
             if rev_match:
                 revision = int(rev_match.group(1))
                 remaining = before
+
+    # Expand filter@CODE segments (reserved, checked before date@ and @id).
+    # "filter" is a globally hard-reserved segment name — the parser recognises
+    # it before falling through to entity @id logic. It does NOT count against
+    # the one-@id-per-path limit.
+    filter_shortlink: str | None = None
+    extra_params: dict[str, str] = {}
+    parts_check = remaining.split("/")
+    for i, seg in enumerate(parts_check):
+        if seg.startswith(_FILTER_PREFIX):
+            short_code = seg[len(_FILTER_PREFIX):]
+            if not short_code:
+                raise MonikerParseError("Empty code in 'filter@'.")
+            if shortlink_store is None:
+                raise MonikerParseError(
+                    f"Cannot expand '{seg}': no shortlink store available."
+                )
+            link = shortlink_store.get(short_code)
+            if link is None:
+                raise MonikerParseError(
+                    f"Shortlink not found: '{short_code}'."
+                )
+            # Splice: replace filter@CODE with expanded filter segments
+            before = parts_check[:i]
+            after = parts_check[i + 1:]
+            parts_check = before + list(link.filter_segments) + after
+            remaining = "/".join(parts_check)
+            extra_params.update(link.params)
+            filter_shortlink = f"filter@{short_code}"
+            break  # one filter@ per path
 
     # Extract date@VALUE from final segment (reserved segment, checked first).
     # "date" is a globally hard-reserved segment name — the parser recognises it
@@ -236,8 +287,10 @@ def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
     # Parse path
     path = parse_path(remaining, validate=validate)
 
-    # Parse query params
+    # Parse query params (shortlink params first, client params override)
     params: dict[str, str] = {}
+    if extra_params:
+        params.update(extra_params)
     if query_str:
         parsed_qs = parse_qs(query_str, keep_blank_values=True)
         for key, values in parsed_qs.items():
@@ -251,6 +304,7 @@ def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
         date_param=date_param,
         revision=revision,
         params=QueryParams(params),
+        filter_shortlink=filter_shortlink,
     )
 
 

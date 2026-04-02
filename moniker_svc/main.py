@@ -1211,27 +1211,23 @@ async def resolve_moniker(
     if full_path.startswith("/resolve/"):
         path = full_path[9:]  # Strip "/resolve/"
 
-    # Shortlink expansion: detect ~-prefixed segment and expand inline
-    shortlink_alias = None
-    if _shortlink_store:
-        try:
-            expanded, alias = _shortlink_store.try_expand_path(path)
-            if alias:
-                shortlink_alias = alias
-                path = expanded
-        except KeyError as exc:
-            raise HTTPException(status_code=404, detail=str(exc))
-
     # Build full moniker string
     moniker_str = f"moniker://{path}"
-    if not shortlink_alias and request.query_params:
-        # Only append client query params for non-shortlink requests
-        # (shortlinks have params baked in — the expand() already includes them)
+    if request.query_params:
         params = list(request.query_params.items())
         if params:
             moniker_str += "?" + "&".join(f"{k}={v}" for k, v in params)
 
-    result = await _service.resolve(moniker_str, caller)
+    # Resolve (parser expands filter@CODE inline if shortlink store available)
+    try:
+        result = await _service.resolve(
+            moniker_str, caller, shortlink_store=_shortlink_store,
+        )
+    except ValueError as exc:
+        # MonikerParseError (subclass of ValueError) for bad filter@CODE
+        if "Shortlink not found" in str(exc):
+            raise HTTPException(status_code=404, detail=str(exc))
+        raise
 
     # Check for deprecation warning
     node = result.node
@@ -1287,10 +1283,6 @@ async def resolve_moniker(
         migration_guide_url=migration_guide_url,
         redirected_from=result.redirected_from,
     )
-
-    # Override redirected_from if this was a shortlink expansion
-    if shortlink_alias:
-        response.redirected_from = shortlink_alias
 
     # Add deprecation/redirect headers
     headers = {}
