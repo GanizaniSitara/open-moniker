@@ -1,6 +1,6 @@
 [project]
 name = "moniker-svc"
-version = "0.3.0"
+version = "0.3.1"
 description = "Unified data access layer with hierarchical ownership and telemetry"
 readme = "README.md"
 requires-python = ">=3.10"
