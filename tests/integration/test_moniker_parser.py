@@ -230,3 +230,106 @@ class TestSegmentId:
         """str(moniker.path) must remain clean (no @id) for catalog lookup."""
         m = parse_moniker("holdings/positions@ACC001/summary")
         assert str(m.path) == "holdings/positions/summary"
+
+
+class TestDateParam:
+    """Tests for date@VALUE reserved segment parsing."""
+
+    def test_date_absolute(self):
+        m = parse_moniker("prices/equity/AAPL/date@20260101")
+        assert m.date_param == "20260101"
+        assert str(m.path) == "prices/equity/AAPL"
+        assert m.segment_id is None
+
+    def test_date_latest(self):
+        m = parse_moniker("prices/equity/AAPL/date@latest")
+        assert m.date_param == "latest"
+        assert str(m.path) == "prices/equity/AAPL"
+
+    def test_date_previous(self):
+        m = parse_moniker("prices/equity/AAPL/date@previous")
+        assert m.date_param == "previous"
+
+    def test_date_relative_months(self):
+        m = parse_moniker("prices/equity/AAPL/date@3M")
+        assert m.date_param == "3M"
+        assert str(m.path) == "prices/equity/AAPL"
+
+    def test_date_relative_years(self):
+        m = parse_moniker("prices/equity/AAPL/date@1Y")
+        assert m.date_param == "1Y"
+
+    def test_date_relative_weeks(self):
+        m = parse_moniker("prices/equity/AAPL/date@2W")
+        assert m.date_param == "2W"
+
+    def test_date_relative_days(self):
+        m = parse_moniker("prices/equity/AAPL/date@5D")
+        assert m.date_param == "5D"
+
+    def test_date_stripped_from_canonical_path(self):
+        """date@VALUE must not appear in canonical_path (used for catalog lookup)."""
+        m = parse_moniker("prices/equity/AAPL/date@20260101")
+        assert m.canonical_path == "prices/equity/AAPL"
+        assert "date" not in m.canonical_path
+
+    def test_date_not_in_segments(self):
+        """date@ is not a positional segment."""
+        m = parse_moniker("prices/equity/AAPL/date@20260101")
+        assert m.path.segments == ("prices", "equity", "AAPL")
+
+    def test_date_with_segment_id(self):
+        """date@ and @id can coexist."""
+        m = parse_moniker("holdings/positions@ACC001/summary/date@20260101")
+        assert m.segment_id == (1, "ACC001")
+        assert m.date_param == "20260101"
+        assert str(m.path) == "holdings/positions/summary"
+
+    def test_date_with_revision(self):
+        m = parse_moniker("prices/equity/AAPL/date@20260101/v2")
+        assert m.date_param == "20260101"
+        assert m.revision == 2
+        assert str(m.path) == "prices/equity/AAPL"
+
+    def test_date_with_query_params(self):
+        m = parse_moniker("prices/equity/AAPL/date@latest?format=json")
+        assert m.date_param == "latest"
+        assert m.params.format == "json"
+
+    def test_date_in_str_representation(self):
+        m = parse_moniker("prices/equity/AAPL/date@20260101")
+        s = str(m)
+        assert "date@20260101" in s
+
+    def test_date_case_insensitive_symbolic(self):
+        m = parse_moniker("prices/AAPL/date@Latest")
+        assert m.date_param == "Latest"
+
+    def test_date_empty_value_raises(self):
+        with pytest.raises(MonikerParseError, match="Empty date value"):
+            parse_moniker("prices/AAPL/date@")
+
+    def test_date_invalid_format_raises(self):
+        with pytest.raises(MonikerParseError, match="Invalid date parameter"):
+            parse_moniker("prices/AAPL/date@notadate")
+
+    def test_date_invalid_relative_raises(self):
+        with pytest.raises(MonikerParseError, match="Invalid date parameter"):
+            parse_moniker("prices/AAPL/date@0M")  # 0 not valid (must start with 1-9)
+
+    def test_date_with_scheme(self):
+        m = parse_moniker("moniker://prices/equity/AAPL/date@20260101")
+        assert m.date_param == "20260101"
+        assert str(m.path) == "prices/equity/AAPL"
+
+    def test_no_date_param_by_default(self):
+        """Monikers without date@ have date_param=None."""
+        m = parse_moniker("prices/equity/AAPL")
+        assert m.date_param is None
+
+    def test_date_with_namespace(self):
+        """date@ works with namespace prefix."""
+        m = parse_moniker("prod@prices/equity/AAPL/date@20260101")
+        assert m.namespace == "prod"
+        assert m.date_param == "20260101"
+        assert str(m.path) == "prices/equity/AAPL"

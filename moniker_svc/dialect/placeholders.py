@@ -79,18 +79,26 @@ PLACEHOLDERS: dict[str, PlaceholderInfo] = {
         example_output="true",
         category="segment",
     ),
-    "segments[N]:date": PlaceholderInfo(
-        name="segments[N]:date",
-        description="Path segment formatted as date (YYYYMMDD → YYYY-MM-DD)",
-        example_input="risk/20260101/100 with {segments[0]:date}",
-        example_output="2026-01-01",
-        category="segment",
+    # Date segment placeholders (date@VALUE)
+    "date_value": PlaceholderInfo(
+        name="date_value",
+        description="Raw date parameter value from date@VALUE segment",
+        example_input="prices/equity/AAPL/date@20260101",
+        example_output="20260101",
+        category="raw",
     ),
-    "segment_date_sql[N]": PlaceholderInfo(
-        name="segment_date_sql[N]",
-        description="Path segment as dialect-aware SQL date expression",
-        example_input="risk/20260101/100 with {segment_date_sql[0]}",
+    "date_sql": PlaceholderInfo(
+        name="date_sql",
+        description="Dialect-aware SQL expression from date@VALUE segment",
+        example_input="prices/equity/AAPL/date@20260101 (Snowflake)",
         example_output="TO_DATE('20260101', 'YYYYMMDD')",
+        category="dialect",
+    ),
+    "date_filter:COL": PlaceholderInfo(
+        name="date_filter:COL",
+        description="SQL filter clause: COL = <date_sql>, or 1=1 if no date param",
+        example_input="prices/equity/AAPL/date@20260101 with {date_filter:trade_date}",
+        example_output="trade_date = TO_DATE('20260101', 'YYYYMMDD')",
         category="dialect",
     ),
 
@@ -165,3 +173,18 @@ def format_placeholder_reference() -> str:
         lines.append("")
 
     return "\n".join(lines)
+
+
+# Quick reference for common patterns
+COMMON_PATTERNS = {
+    "segment_filter_query": """\
+-- Query with segment-based filtering
+SELECT * FROM {table}
+WHERE {filter[0]:symbol}
+""",
+}
+
+
+def get_pattern(name: str) -> str | None:
+    """Get a common query pattern by name."""
+    return COMMON_PATTERNS.get(name)

@@ -25,6 +25,7 @@ from moniker_svc.dialect.placeholders import (
     get_placeholder_help,
     list_placeholders,
     format_placeholder_reference,
+    get_pattern,
 )
 
 
@@ -321,3 +322,92 @@ class TestPlaceholders:
         assert "Raw Value Placeholders" in ref
         assert "Dialect-Aware SQL Placeholders" in ref
         assert "Path Segment Placeholders" in ref
+
+    def test_old_segment_date_placeholders_removed(self):
+        """segments[N]:date and segment_date_sql[N] replaced by date@ mechanism."""
+        assert get_placeholder_help("segments[N]:date") is None
+        assert get_placeholder_help("segment_date_sql[N]") is None
+
+    def test_date_placeholders_exist(self):
+        """New date@ placeholders are registered."""
+        assert get_placeholder_help("date_value") is not None
+        assert get_placeholder_help("date_sql") is not None
+        assert get_placeholder_help("date_filter:COL") is not None
+
+    def test_get_pattern(self):
+        p = get_pattern("segment_filter_query")
+        assert p is not None
+        assert "{filter[0]:symbol}" in p
+
+    def test_get_pattern_not_found(self):
+        assert get_pattern("nonexistent") is None
+
+
+# ===================================================================
+# resolve_date_param (via dialect base class)
+# ===================================================================
+
+class TestResolveDateParam:
+    """Tests for resolve_date_param across all dialects."""
+
+    def test_absolute_snowflake(self):
+        d = SnowflakeDialect()
+        assert d.resolve_date_param("20260101") == "TO_DATE('20260101', 'YYYYMMDD')"
+
+    def test_absolute_oracle(self):
+        d = OracleDialect()
+        assert d.resolve_date_param("20260115") == "TO_DATE('20260115', 'YYYYMMDD')"
+
+    def test_absolute_mssql(self):
+        d = MSSQLDialect()
+        assert d.resolve_date_param("20260115") == "CONVERT(DATE, '20260115', 112)"
+
+    def test_absolute_rest(self):
+        d = RestDialect()
+        assert d.resolve_date_param("20260115") == "2026-01-15"
+
+    def test_latest_snowflake(self):
+        d = SnowflakeDialect()
+        assert d.resolve_date_param("latest") == "CURRENT_DATE()"
+
+    def test_latest_oracle(self):
+        d = OracleDialect()
+        assert d.resolve_date_param("latest") == "SYSDATE"
+
+    def test_latest_mssql(self):
+        d = MSSQLDialect()
+        assert d.resolve_date_param("latest") == "CAST(GETDATE() AS DATE)"
+
+    def test_latest_rest(self):
+        d = RestDialect()
+        assert d.resolve_date_param("latest") == date.today().isoformat()
+
+    def test_latest_case_insensitive(self):
+        d = SnowflakeDialect()
+        assert d.resolve_date_param("Latest") == "CURRENT_DATE()"
+        assert d.resolve_date_param("LATEST") == "CURRENT_DATE()"
+
+    def test_previous_snowflake(self):
+        d = SnowflakeDialect()
+        assert d.resolve_date_param("previous") == "DATEADD('DAY', -1, CURRENT_DATE())"
+
+    def test_previous_oracle(self):
+        d = OracleDialect()
+        assert d.resolve_date_param("previous") == "SYSDATE - 1"
+
+    def test_relative_3m_snowflake(self):
+        d = SnowflakeDialect()
+        assert d.resolve_date_param("3M") == "DATEADD('MONTH', -3, CURRENT_DATE())"
+
+    def test_relative_1y_oracle(self):
+        d = OracleDialect()
+        assert d.resolve_date_param("1Y") == "ADD_MONTHS(SYSDATE, -12)"
+
+    def test_relative_5d_mssql(self):
+        d = MSSQLDialect()
+        assert d.resolve_date_param("5D") == "DATEADD(DAY, -5, CAST(GETDATE() AS DATE))"
+
+    def test_relative_2w_rest(self):
+        d = RestDialect()
+        expected = (date.today() - timedelta(weeks=2)).isoformat()
+        assert d.resolve_date_param("2W") == expected

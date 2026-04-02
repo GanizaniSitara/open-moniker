@@ -91,3 +91,48 @@ class VersionDialect(ABC):
         which is catalog-defined. This returns a placeholder.
         """
         return "'__LATEST__'"
+
+    def resolve_date_param(self, value: str) -> str:
+        """Resolve a date@ parameter value to a dialect-specific expression.
+
+        Handles:
+            - Absolute dates: "20260101" → dialect-specific date literal
+            - Symbolic: "latest" → current date, "previous" → current date - 1
+            - Relative: "3M", "1Y", "5D" → dialect-specific date arithmetic
+
+        Args:
+            value: The raw date parameter value (e.g., "20260101", "latest", "3M")
+
+        Returns:
+            Dialect-specific SQL expression or date string
+        """
+        import re
+
+        lower = value.lower()
+
+        # Symbolic values
+        if lower == "latest":
+            return self.current_date()
+        if lower == "previous":
+            return self._previous_date()
+
+        # Absolute date (YYYYMMDD)
+        if len(value) == 8 and value.isdigit():
+            return self.date_literal(value)
+
+        # Relative lookback (e.g., 3M, 1Y, 5D, 2W)
+        rel_match = re.match(r"^(\d+)([YMWD])$", value, re.IGNORECASE)
+        if rel_match:
+            amount = int(rel_match.group(1))
+            unit = rel_match.group(2).upper()
+            return self.lookback_start(amount, unit)
+
+        # Fallback: return as quoted string
+        return f"'{value}'"
+
+    def _previous_date(self) -> str:
+        """Return dialect-specific expression for previous business day (current_date - 1).
+
+        Subclasses may override for more specific behaviour.
+        """
+        return self.lookback_start(1, "D")

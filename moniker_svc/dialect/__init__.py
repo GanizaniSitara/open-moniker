@@ -12,6 +12,7 @@ from .placeholders import (
     get_placeholder_help,
     list_placeholders,
     format_placeholder_reference,
+    get_pattern,
 )
 
 __all__ = [
@@ -29,4 +30,5 @@ __all__ = [
     "get_placeholder_help",
     "list_placeholders",
     "format_placeholder_reference",
+    "get_pattern",
 ]

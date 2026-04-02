@@ -26,6 +26,12 @@ SEGMENT_ID_VALUE_PATTERN = re.compile(r"^[a-zA-Z0-9_.\-]+$")
 # Revision pattern: /vN or /VN where N is a positive integer (case-insensitive)
 REVISION_PATTERN = re.compile(r"^[vV](\d+)$")
 
+# date@VALUE patterns: absolute (YYYYMMDD), relative (3M, 1Y, 5D), symbolic (latest, previous)
+DATE_PARAM_PATTERN = re.compile(
+    r"^(?:\d{8}|[1-9]\d*[YMWD]|latest|previous)$",
+    re.IGNORECASE,
+)
+
 
 def validate_segment(segment: str) -> bool:
     """Check if a path segment is valid."""
@@ -157,9 +163,33 @@ def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
                 revision = int(rev_match.group(1))
                 remaining = before
 
+    # Extract date@VALUE from final segment (reserved segment, checked first).
+    # "date" is a globally hard-reserved segment name — the parser recognises it
+    # before falling through to entity @id logic. It does NOT count against
+    # the one-@id-per-path limit.
+    date_param = None
+    if "@" in remaining:
+        parts = remaining.split("/")
+        final = parts[-1]
+        if final.startswith("date@"):
+            date_value = final[5:]  # strip "date@"
+            if not date_value:
+                raise MonikerParseError("Empty date value in 'date@'.")
+            if validate and not DATE_PARAM_PATTERN.match(date_value):
+                raise MonikerParseError(
+                    f"Invalid date parameter: '{date_value}'. "
+                    "Must be YYYYMMDD, relative (e.g., 3M, 1Y, 5D), "
+                    "or symbolic (latest, previous)."
+                )
+            date_param = date_value
+            # Remove the date segment from the path
+            parts = parts[:-1]
+            remaining = "/".join(parts)
+
     # Extract in-path segment identity (@id embedded in a path segment).
     # @ is ONLY valid as an identity parameter within a segment followed by more path.
-    # @ at end of path or standalone is a parse error.
+    # @ at end of path or standalone is a parse error (unless it was a date@ segment,
+    # already consumed above).
     segment_id = None
     if "@" in remaining:
         parts = remaining.split("/")
@@ -218,6 +248,7 @@ def parse_moniker(moniker_str: str, *, validate: bool = True) -> Moniker:
         path=path,
         namespace=namespace,
         segment_id=segment_id,
+        date_param=date_param,
         revision=revision,
         params=QueryParams(params),
     )

@@ -26,10 +26,10 @@ monikers:
     desc: Security Master (Oracle)
     note: Returns Oracle connection info.
 
-  - moniker: spm.position/20260109/700
+  - moniker: spm.position/700/date@20260109
     action: resolve
-    desc: SPM Position by date/account
-    note: "Path segments: date (20260109), account (700). Use {segments[0]:date} for formatted date."
+    desc: SPM Position by account/date
+    note: "Account as path segment, date via date@VALUE. Use {date_sql} for dialect-aware date, {date_value} for raw value."
 
   # --- Fetch demos (server-side execution) ---
   - moniker: prices.equity/AAPL

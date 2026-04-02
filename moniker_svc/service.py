@@ -306,14 +306,17 @@ class MonikerService:
             Raw values:
                 {path}              - Full sub-path after the binding
                 {segments[N]}       - Specific path segment (0-indexed)
-                {segments[N]:date}  - Segment N formatted as date (YYYYMMDD → YYYY-MM-DD)
                 {revision}          - Revision from /vN suffix
                 {namespace}         - Namespace prefix if provided
                 {moniker}           - Full moniker string
 
             Dialect-aware SQL expressions:
                 {current_date}      - Dialect-specific current date (e.g., CURRENT_DATE(), SYSDATE)
-                {segment_date_sql[N]} - Segment N as dialect-aware SQL date
+
+            Date segment (date@VALUE):
+                {date_value}        - Raw date parameter value (e.g., "20260101", "latest", "3M")
+                {date_sql}          - Dialect-aware date expression
+                {date_filter:col}   - "col = <date_sql>" or "1=1" if no date param
 
             Segment filters:
                 {filter[N]:col}     - SQL filter for segment N on column col
@@ -335,8 +338,8 @@ class MonikerService:
         # Get dialect for this source type
         dialect = get_dialect(source_type)
 
-        # Dialect-aware current date
-        current_date_sql = dialect.current_date()
+        # Resolve date_param via dialect
+        date_sql = dialect.resolve_date_param(moniker.date_param) if moniker.date_param else ""
 
         # Build substitution dict
         subs = {
@@ -345,7 +348,10 @@ class MonikerService:
             "namespace": moniker.namespace or "",
             "moniker": str(moniker),
             # Dialect-aware SQL
-            "current_date": current_date_sql,
+            "current_date": dialect.current_date(),
+            # Date segment placeholders
+            "date_value": moniker.date_param or "",
+            "date_sql": date_sql,
             # Segment identity placeholders
             "segment_id_value": moniker.segment_id[1] if moniker.segment_id else "",
             "segment_id_index": str(moniker.segment_id[0]) if moniker.segment_id else "",
@@ -372,29 +378,14 @@ class MonikerService:
 
         result = re.sub(r"\{segment_id\[(\d+)\]\}", replace_segment_id, result)
 
-        # Handle {segments[N]:date} patterns - formats YYYYMMDD as YYYY-MM-DD
-        def replace_segment_date(match: re.Match) -> str:
-            idx = int(match.group(1))
-            if 0 <= idx < len(segments):
-                seg = segments[idx]
-                if len(seg) == 8 and seg.isdigit():
-                    return f"{seg[:4]}-{seg[4:6]}-{seg[6:8]}"
-                return seg
-            return ""
+        # Handle {date_filter:col} pattern - "col = <date_sql>" or "1=1" if no date param
+        def replace_date_filter(match: re.Match) -> str:
+            col = match.group(1)
+            if moniker.date_param:
+                return f"{col} = {date_sql}"
+            return dialect.no_filter()
 
-        result = re.sub(r"\{segments\[(\d+)\]:date\}", replace_segment_date, result)
-
-        # Handle {segment_date_sql[N]} patterns - dialect-aware SQL date expression
-        def replace_segment_date_sql(match: re.Match) -> str:
-            idx = int(match.group(1))
-            if 0 <= idx < len(segments):
-                seg = segments[idx]
-                if len(seg) == 8 and seg.isdigit():
-                    return dialect.date_literal(seg)
-                return f"'{seg}'"
-            return "NULL"
-
-        result = re.sub(r"\{segment_date_sql\[(\d+)\]\}", replace_segment_date_sql, result)
+        result = re.sub(r"\{date_filter:(\w+)\}", replace_date_filter, result)
 
         # Handle {is_all[N]} patterns
         def replace_is_all(match: re.Match) -> str:

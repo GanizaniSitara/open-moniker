@@ -117,6 +117,7 @@ class Moniker:
         namespace: Access scope (e.g., "official", "user", "trading-desk")
         path: Hierarchical path with dot-notation support
         segment_id: In-path identity parameter (segment_index, id_value)
+        date_param: Date parameter from date@VALUE final segment
         revision: Schema/format revision (integer, e.g., 2 for /v2)
         params: Additional query parameters
 
@@ -124,12 +125,13 @@ class Moniker:
         indices.sovereign/developed/EUR/ALL
         verified@reference.security/ISIN/US0378331005
         holdings/positions@ACC001/summary
-        prod@holdings/positions@ACC001/summary/v2
-        holdings/20260115/fund_alpha?format=json
+        prices/equity/AAPL/date@20260101
+        prices/equity/AAPL/date@latest
     """
     path: MonikerPath
     namespace: str | None = None
     segment_id: tuple[int, str] | None = None  # In-path identity: (segment_index, id_value)
+    date_param: str | None = None  # date@VALUE: "20260101", "latest", "3M"
     revision: int | None = None  # /v2 -> 2
     params: QueryParams = field(default_factory=lambda: QueryParams({}))
 
@@ -153,6 +155,10 @@ class Moniker:
 
         # Path (with @id re-injected)
         parts.append(self._path_with_segment_id())
+
+        # Date segment (before revision)
+        if self.date_param is not None:
+            parts.append(f"/date@{self.date_param}")
 
         # Revision suffix
         if self.revision is not None:
@@ -191,6 +197,7 @@ class Moniker:
             path=self.path,
             namespace=namespace,
             segment_id=self.segment_id,
+            date_param=self.date_param,
             revision=self.revision,
             params=self.params,
         )
