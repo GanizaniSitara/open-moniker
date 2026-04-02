@@ -9,81 +9,10 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
-## [0.3.1] — 2026-04-02
+## [Unreleased] — OM-24 (Java & Go resolver parity — pending)
 
-### Java & Go resolvers — brought to parity with Python (OM-24)
-
-The Java (`resolver-java/`) and Go (`resolver-go/`) implementations were written against
-the pre-OM-17/OM-19 moniker contract. This release aligns both with the current Python
-`Moniker` dataclass and parser behaviour.
-
-#### Breaking (Java & Go APIs only — Python unchanged)
-
-- **Removed fields**: `version`, `versionType`/`VersionType`, `subResource`/`SubResource`
-  from `Moniker` struct in both languages. Consumers using `getVersion()`, `m.Version`,
-  `getSubResource()`, etc. will fail at compile time.
-- **Removed helpers**: `isVersioned()`, `isLatest()`, `isAll()`, `versionDate()`,
-  `versionLookback()`, `versionTenor()`, `versionFrequency()`, `withVersion()`,
-  `withSubResource()`, `classifyVersion()` (Java and Go).
-- **`@version` syntax now rejected**: Parsing `prices/AAPL@20260101` or `prices/AAPL@latest`
-  now throws `MonikerParseException` / `MonikerParseError` (matching Python OM-19 behaviour).
-
-#### Added
-
-- **`segmentId` / `SegmentID` field** on `Moniker` in both Java and Go, matching Python's
-  `segment_id: tuple[int, str] | None` (OM-17 parity).
-  - Java: `getSegmentIdIndex()`, `getSegmentIdValue()`, `hasSegmentId()`
-  - Go: `SegmentID *SegmentID` struct with `Index int`, `Value string`; `HasSegmentID()`
-- **`@id` parsing** — `holdings/positions@ACC001/summary` extracts identity `(1, "ACC001")`
-  and cleans the path to `holdings/positions/summary` for catalog lookup.
-- **`@id` validation** — empty `@id`, invalid characters, and multiple `@id` per path
-  raise parse errors (matching all 4 Python error cases).
-- **`canonical_path` excludes `@id`** — `canonicalPath()` / `CanonicalPath()` returns
-  the clean path for catalog lookup, consistent with Python.
-- **`full_path` includes `@id`** — `fullPath()` / `FullPath()` re-injects `@id` into
-  the correct segment, matching Python's `full_path` property.
-- **`segment_id_*` placeholder support** in service template substitution (Java and Go):
-  `{segment_id_value}`, `{segment_id_index}`, `{has_segment_id}`, `{segment_id[N]}`
-
-#### Files changed — Java (`resolver-java/`)
-
-- **Deleted**: `src/main/java/.../moniker/VersionType.java` — enum no longer needed
-- **Modified**: `src/main/java/.../moniker/Moniker.java` — removed 3 fields + version
-  helpers, added `segmentId`/`segmentIdValue`, updated `toString()`, `fullPath()`,
-  `canonicalPath()`, `equals()`, `hashCode()`
-- **Modified**: `src/main/java/.../moniker/MonikerParser.java` — removed `@version`
-  parsing + `classifyVersion()`, added `@id` extraction with validation, updated
-  `buildMoniker()` signature
-- **Modified**: `src/main/java/.../service/MonikerService.java` — `substituteQueryTemplate()`
-  now expands `segment_id_*` placeholders instead of `{version}`
-- **Modified**: `src/main/java/.../service/ResolveResult.java` — replaced `version` field
-  with `segmentIdIndex` and `segmentIdValue`
-- **Modified**: `src/main/java/.../controller/ResolverController.java` — removed `version`
-  query parameter from `/resolve/{path}` endpoint
-- **Modified**: `src/test/.../moniker/MonikerParserTest.java` — removed version tests,
-  added 6 `@version` rejection tests + 15 `@id` tests (aligned with Python test suite)
-
-#### Files changed — Go (`resolver-go/`)
-
-- **Modified**: `internal/moniker/types.go` — removed `Version`, `VersionType`,
-  `SubResource` fields + all version constants/helpers, added `SegmentID` struct,
-  updated `String()`, `FullPath()`, `CanonicalPath()`, `WithNamespace()`
-- **Modified**: `internal/moniker/parser.go` — removed `ClassifyVersion()` + version
-  patterns + `@version` parsing block, added `@id` extraction with validation, updated
-  `BuildMoniker()` signature
-- **Modified**: `internal/service/service.go` — `formatQuery()` now expands
-  `segment_id_*` placeholders instead of `{version_date}` and `{is_latest}`
-- **Modified**: `internal/moniker/parser_test.go` — replaced version-focused tests with
-  6 `@version` rejection tests + 15 `@id` tests + `HasSegmentID` test (aligned with
-  Python test suite)
-
-#### Test results
-
-| Implementation | Tests | Result |
-|----------------|-------|--------|
-| Python | 43 | 43 passed |
-| Go | 56 | 56 passed |
-| Java | 37 | Not runnable (no Maven on this machine) — compiles cleanly |
+> **Note:** A previous version of this changelog incorrectly claimed 0.3.1 was complete.
+> The Java and Go resolvers have NOT been updated yet. OM-24 is being respun.
 
 ---
 
