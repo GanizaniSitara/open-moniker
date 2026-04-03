@@ -2,24 +2,15 @@ package moniker
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 )
 
-// VersionType represents the semantic type of a version specifier
-type VersionType string
-
-const (
-	VersionTypeDate      VersionType = "date"      // @20260101 (YYYYMMDD format)
-	VersionTypeLatest    VersionType = "latest"    // @latest
-	VersionTypeLookback  VersionType = "lookback"  // @3M, @12Y, @1W, @5D (lookback period)
-	VersionTypeFrequency VersionType = "frequency" // @daily, @weekly, @monthly
-	VersionTypeAll       VersionType = "all"       // @all (full time series)
-	VersionTypeCustom    VersionType = "custom"    // Source-specific version identifier
-)
-
-// Backward compatibility alias
-var VersionTypeTenor = VersionTypeLookback
+// SegmentID represents an in-path identity parameter (@id).
+// For example, positions@ACC001 → Index=1, Value="ACC001"
+type SegmentID struct {
+	Index int    // which positional segment carries the @id
+	Value string // the identity value after @
+}
 
 // MonikerPath represents a hierarchical path to a data asset
 type MonikerPath struct {
@@ -150,13 +141,13 @@ func (q QueryParams) IsEmpty() bool {
 
 // Moniker represents a complete moniker reference
 type Moniker struct {
-	Path         *MonikerPath
-	Namespace    *string
-	Version      *string
-	VersionType  *VersionType
-	SubResource  *string
-	Revision     *int
-	Params       QueryParams
+	Path            *MonikerPath
+	Namespace       *string
+	SegmentID       *SegmentID // In-path identity parameter (@id)
+	DateParam       *string    // date@VALUE: "20260101", "latest", "3M", etc.
+	FilterShortlink *string    // filter@CODE that was expanded (e.g. "filter@xK9f2p")
+	Revision        *int
+	Params          QueryParams
 }
 
 // String returns the canonical moniker string
@@ -168,17 +159,12 @@ func (m *Moniker) String() string {
 		parts = append(parts, *m.Namespace+"@")
 	}
 
-	// Path
-	parts = append(parts, m.Path.String())
+	// Path (with @id re-injected)
+	parts = append(parts, m.pathWithSegmentID())
 
-	// Version suffix
-	if m.Version != nil {
-		parts = append(parts, "@"+*m.Version)
-	}
-
-	// Sub-resource (after version, before revision)
-	if m.SubResource != nil {
-		parts = append(parts, "/"+*m.SubResource)
+	// Date segment (before revision)
+	if m.DateParam != nil {
+		parts = append(parts, "/date@"+*m.DateParam)
 	}
 
 	// Revision suffix
@@ -200,128 +186,47 @@ func (m *Moniker) String() string {
 	return "moniker://" + base
 }
 
+// pathWithSegmentID returns the path string with @id re-injected into the correct segment
+func (m *Moniker) pathWithSegmentID() string {
+	pathStr := m.Path.String()
+	if m.SegmentID == nil {
+		return pathStr
+	}
+	segments := strings.Split(pathStr, "/")
+	if m.SegmentID.Index < len(segments) {
+		segments[m.SegmentID.Index] = segments[m.SegmentID.Index] + "@" + m.SegmentID.Value
+	}
+	return strings.Join(segments, "/")
+}
+
 // Domain returns the data domain (first path segment)
 func (m *Moniker) Domain() *string {
 	return m.Path.Domain()
 }
 
-// CanonicalPath returns the path as a string (without namespace, version, or params)
+// CanonicalPath returns the path as a string (without @id, namespace, or params)
 func (m *Moniker) CanonicalPath() string {
 	return m.Path.String()
 }
 
-// FullPath returns path including version, sub-resource, and revision but not namespace
+// FullPath returns path including @id and revision but not namespace
 func (m *Moniker) FullPath() string {
-	parts := []string{m.Path.String()}
-	if m.Version != nil {
-		parts = append(parts, "@"+*m.Version)
-	}
-	if m.SubResource != nil {
-		parts = append(parts, "/"+*m.SubResource)
-	}
+	parts := []string{m.pathWithSegmentID()}
 	if m.Revision != nil {
 		parts = append(parts, fmt.Sprintf("/v%d", *m.Revision))
 	}
 	return strings.Join(parts, "")
 }
 
-// IsVersioned returns true if the moniker has a version specifier
-func (m *Moniker) IsVersioned() bool {
-	return m.Version != nil
-}
-
-// IsLatest returns true if the moniker explicitly requests latest version
-func (m *Moniker) IsLatest() bool {
-	return m.Version != nil && *m.Version == "latest"
-}
-
-// VersionDate extracts date from version if it's a date format (YYYYMMDD)
-func (m *Moniker) VersionDate() *string {
-	if m.VersionType != nil && *m.VersionType == VersionTypeDate {
-		return m.Version
-	}
-	// Fallback for backwards compatibility
-	if m.Version != nil && len(*m.Version) == 8 {
-		// Check if all digits
-		matched, _ := regexp.MatchString(`^\d{8}$`, *m.Version)
-		if matched {
-			return m.Version
-		}
-	}
-	return nil
-}
-
-// VersionLookback extracts lookback components if version is a lookback period
-// Returns (value, unit) where unit is Y/M/W/D, or nil if not a lookback
-func (m *Moniker) VersionLookback() (value *int, unit *string) {
-	if m.VersionType != nil && *m.VersionType == VersionTypeLookback && m.Version != nil {
-		re := regexp.MustCompile(`^(\d+)([YMWD])$`)
-		matches := re.FindStringSubmatch(strings.ToUpper(*m.Version))
-		if len(matches) == 3 {
-			var val int
-			fmt.Sscanf(matches[1], "%d", &val)
-			unitStr := matches[2]
-			return &val, &unitStr
-		}
-	}
-	return nil, nil
-}
-
-// VersionTenor is a backward compatibility alias for VersionLookback
-func (m *Moniker) VersionTenor() (value *int, unit *string) {
-	return m.VersionLookback()
-}
-
-// VersionFrequency extracts frequency if version is a frequency specifier
-// Returns frequency string (daily, weekly, monthly) or nil
-func (m *Moniker) VersionFrequency() *string {
-	if m.VersionType != nil && *m.VersionType == VersionTypeFrequency && m.Version != nil {
-		freq := strings.ToLower(*m.Version)
-		return &freq
-	}
-	return nil
-}
-
-// IsAll returns true if the moniker requests the full time series
-func (m *Moniker) IsAll() bool {
-	return m.VersionType != nil && *m.VersionType == VersionTypeAll
-}
-
-// WithVersion creates a copy with a different version
-func (m *Moniker) WithVersion(version string, versionType *VersionType) *Moniker {
-	return &Moniker{
-		Path:        m.Path,
-		Namespace:   m.Namespace,
-		Version:     &version,
-		VersionType: versionType,
-		SubResource: m.SubResource,
-		Revision:    m.Revision,
-		Params:      m.Params,
-	}
-}
-
 // WithNamespace creates a copy with a different namespace
 func (m *Moniker) WithNamespace(namespace *string) *Moniker {
 	return &Moniker{
-		Path:        m.Path,
-		Namespace:   namespace,
-		Version:     m.Version,
-		VersionType: m.VersionType,
-		SubResource: m.SubResource,
-		Revision:    m.Revision,
-		Params:      m.Params,
-	}
-}
-
-// WithSubResource creates a copy with a different sub-resource
-func (m *Moniker) WithSubResource(subResource *string) *Moniker {
-	return &Moniker{
-		Path:        m.Path,
-		Namespace:   m.Namespace,
-		Version:     m.Version,
-		VersionType: m.VersionType,
-		SubResource: subResource,
-		Revision:    m.Revision,
-		Params:      m.Params,
+		Path:            m.Path,
+		Namespace:       namespace,
+		SegmentID:       m.SegmentID,
+		DateParam:       m.DateParam,
+		FilterShortlink: m.FilterShortlink,
+		Revision:        m.Revision,
+		Params:          m.Params,
 	}
 }

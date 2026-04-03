@@ -156,17 +156,19 @@ func (s *MonikerService) formatQuery(query string, m *moniker.Moniker) string {
 		result = strings.ReplaceAll(result, placeholder, seg)
 	}
 
-	// Replace {version_date} if present
-	if m.VersionDate() != nil {
-		result = strings.ReplaceAll(result, "{version_date}", *m.VersionDate())
+	// Replace {segment_id_value} and {has_segment_id}
+	if m.SegmentID != nil {
+		result = strings.ReplaceAll(result, "{segment_id_value}", m.SegmentID.Value)
+		result = strings.ReplaceAll(result, "{segment_id_index}", fmt.Sprintf("%d", m.SegmentID.Index))
+		result = strings.ReplaceAll(result, "{has_segment_id}", "true")
+		// Replace {segment_id[N]} for the specific segment
+		placeholder := fmt.Sprintf("{segment_id[%d]}", m.SegmentID.Index)
+		result = strings.ReplaceAll(result, placeholder, m.SegmentID.Value)
+	} else {
+		result = strings.ReplaceAll(result, "{segment_id_value}", "")
+		result = strings.ReplaceAll(result, "{segment_id_index}", "")
+		result = strings.ReplaceAll(result, "{has_segment_id}", "false")
 	}
-
-	// Replace {is_latest} if present
-	isLatest := "false"
-	if m.IsLatest() {
-		isLatest = "true"
-	}
-	result = strings.ReplaceAll(result, "{is_latest}", isLatest)
 
 	return result
 }

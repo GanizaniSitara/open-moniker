@@ -84,7 +84,6 @@ public class MonikerService {
 
         // Build result
         ResolveResult result = new ResolveResult(monikerStr, path);
-        result.setVersion(moniker.getVersion());
         result.setNamespace(moniker.getNamespace());
 
         SourceBinding binding = node.getSourceBinding();
@@ -238,9 +237,16 @@ public class MonikerService {
             result = result.replace("{seg" + i + "}", segments.get(i));
         }
 
-        // Substitute version
-        if (moniker.getVersion() != null) {
-            result = result.replace("{version}", moniker.getVersion());
+        // Substitute segment identity
+        if (moniker.hasSegmentId()) {
+            result = result.replace("{segment_id_value}", moniker.getSegmentIdValue());
+            result = result.replace("{segment_id_index}", String.valueOf(moniker.getSegmentIdIndex()));
+            result = result.replace("{has_segment_id}", "true");
+            result = result.replace("{segment_id[" + moniker.getSegmentIdIndex() + "]}", moniker.getSegmentIdValue());
+        } else {
+            result = result.replace("{segment_id_value}", "");
+            result = result.replace("{segment_id_index}", "");
+            result = result.replace("{has_segment_id}", "false");
         }
 
         // Substitute query params

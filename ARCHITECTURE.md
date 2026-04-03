@@ -151,8 +151,8 @@ C:/miniconda3/envs/python312/python.exe -m pytest tests/ --tb=short -q
 | Implementation | Location | Status |
 |----------------|----------|--------|
 | Python (canonical) | `moniker_svc/` | v0.3.0 — current |
-| Java | `resolver-java/` | Behind — pre-OM-17 |
-| Go | `resolver-go/` | Behind — pre-OM-17 |
+| Java | `resolver-java/` | v0.3.1 — OM-17/OM-19 parity |
+| Go | `resolver-go/` | v0.3.1 — OM-17/OM-19 parity |
 
 See OM-24 for the delta audit between implementations.
 
