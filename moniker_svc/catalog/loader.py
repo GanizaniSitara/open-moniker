@@ -247,12 +247,12 @@ class CatalogLoader:
 
         # Parse maturity tier from YAML
         from .types import Maturity
-        maturity = Maturity.CATALOGED
+        maturity = Maturity.BRONZE
         if "maturity" in data:
             try:
                 maturity = Maturity(data["maturity"])
             except ValueError:
-                logger.warning(f"Unknown maturity '{data['maturity']}' for {path}, defaulting to cataloged")
+                logger.warning(f"Unknown maturity '{data['maturity']}' for {path}, defaulting to bronze")
 
         # Parse quality shorthand into metadata if present
         metadata = data.get("metadata", {})

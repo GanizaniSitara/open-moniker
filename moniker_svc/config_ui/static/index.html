@@ -202,6 +202,12 @@
             font-weight: var(--fw-bold);
         }
         .node.selected .node-badge { background: rgba(255,255,255,0.2); color: white; }
+        .node-badge.tier-bronze { background: rgba(160,82,45,0.15); color: #A0522D; }
+        .node-badge.tier-silver { background: rgba(123,143,161,0.2); color: #5A6B7A; }
+        .node-badge.tier-gold   { background: rgba(212,160,23,0.15); color: #8C6A10; }
+        .node.selected .node-badge.tier-bronze,
+        .node.selected .node-badge.tier-silver,
+        .node.selected .node-badge.tier-gold { background: rgba(255,255,255,0.2); color: white; }
 
         /* Domain badge */
         .domain-badge {
@@ -1626,6 +1632,13 @@
                     if (hasSource) {
                         badges += `<span class="node-badge">${node.source_binding.type}</span>`;
                     }
+                    if (node.maturity) {
+                        const tierEmoji = { bronze: '🥉', silver: '🥈', gold: '🥇' }[node.maturity] || '';
+                        if (tierEmoji) {
+                            const tierLabel = node.maturity.charAt(0).toUpperCase() + node.maturity.slice(1);
+                            badges += `<span class="node-badge tier-${node.maturity}" title="Maturity: ${tierLabel}">${tierEmoji}</span>`;
+                        }
+                    }
 
                     const childrenHtml = hasChildren
                         ? '<ul>' + renderTreeLevel(data._children, false) + '</ul>'
@@ -1970,9 +1983,9 @@
                             <div class="form-row">
                                 <label for="maturity">Maturity</label>
                                 <select id="maturity">
-                                    <option value="cataloged" ${(node.maturity || 'cataloged') === 'cataloged' ? 'selected' : ''}>🥉 Cataloged</option>
-                                    <option value="governed" ${node.maturity === 'governed' ? 'selected' : ''}>🥈 Governed</option>
-                                    <option value="certified" ${node.maturity === 'certified' ? 'selected' : ''}>🥇 Certified</option>
+                                    <option value="bronze" ${(node.maturity || 'bronze') === 'bronze' ? 'selected' : ''}>🥉 Bronze</option>
+                                    <option value="silver" ${node.maturity === 'silver' ? 'selected' : ''}>🥈 Silver</option>
+                                    <option value="gold" ${node.maturity === 'gold' ? 'selected' : ''}>🥇 Gold</option>
                                 </select>
                             </div>
                         </div>
@@ -2477,7 +2490,7 @@
                 display_name: document.getElementById('display_name')?.value || '',
                 description: document.getElementById('description')?.value || '',
                 classification: document.getElementById('classification')?.value || 'internal',
-                maturity: document.getElementById('maturity')?.value || 'cataloged',
+                maturity: document.getElementById('maturity')?.value || 'bronze',
                 tags: collectTags(),
             };
 

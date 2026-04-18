@@ -191,7 +191,7 @@ class CatalogNodeModel(BaseModel):
     access_policy: AccessPolicyModel | None = None
     documentation: DocumentationModel | None = None
     classification: str = "internal"
-    maturity: str = "cataloged"
+    maturity: str = "bronze"
     tags: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     is_leaf: bool = False
@@ -226,7 +226,7 @@ class CreateNodeRequest(BaseModel):
     access_policy: AccessPolicyModel | None = None
     documentation: DocumentationModel | None = None
     classification: str = "internal"
-    maturity: str = "cataloged"
+    maturity: str = "bronze"
     tags: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -268,7 +268,7 @@ class NodeSummaryModel(BaseModel):
     resolved_domain: str | None = None
     vendor: str | None = None
     classification: str = "internal"
-    maturity: str = "cataloged"
+    maturity: str = "bronze"
     is_leaf: bool = False
     status: str = "active"
     source_type: str | None = None

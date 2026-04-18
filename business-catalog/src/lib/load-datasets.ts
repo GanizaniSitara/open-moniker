@@ -61,7 +61,7 @@ export async function loadBrowseDatasets(limit?: number): Promise<{
       domainColor: domain?.color,
       isContainer: !node.is_leaf,
       classification: node.classification,
-      maturity: node.maturity || "catalogued",
+      maturity: node.maturity || "bronze",
       vendor: node.vendor || undefined,
       source_binding: node.source_type ? { type: node.source_type } : undefined,
       schema: null as null,

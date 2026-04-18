@@ -32,7 +32,7 @@ public class CatalogNode {
     // Update frequency (e.g., daily, real-time, weekly)
     private String updateFrequency;
 
-    // Maturity level (e.g., governed, certified)
+    // Maturity level (e.g., silver, gold)
     private String maturity;
 
     // Extended description with technical details

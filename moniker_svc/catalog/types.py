@@ -29,9 +29,9 @@ class SourceType(str, Enum):
 
 class Maturity(str, Enum):
     """Data maturity tier for catalog nodes."""
-    CATALOGED = "cataloged"
-    GOVERNED = "governed"
-    CERTIFIED = "certified"
+    BRONZE = "bronze"
+    SILVER = "silver"
+    GOLD = "gold"
 
 
 class NodeStatus(str, Enum):
@@ -341,7 +341,7 @@ class CatalogNode:
     classification: str = "internal"
 
     # Data maturity tier
-    maturity: Maturity = Maturity.CATALOGED
+    maturity: Maturity = Maturity.BRONZE
 
     # Arbitrary tags for searchability
     tags: frozenset[str] = field(default_factory=frozenset)

@@ -342,14 +342,14 @@ export default async function DatasetDetailPage({ params }: PageProps) {
               </Typography>
               <Chip
                 icon={<WorkspacePremiumIcon />}
-                label={desc.maturity === "certified" ? "Certified" : desc.maturity === "governed" ? "Governed" : "Cataloged"}
+                label={desc.maturity === "gold" ? "Gold" : desc.maturity === "silver" ? "Silver" : "Bronze"}
                 size="small"
                 variant="outlined"
                 sx={{
                   fontWeight: 600,
                   border: "none",
                   "& .MuiChip-icon": {
-                    color: desc.maturity === "certified" ? "#D4A017" : desc.maturity === "governed" ? "#7B8FA1" : "#A0522D",
+                    color: desc.maturity === "gold" ? "#D4A017" : desc.maturity === "silver" ? "#7B8FA1" : "#A0522D",
                   },
                 }}
               />

@@ -88,7 +88,7 @@ export default function DatasetCard({
           {maturity && (
             <Chip
               icon={<WorkspacePremiumIcon />}
-              label={maturity === "certified" ? "Certified" : maturity === "governed" ? "Governed" : "Cataloged"}
+              label={maturity === "gold" ? "Gold" : maturity === "silver" ? "Silver" : "Bronze"}
               size="small"
               variant="outlined"
               sx={{
@@ -100,7 +100,7 @@ export default function DatasetCard({
                 border: "none",
                 "& .MuiChip-icon": {
                   fontSize: 16,
-                  color: maturity === "certified" ? "#D4A017" : maturity === "governed" ? "#7B8FA1" : "#A0522D",
+                  color: maturity === "gold" ? "#D4A017" : maturity === "silver" ? "#7B8FA1" : "#A0522D",
                 },
               }}
             />

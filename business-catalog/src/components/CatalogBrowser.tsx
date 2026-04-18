@@ -90,7 +90,7 @@ export default function CatalogBrowser({
     for (const ds of searchFiltered) {
       const cat = ds.domainDisplayName || "Other";
       categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
-      const m = ds.maturity || "cataloged";
+      const m = ds.maturity || "bronze";
       maturityCounts.set(m, (maturityCounts.get(m) || 0) + 1);
     }
 
@@ -105,7 +105,7 @@ export default function CatalogBrowser({
         label: "Maturity",
         options: [...maturityCounts.entries()]
           .sort((a, b) => b[1] - a[1])
-          .map(([v, c]) => ({ value: v, label: v === "certified" ? "Certified" : v === "governed" ? "Governed" : "Cataloged", count: c })),
+          .map(([v, c]) => ({ value: v, label: v === "gold" ? "Gold" : v === "silver" ? "Silver" : "Bronze", count: c })),
       },
     ];
   }, [searchFiltered]);
@@ -121,7 +121,7 @@ export default function CatalogBrowser({
     }
     if (filters.Maturity.size > 0) {
       result = result.filter((ds) =>
-        filters.Maturity.has(ds.maturity || "cataloged")
+        filters.Maturity.has(ds.maturity || "bronze")
       );
     }
     result.sort((a, b) => a.display_name.localeCompare(b.display_name));

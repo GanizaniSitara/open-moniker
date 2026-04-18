@@ -362,7 +362,7 @@ type CatalogNode struct {
 	// Vendor (e.g., bloomberg, refinitiv, msci)
 	Vendor *string `json:"vendor,omitempty" yaml:"vendor,omitempty"`
 
-	// Maturity level (e.g., governed, certified)
+	// Maturity level (e.g., silver, gold)
 	Maturity *string `json:"maturity,omitempty" yaml:"maturity,omitempty"`
 
 	// Extended technical description

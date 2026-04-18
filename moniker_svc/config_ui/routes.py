@@ -229,7 +229,7 @@ def _request_to_node(path: str, request: CreateNodeRequest | UpdateNodeRequest, 
         ownership = _model_to_ownership(request.ownership)
         source_binding = _model_to_source_binding(request.source_binding)
         classification = request.classification if hasattr(request, 'classification') else "internal"
-        maturity = Maturity(request.maturity) if hasattr(request, 'maturity') and request.maturity else Maturity.CATALOGED
+        maturity = Maturity(request.maturity) if hasattr(request, 'maturity') and request.maturity else Maturity.BRONZE
         tags = frozenset(request.tags) if request.tags else frozenset()
         metadata = request.metadata if request.metadata else {}
 
@@ -310,7 +310,7 @@ async def list_nodes(
                     ),
                     vendor=n.vendor,
                     classification=n.classification or "internal",
-                    maturity=n.maturity.value if n.maturity else "cataloged",
+                    maturity=n.maturity.value if n.maturity else "bronze",
                     is_leaf=n.is_leaf,
                     status=n.status.value if hasattr(n.status, "value") else str(n.status),
                     source_type=(

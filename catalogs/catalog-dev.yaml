@@ -2,7 +2,7 @@ benchmarks:
   display_name: Benchmarks
   domain: benchmarks
   vendor: msci
-  maturity: governed
+  maturity: silver
   description: Benchmark indices, constituents, and returns
   ownership:
     accountable_owner: indices-governance@firm.com
@@ -16,7 +16,7 @@ benchmarks/constituents:
   display_name: Benchmark Constituents
   domain: benchmarks
   vendor: ftse-russell
-  maturity: governed
+  maturity: silver
   description: Index membership and weights
   source_binding:
     type: snowflake
@@ -32,7 +32,7 @@ benchmarks/corporate:
   display_name: Corporate Bond Indices
   domain: benchmarks
   vendor: barclays-indices
-  maturity: certified
+  maturity: gold
   description: Investment grade and high yield corporate bond indices
   ownership:
     data_specialist: credit-research@firm.com
@@ -382,7 +382,7 @@ flows.subscriptions:
 nav:
   display_name: NAV
   domain: nav
-  maturity: governed
+  maturity: silver
   description: Net Asset Value and fund accounting
   ownership:
     accountable_owner: fund-accounting@firm.com
@@ -405,7 +405,7 @@ nav.official:
   display_name: Official NAV
   domain: nav
   vendor: factset
-  maturity: governed
+  maturity: silver
   description: End of day official NAV per share
   source_binding:
     type: snowflake
@@ -420,7 +420,7 @@ nav.official:
 portfolios:
   display_name: Portfolios
   domain: portfolios
-  maturity: governed
+  maturity: silver
   description: Portfolio master, holdings, performance, and attribution
   ownership:
     accountable_owner: portfolio-ops@firm.com
@@ -497,7 +497,7 @@ portfolios.performance:
 prices:
   display_name: Prices
   domain: prices
-  maturity: certified
+  maturity: gold
   description: Real-time and historical security prices
   ownership:
     accountable_owner: market-data-governance@firm.com
@@ -512,7 +512,7 @@ prices.equity:
   display_name: Equity Prices
   domain: prices
   vendor: refinitiv
-  maturity: certified
+  maturity: gold
   source_binding:
     type: snowflake
     config:
@@ -557,7 +557,7 @@ prices.fx:
 rates:
   display_name: Interest Rates
   domain: rates
-  maturity: certified
+  maturity: gold
   description: Interest rate curves, swaps, and money market rates
   ownership:
     accountable_owner: rates-governance@firm.com
@@ -577,7 +577,7 @@ rates.curves:
   display_name: Yield Curves
   domain: rates
   vendor: bloomberg
-  maturity: governed
+  maturity: silver
   description: Constructed yield curves by currency
   source_binding:
     type: snowflake
@@ -593,7 +593,7 @@ rates.sofr:
   display_name: SOFR Rates
   domain: rates
   vendor: fred
-  maturity: certified
+  maturity: gold
   description: Secured Overnight Financing Rate and term SOFR
   source_binding:
     type: snowflake
@@ -654,7 +654,7 @@ rates.swap:
 reference:
   display_name: Reference Data
   domain: reference
-  maturity: certified
+  maturity: gold
   description: Calendars, classifications, and static reference
   ownership:
     accountable_owner: ref-data-governance@firm.com
@@ -667,7 +667,7 @@ reference.calendars:
   display_name: Trading Calendars
   domain: reference
   vendor: refinitiv
-  maturity: governed
+  maturity: silver
   description: Exchange and settlement calendars
 reference.calendars/exchange:
   display_name: Exchange Calendars
